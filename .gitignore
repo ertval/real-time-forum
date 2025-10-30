@@ -1,0 +1,15 @@
+# Go
+bin/
+*.exe
+*.out
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
+
+# Database
+forum.db
