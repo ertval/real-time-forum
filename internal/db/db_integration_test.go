@@ -10,9 +10,7 @@ import (
 	forumdb "forum/internal/db"
 )
 
-const (
-	testDBPath = "test.db"
-)
+const testDBPath = "test.db"
 
 func setupDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -22,13 +20,14 @@ func setupDB(t *testing.T) *sql.DB {
 	_ = os.Remove(testDBPath + "-wal")
 	_ = os.Remove(testDBPath + "-shm")
 
-	d, err := forumdb.InitDB(testDBPath)
+	d, err := forumdb.InitDB(testDBPath) // uses embedded schema
 	if err != nil {
 		t.Fatalf("InitDB failed: %v", err)
 	}
 
+	// Safer cleanup: close before deleting files (WAL/Windows friendly)
 	t.Cleanup(func() {
-		d.Close()
+		_ = d.Close()
 		_ = os.Remove(testDBPath)
 		_ = os.Remove(testDBPath + "-wal")
 		_ = os.Remove(testDBPath + "-shm")
@@ -55,14 +54,17 @@ func mustQueryRowInt(t *testing.T, d *sql.DB, q string, args ...any) int {
 	return n
 }
 
+func expectErrorExec(t *testing.T, d *sql.DB, q string, args ...any) {
+	t.Helper()
+	if _, err := d.Exec(q, args...); err == nil {
+		t.Fatalf("expected error, got nil\nquery: %s", q)
+	}
+}
+
 func TestIntegration_DB(t *testing.T) {
 	d := setupDB(t)
 
-	// ——————————————————————————————————————————————
-	// 0) Ensure PRAGMA foreign_keys is ON for this connection
-	// ——————————————————————————————————————————————
-	{
-		// Belt & suspenders: set + verify
+	t.Run("0_ForeignKeys", func(t *testing.T) {
 		mustExec(t, d, `PRAGMA foreign_keys = ON;`)
 		var fk int
 		if err := d.QueryRow(`PRAGMA foreign_keys;`).Scan(&fk); err != nil {
@@ -71,139 +73,100 @@ func TestIntegration_DB(t *testing.T) {
 		if fk != 1 {
 			t.Fatalf("expected foreign_keys=1, got %d", fk)
 		}
-	}
+	})
 
-	// ——————————————————————————————————————————————
-	// Seed minimal users (since tests touch posts/comments owned by these)
-	// ——————————————————————————————————————————————
-	mustExec(t, d, `INSERT INTO users (username,email,password_hash) VALUES
-		('alex','alex@example.com','h1'),
-		('maria','maria@example.com','h2');`)
+	t.Run("1_SeedData", func(t *testing.T) {
+		mustExec(t, d, `INSERT INTO users (username,email,password_hash) VALUES
+			('alex','alex@example.com','h1'),
+			('maria','maria@example.com','h2');`)
 
-	// ——————————————————————————————————————————————
-	// Seed categories, posts, links, comments, reactions, sessions
-	// ——————————————————————————————————————————————
-	mustExec(t, d, `INSERT INTO categories (name,slug) VALUES
-		('General Discussion','general'),
-		('Technology','technology'),
-		('Sports','sports'),
-		('Music','music'),
-		('News','news');`)
+		mustExec(t, d, `INSERT INTO categories (name,slug) VALUES
+			('General Discussion','general'),
+			('Technology','technology'),
+			('Sports','sports'),
+			('Music','music'),
+			('News','news');`)
 
-	mustExec(t, d, `INSERT INTO posts (user_id,title,body) VALUES
-		(1,'Welcome to the Forum','Hey everyone!'),
-		(2,'Best Programming Language?','Your thoughts?'),
-		(1,'Latest Football Results','Did you watch it?'),
-		(2,'Favorite Bands','What are you into?'),
-		(1,'Daily Tech News','Share tech headlines');`)
+		mustExec(t, d, `INSERT INTO posts (user_id,title,body) VALUES
+			(1,'Welcome to the Forum','Hey everyone!'),
+			(2,'Best Programming Language?','Your thoughts?'),
+			(1,'Latest Football Results','Did you watch it?'),
+			(2,'Favorite Bands','What are you into?'),
+			(1,'Daily Tech News','Share tech headlines');`)
 
-	mustExec(t, d, `INSERT INTO post_categories (post_id,category_id) VALUES
-		(1,1),(2,2),(3,3),(4,4),(5,2),(5,5);`)
+		mustExec(t, d, `INSERT INTO post_categories (post_id,category_id) VALUES
+			(1,1),(2,2),(3,3),(4,4),(5,2),(5,5);`)
 
-	mustExec(t, d, `INSERT INTO comments (post_id,user_id,body) VALUES
-		(1,2,'Welcome Alex!'),
-		(2,1,'Go is the best!'),
-		(2,2,'Python is easier'),
-		(3,2,'Crazy match!'),
-		(4,1,'Arctic Monkeys!');`)
-	// nested reply to comment id=1
-	mustExec(t, d, `INSERT INTO comments (post_id,user_id,parent_comment_id,body) VALUES (1,1,1,'Thanks Maria!');`)
+		mustExec(t, d, `INSERT INTO comments (post_id,user_id,body) VALUES
+			(1,2,'Welcome Alex!'),
+			(2,1,'Go is the best!'),
+			(2,2,'Python is easier'),
+			(3,2,'Crazy match!'),
+			(4,1,'Arctic Monkeys!');`)
+		mustExec(t, d, `INSERT INTO comments (post_id,user_id,parent_comment_id,body)
+			VALUES (1,1,1,'Thanks Maria!');`)
 
-	mustExec(t, d, `INSERT INTO reactions (user_id, post_id, value) VALUES
-		(1,2,1),
-		(2,2,1),
-		(1,3,-1);`)
-	mustExec(t, d, `INSERT INTO reactions (user_id, comment_id, value) VALUES
-		(2,1,1),
-		(1,2,1);`)
+		mustExec(t, d, `INSERT INTO reactions (user_id, post_id, value) VALUES
+			(1,2,1),
+			(2,2,1),
+			(1,3,-1);`)
+		mustExec(t, d, `INSERT INTO reactions (user_id, comment_id, value) VALUES
+			(2,1,1),
+			(1,2,1);`)
 
-	mustExec(t, d, `INSERT INTO sessions (user_id, token, expires_at, ip, user_agent) VALUES
-		(1,'abc123', datetime('now','+1 day'), '127.0.0.1','UA'),
-		(2,'xyz789', datetime('now','+1 day'), '127.0.0.2','UA');`)
+		mustExec(t, d, `INSERT INTO sessions (user_id, token, expires_at, ip, user_agent) VALUES
+			(1,'abc123', datetime('now','+1 day'), '127.0.0.1','UA'),
+			(2,'xyz789', datetime('now','+1 day'), '127.0.0.2','UA');`)
 
-	// Sanity counts
-	{
 		users := mustQueryRowInt(t, d, `SELECT COUNT(*) FROM users`)
 		posts := mustQueryRowInt(t, d, `SELECT COUNT(*) FROM posts`)
 		if users != 2 || posts != 5 {
 			t.Fatalf("unexpected counts users=%d posts=%d", users, posts)
 		}
-	}
+	})
 
-	// ——————————————————————————————————————————————
-	// 2) Reactions CHECKs should fail
-	// ——————————————————————————————————————————————
-	{
-		// both post_id and comment_id set → fail
-		if _, err := d.Exec(`INSERT INTO reactions (user_id, post_id, comment_id, value) VALUES (1,1,1,1)`); err == nil {
-			t.Fatalf("expected CHECK failure for both targets set")
-		}
-		// neither set → fail
-		if _, err := d.Exec(`INSERT INTO reactions (user_id, value) VALUES (1, 1)`); err == nil {
-			t.Fatalf("expected CHECK failure for neither target set")
-		}
-		// invalid value → fail
-		if _, err := d.Exec(`INSERT INTO reactions (user_id, post_id, value) VALUES (1, 1, 2)`); err == nil {
-			t.Fatalf("expected CHECK failure for invalid value")
-		}
-	}
+	t.Run("2_ReactionChecks", func(t *testing.T) {
+		expectErrorExec(t, d, `INSERT INTO reactions (user_id, post_id, comment_id, value) VALUES (1,1,1,1)`)
+		expectErrorExec(t, d, `INSERT INTO reactions (user_id, value) VALUES (1, 1)`)
+		expectErrorExec(t, d, `INSERT INTO reactions (user_id, post_id, value) VALUES (1, 1, 2)`)
+	})
 
-	// ——————————————————————————————————————————————
-	// 3) Reactions uniqueness (partial unique indexes)
-	//    and toggle via update-then-insert
-	// ——————————————————————————————————————————————
-	{
-		// user 2 already liked post 2 → duplicate should fail
-		if _, err := d.Exec(`INSERT INTO reactions (user_id, post_id, value) VALUES (2,2,1)`); err == nil {
-			t.Fatalf("expected UNIQUE failure for duplicate reaction on same post")
-		}
+	t.Run("3_ReactionUniquenessAndToggle", func(t *testing.T) {
+		// duplicate like by same user on same post
+		expectErrorExec(t, d, `INSERT INTO reactions (user_id, post_id, value) VALUES (2,2,1)`)
 
-		// Toggle pattern for user 1 on post 1 (update, then insert if missing)
-		// First ensure it doesn't exist
+		// toggle pattern for user 1 on post 1
 		n := mustQueryRowInt(t, d, `SELECT COUNT(*) FROM reactions WHERE user_id=1 AND post_id=1`)
 		if n != 0 {
 			t.Fatalf("unexpected preexisting reaction for user1/post1")
 		}
-
 		res, err := d.Exec(`UPDATE reactions SET value=? WHERE user_id=? AND post_id=?`, -1, 1, 1)
 		if err != nil {
 			t.Fatalf("update toggle failed: %v", err)
 		}
 		aff, _ := res.RowsAffected()
 		if aff == 0 {
-			// insert new
 			mustExec(t, d, `INSERT INTO reactions (user_id, post_id, value) VALUES (?,?,?)`, 1, 1, -1)
 		}
-
 		val := mustQueryRowInt(t, d, `SELECT value FROM reactions WHERE user_id=1 AND post_id=1`)
 		if val != -1 {
 			t.Fatalf("expected value -1 after toggle, got %d", val)
 		}
-	}
+	})
 
-	// ——————————————————————————————————————————————
-	// 4) Sessions: single active per user
-	// ——————————————————————————————————————————————
-	{
+	t.Run("4_SessionsSingleActive", func(t *testing.T) {
 		// should fail (already active for user 1)
-		if _, err := d.Exec(`INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'conflict', datetime('now','+1 day'))`); err == nil {
-			t.Fatalf("expected UNIQUE failure for second active session")
-		}
+		expectErrorExec(t, d, `INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'conflict', datetime('now','+1 day'))`)
 
 		// invalidate then create new
 		mustExec(t, d, `UPDATE sessions SET is_valid=0 WHERE user_id=1`)
 		mustExec(t, d, `INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'fresh', datetime('now','+2 days'))`)
 
-		// trying again should fail
-		if _, err := d.Exec(`INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'again', datetime('now','+2 days'))`); err == nil {
-			t.Fatalf("expected UNIQUE failure for second active session (after fresh)")
-		}
-	}
+		// trying another active again should fail
+		expectErrorExec(t, d, `INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'again', datetime('now','+2 days'))`)
+	})
 
-	// ——————————————————————————————————————————————
-	// 5) Cascades in a transaction (user 2)
-	// ——————————————————————————————————————————————
-	{
+	t.Run("5_CascadeDeleteUser", func(t *testing.T) {
 		tx, err := d.Begin()
 		if err != nil {
 			t.Fatalf("begin tx failed: %v", err)
@@ -212,7 +175,7 @@ func TestIntegration_DB(t *testing.T) {
 			_ = tx.Rollback()
 			t.Fatalf("delete user2 failed: %v", err)
 		}
-		postsBy2 := 0
+		var postsBy2 int
 		if err := tx.QueryRow(`SELECT COUNT(*) FROM posts WHERE user_id=2`).Scan(&postsBy2); err != nil {
 			_ = tx.Rollback()
 			t.Fatalf("scan postsBy2 failed: %v", err)
@@ -221,13 +184,10 @@ func TestIntegration_DB(t *testing.T) {
 			_ = tx.Rollback()
 			t.Fatalf("expected posts by user2 to be 0 after cascade; got %d", postsBy2)
 		}
-		_ = tx.Rollback() // revert DB to original state
-	}
+		_ = tx.Rollback()
+	})
 
-	// ——————————————————————————————————————————————
-	// 6) Post-level cascades (post 5) in a transaction
-	// ——————————————————————————————————————————————
-	{
+	t.Run("6_CascadeDeletePost", func(t *testing.T) {
 		tx, err := d.Begin()
 		if err != nil {
 			t.Fatalf("begin tx failed: %v", err)
@@ -245,12 +205,9 @@ func TestIntegration_DB(t *testing.T) {
 			t.Fatalf("cascade failed: post5=%d cats=%d reacts=%d", post5, post5cats, post5reacts)
 		}
 		_ = tx.Rollback()
-	}
+	})
 
-	// ——————————————————————————————————————————————
-	// 7) Filters: by category, by my posts, by my liked posts
-	// ——————————————————————————————————————————————
-	{
+	t.Run("7_Filters", func(t *testing.T) {
 		techCount := mustQueryRowInt(t, d, `
 			SELECT COUNT(*)
 			FROM posts p
@@ -271,16 +228,12 @@ func TestIntegration_DB(t *testing.T) {
 			FROM posts p
 			JOIN reactions r ON r.post_id=p.id
 			WHERE r.user_id=1 AND r.value=1`)
-		// from seed: user1 liked post2 (1 row)
-		if likedByUser1 != 1 {
+		if likedByUser1 != 1 { // from seed: user1 liked post 2
 			t.Fatalf("expected 1 liked post by user1, got %d", likedByUser1)
 		}
-	}
+	})
 
-	// ——————————————————————————————————————————————
-	// 8) updated_at behavior (app-managed)
-	// ——————————————————————————————————————————————
-	{
+	t.Run("8_UpdatedAtAppManaged", func(t *testing.T) {
 		var before string
 		if err := d.QueryRow(`SELECT updated_at FROM posts WHERE id=1`).Scan(&before); err != nil {
 			t.Fatalf("scan before failed: %v", err)
@@ -306,12 +259,9 @@ func TestIntegration_DB(t *testing.T) {
 		if after == before {
 			t.Fatalf("expected updated_at to change; before=%s after=%s", before, after)
 		}
-	}
+	})
 
-	// ——————————————————————————————————————————————
-	// 9) quick_check
-	// ——————————————————————————————————————————————
-	{
+	t.Run("9_QuickCheck", func(t *testing.T) {
 		var status string
 		if err := d.QueryRow(`PRAGMA quick_check;`).Scan(&status); err != nil {
 			t.Fatalf("quick_check scan failed: %v", err)
@@ -319,8 +269,8 @@ func TestIntegration_DB(t *testing.T) {
 		if status != "ok" {
 			t.Fatalf("quick_check not ok: %s", status)
 		}
-	}
+	})
 
-	// Just print absolute path to confirm test DB location (useful in CI logs)
+	// Optional: print absolute path to confirm test DB location (handy in CI logs)
 	_, _ = filepath.Abs(testDBPath)
 }

@@ -1,28 +1,43 @@
 
 --TODO updated_at field on comments,users,posts to be set by in app logic
 
--- forum_schema.sql
--- SQLite schema for a simple forum app
+-- ===============================================================
+-- Forum database schema (SQLite)
+-- ===============================================================
+-- users: registered forum members
+-- posts: threads created by users
+-- comments: replies to posts or nested comments
+-- categories: thematic grouping of posts
+-- post_categories: M:N relation between posts and categories
+-- reactions: likes/dislikes by users on posts/comments
+-- sessions: active login sessions with expiration
+--
+-- Notes:
+-- - All timestamps use datetime('now') (UTC)
+-- - updated_at fields are managed by the application (not triggers)
+-- - Foreign keys enforce cascades for data consistency
+-- ===============================================================
+
 PRAGMA foreign_keys = ON;
 
--- 1) users
+-- users: registered members with unique username/email and bcrypt-hashed password
 CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  username      TEXT    NOT NULL UNIQUE,
-  email         TEXT    NOT NULL UNIQUE,
-  password_hash TEXT    NOT NULL,
-  is_active     INTEGER NOT NULL DEFAULT 1, --1 means active, 0 means inactive
+  username      TEXT    NOT NULL UNIQUE CHECK (length(username) BETWEEN 3 AND 30),
+  email         TEXT    NOT NULL UNIQUE CHECK (instr(email, '@') > 1),
+  password_hash TEXT    NOT NULL, -- bcrypt hashed password
+  is_active     INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
--- 2) posts
+-- posts: user-created threads; deleted with their author (ON DELETE CASCADE)
 CREATE TABLE IF NOT EXISTS posts (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL,
-  title       TEXT    NOT NULL,
-  body        TEXT    NOT NULL,
-  status      TEXT    NOT NULL DEFAULT 'published',
+  title       TEXT    NOT NULL CHECK (length(title) > 0),
+  body        TEXT    NOT NULL CHECK (length(body) > 0),
+  status      TEXT    NOT NULL DEFAULT 'published' CHECK (status IN ('draft','published','archived')),
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -30,13 +45,13 @@ CREATE TABLE IF NOT EXISTS posts (
 
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 
--- 3) comments
+-- comments: replies to posts or other comments (nested, cascade on delete)
 CREATE TABLE IF NOT EXISTS comments (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,
   post_id            INTEGER NOT NULL,
   user_id            INTEGER NOT NULL,
   parent_comment_id  INTEGER,
-  body               TEXT    NOT NULL,
+  body               TEXT    NOT NULL CHECK (length(body) > 0),
   created_at         TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at         TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
@@ -49,7 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_comment_id);
 
 
--- 4) categories
+-- categories: thematic groups used to organize and filter posts
 CREATE TABLE IF NOT EXISTS categories (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   name       TEXT NOT NULL UNIQUE,
@@ -57,7 +72,7 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- 5) post_categories
+-- post_categories: many-to-many relation between posts and categories
 CREATE TABLE IF NOT EXISTS post_categories (
   post_id     INTEGER NOT NULL,
   category_id INTEGER NOT NULL,
@@ -68,7 +83,7 @@ CREATE TABLE IF NOT EXISTS post_categories (
 
 CREATE INDEX IF NOT EXISTS idx_post_categories_category ON post_categories(category_id);
 
--- 6) reactions (like = +1, dislike = -1) for posts OR comments
+-- reactions: likes/dislikes by users on posts or comments (one per target)
 CREATE TABLE IF NOT EXISTS reactions (
                                          id          INTEGER PRIMARY KEY AUTOINCREMENT,
                                          user_id     INTEGER NOT NULL,
@@ -94,16 +109,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_react_user_comment
 CREATE INDEX IF NOT EXISTS idx_react_post_id ON reactions(post_id);
 CREATE INDEX IF NOT EXISTS idx_react_comment_id ON reactions(comment_id);
 
--- 7) sessions
+-- sessions: active user logins with expiration and one active per user
 CREATE TABLE IF NOT EXISTS sessions (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL,
   token       TEXT    NOT NULL UNIQUE,
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-  expires_at  TEXT    NOT NULL,
+  expires_at  TEXT    NOT NULL CHECK (expires_at > created_at),
   ip          TEXT,
-  user_agent  TEXT,
-  is_valid    INTEGER NOT NULL DEFAULT 1,
+  user_agent  TEXT CHECK (length(user_agent) <= 512),
+  is_valid    INTEGER NOT NULL DEFAULT 1 CHECK (is_valid IN (0, 1)),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
