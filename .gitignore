@@ -1,15 +1,18 @@
-# Go
+# Go build artifacts
 bin/
 *.exe
 *.out
 *.log
 
-# IDE
+# IDE / Editor settings
 .vscode/
 .idea/
 
-# System
+# System files
 .DS_Store
 
-# Database
+# Database files
 internal/db/forum.db
+*.db
+*.db-wal
+*.db-shm

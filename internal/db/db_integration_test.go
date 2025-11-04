@@ -12,30 +12,35 @@ import (
 
 const testDBPath = "test.db"
 
+// setupDB initializes a fresh test database and ensures proper cleanup.
 func setupDB(t *testing.T) *sql.DB {
 	t.Helper()
 
-	// Clean any prior leftovers
-	_ = os.Remove(testDBPath)
-	_ = os.Remove(testDBPath + "-wal")
-	_ = os.Remove(testDBPath + "-shm")
+	// Clean previous leftovers (db + WAL/SHM)
+	for _, f := range []string{testDBPath, testDBPath + "-wal", testDBPath + "-shm"} {
+		_ = os.Remove(f)
+	}
 
-	d, err := forumdb.InitDB(testDBPath) // uses embedded schema
+	forumdb.LogInfo("Initializing temporary test database: %s", testDBPath)
+	d, err := forumdb.InitDB(testDBPath)
 	if err != nil {
+		forumdb.LogWarn("InitDB failed: %v", err)
 		t.Fatalf("InitDB failed: %v", err)
 	}
 
-	// Safer cleanup: close before deleting files (WAL/Windows friendly)
+	// Safer cleanup — close DB before removing files
 	t.Cleanup(func() {
 		_ = d.Close()
-		_ = os.Remove(testDBPath)
-		_ = os.Remove(testDBPath + "-wal")
-		_ = os.Remove(testDBPath + "-shm")
+		for _, f := range []string{testDBPath, testDBPath + "-wal", testDBPath + "-shm"} {
+			_ = os.Remove(f)
+		}
+		forumdb.LogInfo("Cleaned up test database files")
 	})
 
 	return d
 }
 
+// mustExec runs a SQL statement or fails the test if it errors.
 func mustExec(t *testing.T, d *sql.DB, q string, args ...any) sql.Result {
 	t.Helper()
 	res, err := d.Exec(q, args...)
@@ -45,6 +50,7 @@ func mustExec(t *testing.T, d *sql.DB, q string, args ...any) sql.Result {
 	return res
 }
 
+// mustQueryRowInt executes a query returning one int result or fails.
 func mustQueryRowInt(t *testing.T, d *sql.DB, q string, args ...any) int {
 	t.Helper()
 	var n int
@@ -54,6 +60,7 @@ func mustQueryRowInt(t *testing.T, d *sql.DB, q string, args ...any) int {
 	return n
 }
 
+// expectErrorExec ensures a SQL command produces an error (for constraint testing).
 func expectErrorExec(t *testing.T, d *sql.DB, q string, args ...any) {
 	t.Helper()
 	if _, err := d.Exec(q, args...); err == nil {
@@ -61,8 +68,11 @@ func expectErrorExec(t *testing.T, d *sql.DB, q string, args ...any) {
 	}
 }
 
+// TestIntegration_DB validates the schema, constraints, and cascading behavior.
 func TestIntegration_DB(t *testing.T) {
+	forumdb.LogInfo("Starting DB integration tests")
 	d := setupDB(t)
+	defer forumdb.LogInfo("DB integration tests completed successfully")
 
 	t.Run("0_ForeignKeys", func(t *testing.T) {
 		mustExec(t, d, `PRAGMA foreign_keys = ON;`)
@@ -73,6 +83,7 @@ func TestIntegration_DB(t *testing.T) {
 		if fk != 1 {
 			t.Fatalf("expected foreign_keys=1, got %d", fk)
 		}
+		forumdb.LogInfo("Verified PRAGMA foreign_keys enabled")
 	})
 
 	t.Run("1_SeedData", func(t *testing.T) {
@@ -123,6 +134,7 @@ func TestIntegration_DB(t *testing.T) {
 		if users != 2 || posts != 5 {
 			t.Fatalf("unexpected counts users=%d posts=%d", users, posts)
 		}
+		forumdb.LogInfo("Seeded initial test data successfully")
 	})
 
 	t.Run("2_ReactionChecks", func(t *testing.T) {
@@ -132,10 +144,8 @@ func TestIntegration_DB(t *testing.T) {
 	})
 
 	t.Run("3_ReactionUniquenessAndToggle", func(t *testing.T) {
-		// duplicate like by same user on same post
 		expectErrorExec(t, d, `INSERT INTO reactions (user_id, post_id, value) VALUES (2,2,1)`)
 
-		// toggle pattern for user 1 on post 1
 		n := mustQueryRowInt(t, d, `SELECT COUNT(*) FROM reactions WHERE user_id=1 AND post_id=1`)
 		if n != 0 {
 			t.Fatalf("unexpected preexisting reaction for user1/post1")
@@ -155,14 +165,11 @@ func TestIntegration_DB(t *testing.T) {
 	})
 
 	t.Run("4_SessionsSingleActive", func(t *testing.T) {
-		// should fail (already active for user 1)
 		expectErrorExec(t, d, `INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'conflict', datetime('now','+1 day'))`)
 
-		// invalidate then create new
 		mustExec(t, d, `UPDATE sessions SET is_valid=0 WHERE user_id=1`)
 		mustExec(t, d, `INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'fresh', datetime('now','+2 days'))`)
 
-		// trying another active again should fail
 		expectErrorExec(t, d, `INSERT INTO sessions (user_id, token, expires_at) VALUES (1,'again', datetime('now','+2 days'))`)
 	})
 
@@ -214,7 +221,7 @@ func TestIntegration_DB(t *testing.T) {
 			JOIN post_categories pc ON pc.post_id=p.id
 			JOIN categories c ON c.id=pc.category_id
 			WHERE c.slug='technology'`)
-		if techCount != 2 { // posts 2 and 5
+		if techCount != 2 {
 			t.Fatalf("expected 2 tech posts, got %d", techCount)
 		}
 
@@ -228,7 +235,7 @@ func TestIntegration_DB(t *testing.T) {
 			FROM posts p
 			JOIN reactions r ON r.post_id=p.id
 			WHERE r.user_id=1 AND r.value=1`)
-		if likedByUser1 != 1 { // from seed: user1 liked post 2
+		if likedByUser1 != 1 {
 			t.Fatalf("expected 1 liked post by user1, got %d", likedByUser1)
 		}
 	})
@@ -239,7 +246,6 @@ func TestIntegration_DB(t *testing.T) {
 			t.Fatalf("scan before failed: %v", err)
 		}
 
-		// update WITHOUT touching updated_at → should remain same
 		mustExec(t, d, `UPDATE posts SET title='Welcome (edit 1)' WHERE id=1`)
 		var mid string
 		if err := d.QueryRow(`SELECT updated_at FROM posts WHERE id=1`).Scan(&mid); err != nil {
@@ -249,8 +255,7 @@ func TestIntegration_DB(t *testing.T) {
 			t.Fatalf("expected updated_at unchanged; before=%s mid=%s", before, mid)
 		}
 
-		// update WITH updated_at
-		time.Sleep(1100 * time.Millisecond) // ensure timestamp change
+		time.Sleep(1100 * time.Millisecond)
 		mustExec(t, d, `UPDATE posts SET title='Welcome (edit 2)', updated_at = datetime('now') WHERE id=1`)
 		var after string
 		if err := d.QueryRow(`SELECT updated_at FROM posts WHERE id=1`).Scan(&after); err != nil {
@@ -269,8 +274,9 @@ func TestIntegration_DB(t *testing.T) {
 		if status != "ok" {
 			t.Fatalf("quick_check not ok: %s", status)
 		}
+		forumdb.LogInfo("Database integrity verified (PRAGMA quick_check = ok)")
 	})
 
-	// Optional: print absolute path to confirm test DB location (handy in CI logs)
-	_, _ = filepath.Abs(testDBPath)
+	abs, _ := filepath.Abs(testDBPath)
+	forumdb.LogInfo("Test database path: %s", abs)
 }
