@@ -17,7 +17,6 @@ var (
 )
 
 // WrapError adds context to an existing error and logs it.
-// Use this in DB operations to provide consistent error messages.
 func WrapError(context string, err error) error {
 	if err == nil {
 		return nil
@@ -71,7 +70,7 @@ func stringContains(s, sub string) bool {
 	return len(sub) > 0 && len(s) >= len(sub) && (len(s) == len(sub) && s == sub || len(s) > len(sub) && (indexOf(s, sub) >= 0))
 }
 
-// indexOf finds substring position or returns -1 (tiny helper to keep it standalone).
+// indexOf finds substring position or returns -1
 func indexOf(s, sub string) int {
 	for i := 0; i+len(sub) <= len(s); i++ {
 		if s[i:i+len(sub)] == sub {
