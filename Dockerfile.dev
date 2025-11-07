@@ -1,0 +1,33 @@
+# ================================================================
+# Stage 1: Build the Go binary
+# ================================================================
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /app
+RUN apk add --no-cache build-base sqlite-dev
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+# ✅ Ενεργό CGO για sqlite
+RUN CGO_ENABLED=1 GOOS=linux go build -o forum ./cmd/main.go
+
+
+# ================================================================
+# Stage 2: Runtime image (development-friendly)
+# ================================================================
+FROM alpine:3.20
+
+WORKDIR /app
+RUN apk add --no-cache ca-certificates wget sqlite
+
+COPY --from=builder /app/forum .
+COPY internal/db ./internal/db
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget --spider -q http://localhost:8080/ || exit 1
+
+CMD ["./forum"]

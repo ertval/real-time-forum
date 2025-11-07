@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  forum:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: forum_app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./internal/db:/app/internal/db
+    environment:
+      - TZ=Europe/Athens
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
