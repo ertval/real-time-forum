@@ -34,6 +34,12 @@ func WriteNoContent(w http.ResponseWriter) {
 func WriteError(w http.ResponseWriter, err *APIError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(err.Status)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": map[string]interface{}{
+			"code":    err.Code,
+			"message": err.Message,
+		},
+	})
 }
 
 // NewError creates a new APIError.

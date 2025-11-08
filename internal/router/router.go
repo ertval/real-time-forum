@@ -21,10 +21,11 @@ func NewRouter() http.Handler {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 	})
-	return withMiddlewares(mux)
+	return addMiddlewares(mux)
 }
 
-func withMiddlewares(h http.Handler) http.Handler {
+func addMiddlewares(h http.Handler) http.Handler {
+	//here (h) is just the param for the returned function that runs instantly w
 	h = middleware.CORS("http://localhost:5173")(h) // dev frontend origin
 	h = middleware.Recoverer(h)
 	h = middleware.Logger(h)
