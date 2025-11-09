@@ -13,10 +13,15 @@ func NewRouter() http.Handler {
 	posts := handlers.NewPosts()
 	users := handlers.NewUsers()
 	//v1 indicates this is version one of the api
+
+	//Health
 	mux.HandleFunc("/api/v1/health", health.Health)
+	//Posts
 	mux.HandleFunc("/api/v1/posts", posts.Collection)
 	mux.HandleFunc("/api/v1/posts/", posts.Item)
+	//Users
 	mux.HandleFunc("/api/v1/users/me", users.Me)
+	mux.HandleFunc("/api/v1/users/", users.Item)
 
 	//Catches all undefined routes and servers json 404 message
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

@@ -116,7 +116,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// DEPRECATED
+// Unused at the moment
 func (p *Posts) List(w http.ResponseWriter, r *http.Request) {
 	//Requests page number & per page elements
 	//default page num is 1 and per page elements is 20

@@ -33,7 +33,7 @@ func Start() {
 	r := router.NewRouter()
 
 	port := ":8080"
-	fmt.Printf("🌐 Server running on http://localhost%s\n", port)
+	fmt.Printf("✅ Server running on http://localhost%s\n", port)
 	if err := http.ListenAndServe(port, r); err != nil {
 		db.HandleFatalError(err, "starting HTTP server")
 	}
