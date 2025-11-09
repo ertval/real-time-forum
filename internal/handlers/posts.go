@@ -11,6 +11,7 @@ type Posts struct{}
 
 func NewPosts() *Posts { return &Posts{} }
 
+// Collection is the main endpoint for posts
 func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -37,11 +38,16 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Title == "" {
 			WriteError(w, NewError("BAD_REQUEST", "invalid JSON or missing title", http.StatusBadRequest))
-			WriteCreated(w, map[string]any{"id": 1, "title": in.Title, "body": in.Body})
+			return
 		}
+		WriteCreated(w, map[string]any{"id": 1, "title": in.Title, "body": in.Body})
+
+	default:
+		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 	}
 }
 
+// Item is the endpoint for a single post and subresources such as /comments, /like
 func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 	tail := strings.TrimPrefix(r.URL.Path, "/api/v1/posts/")
 	parts := strings.Split(strings.Trim(tail, "/"), "/")
@@ -75,11 +81,42 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		WriteOK(w, map[string]string{"status": "toggled"}, nil)
+
+	case "comments":
+		switch r.Method {
+		case http.MethodGet:
+			//list comments
+			page := parseIntOr(r.URL.Query().Get("page"), 1)
+			per := parseIntOr(r.URL.Query().Get("per_page"), 20)
+			if per > 100 {
+				per = 100
+			}
+			if page < 1 {
+				page = 1
+			}
+			data := []any{}
+			meta := map[string]any{"page": page, "per_page": per, "total": 0, "post_id": postID}
+			WriteOK(w, data, meta)
+		case http.MethodPost:
+			//creates comment stub for now
+			var in struct {
+				Body string `json:"body"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&in); err != nil || strings.TrimSpace(in.Body) == "" {
+				WriteError(w, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
+				return
+			}
+			WriteCreated(w, map[string]any{"id": 1, "post_id": postID, "body": in.Body})
+		default:
+			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+		}
+
 	default:
 		WriteError(w, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 	}
 }
 
+// DEPRECATED
 func (p *Posts) List(w http.ResponseWriter, r *http.Request) {
 	//Requests page number & per page elements
 	//default page num is 1 and per page elements is 20
