@@ -1,16 +1,18 @@
 package router
 
 import (
+	"database/sql"
+	"forum/internal/db"
 	"forum/internal/handlers"
 	"forum/internal/middleware"
 	"net/http"
 )
 
-func NewRouter() http.Handler {
+func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
 
 	health := handlers.NewHealth()
-	posts := handlers.NewPosts()
+	posts := handlers.NewPosts(database)
 	users := handlers.NewUsers()
 	//v1 indicates this is version one of the api
 
@@ -24,8 +26,17 @@ func NewRouter() http.Handler {
 	mux.HandleFunc("/api/v1/users/", users.Item)
 
 	//Catches all undefined routes and servers json 404 message
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
+	})
+
+	// Example placeholder handler that uses the DB
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if err := db.InspectAllTables(database, w); err != nil {
+			db.HandleRuntimeError(err, "inspecting all tables")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	})
 	return addMiddlewares(mux)
 }

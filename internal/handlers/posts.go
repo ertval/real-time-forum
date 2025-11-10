@@ -1,15 +1,19 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+
+	db "forum/internal/db"
 )
 
-type Posts struct{}
+type Posts struct{ db *sql.DB }
 
-func NewPosts() *Posts { return &Posts{} }
+func NewPosts(database *sql.DB) *Posts { return &Posts{db: database} }
 
 // Collection is the main endpoint for posts
 func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
@@ -25,15 +29,18 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 		if page < 1 {
 			page = 1
 		}
-		//TODO Populate data from database by linking it to API's
-		data := []any{}
-		meta := map[string]any{"page": page, "per_page": per, "total": 0}
-		WriteOK(w, data, meta)
+		res, err := db.ListPosts(r.Context(), p.db, db.ListPostsParams{Page: page, PerPage: per})
+		if err != nil {
+			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
+			return
+		}
+		meta := map[string]any{"page": page, "per_page": per, "total": res.Total}
+		WriteOK(w, res.Posts, meta)
 
 	case http.MethodPost:
 		//Creates stub for now
 		var in struct {
-			Title string `json:"title""`
+			Title string `json:"title"`
 			Body  string `json:"body"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Title == "" {
@@ -57,19 +64,56 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 		return
 	}
-	postID := parts[0]
+	idStr := parts[0]
+	postID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		WriteError(w, NewError("BAD_REQUEST", "invalid post ID", http.StatusBadRequest))
+		return
+	}
 
 	//case /api/v1/posts/{id}
 	if len(parts) == 1 {
 		switch r.Method {
 		case http.MethodGet:
-			WriteOK(w, map[string]any{"id": postID, "title": "title", "body": "body"}, nil)
+			post, err := db.GetPost(r.Context(), p.db, postID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					WriteError(w, NewError("NOT_FOUND", "post not found", http.StatusNotFound))
+					return
+				}
+				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error getting post", http.StatusInternalServerError))
+				return
+			}
+			WriteOK(w, post, nil)
 		case http.MethodPatch:
+			var in struct {
+				Title *string `json:"title"`
+				Body  *string `json:"body"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+				WriteError(w, NewError("BAD_REQUEST", "invalid JSON", http.StatusBadRequest))
+				return
+			}
+			if in.Title == nil && in.Body == nil {
+				WriteError(w, NewError("BAD_REQUEST", "nothing to update", http.StatusBadRequest))
+				return
+			}
+			if err := db.UpdatePost(r.Context(), p.db, postID, db.UpdatePostInput{
+				Title: in.Title,
+				Body:  in.Body,
+			}); err != nil {
+				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
+				return
+			}
 			WriteOK(w, map[string]string{"status": "updated"}, nil)
 		case http.MethodDelete:
+			if err := db.DeletePost(r.Context(), p.db, postID); err != nil {
+				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error deleting post", http.StatusInternalServerError))
+				return
+			}
 			WriteNoContent(w)
 		default:
-			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+			WriteError(w, NewError("METHOD_NOT_ALLOWED", " method not allowed", http.StatusMethodNotAllowed))
 		}
 		return
 	}
@@ -110,7 +154,6 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 		default:
 			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		}
-
 	default:
 		WriteError(w, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 	}

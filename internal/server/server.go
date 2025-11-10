@@ -22,15 +22,7 @@ func Start() {
 		}
 	}()
 
-	//// Example placeholder handler that uses the DB
-	//http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	//	if err := db.InspectAllTables(database, w); err != nil {
-	//		db.HandleRuntimeError(err, "inspecting all tables")
-	//		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	//		return
-	//	}
-	//})
-	r := router.NewRouter()
+	r := router.NewRouter(database)
 
 	port := ":8080"
 	fmt.Printf("✅ Server running on http://localhost%s\n", port)
