@@ -119,11 +119,10 @@ type CreatePostInput struct {
 	CategoryID *int64
 }
 
-// TODO link DB
 func CreatePost(ctx context.Context, db *sql.DB, in CreatePostInput) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	q := `INSERT INTO posts (author_id, title, body, category_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`
+	q := `INSERT INTO posts (author_id, title, body, category_id, created_at,updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`
 	res, err := db.ExecContext(ctx, q, in.AuthorID, in.Title, in.Body, in.CategoryID)
 	if err != nil {
 		return 0, fmt.Errorf("create post: %w", err)

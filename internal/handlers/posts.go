@@ -38,17 +38,41 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 		WriteOK(w, res.Posts, meta)
 
 	case http.MethodPost:
-		//Creates stub for now
 		var in struct {
-			Title string `json:"title"`
-			Body  string `json:"body"`
+			Title      string `json:"title"`
+			Body       string `json:"body"`
+			CategoryID *int64 `json:"category_id"`
+			//authorID to be added once auth is implemented.
+			//For now hardcoded to 1
 		}
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Title == "" {
-			WriteError(w, NewError("BAD_REQUEST", "invalid JSON or missing title", http.StatusBadRequest))
+			WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
 			return
 		}
-		WriteCreated(w, map[string]any{"id": 1, "title": in.Title, "body": in.Body})
+		if strings.TrimSpace(in.Body) == "" || strings.TrimSpace(in.Title) == "" {
+			WriteError(w, NewError("BAD_REQUEST", "title and body required", http.StatusBadRequest))
+			return
+		}
 
+		//TODO once auth exists, take authorID from authentication. For now its hard-coded
+		const fakeAuthorID = 1
+		newID, err := db.CreatePost(r.Context(), p.db, db.CreatePostInput{
+			AuthorID:   fakeAuthorID,
+			Title:      in.Title,
+			Body:       in.Body,
+			CategoryID: in.CategoryID,
+		})
+		if err != nil {
+			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
+			return
+		}
+		//Gets after creating to also grab auto-filled fields from database
+		post, err := db.GetPost(r.Context(), p.db, newID)
+		if err != nil {
+			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "post created but failed to load", http.StatusInternalServerError))
+			return
+		}
+		WriteCreated(w, post)
 	default:
 		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 	}
@@ -138,19 +162,59 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 			if page < 1 {
 				page = 1
 			}
-			data := []any{}
-			meta := map[string]any{"page": page, "per_page": per, "total": 0, "post_id": postID}
-			WriteOK(w, data, meta)
-		case http.MethodPost:
-			//creates comment stub for now
-			var in struct {
-				Body string `json:"body"`
+			res, err := db.ListCommentsByPost(r.Context(), p.db, db.ListCommentsParams{
+				PostID:  postID,
+				Page:    page,
+				PerPage: per,
+			})
+			if err != nil {
+				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing comments", http.StatusInternalServerError))
+				return
 			}
-			if err := json.NewDecoder(r.Body).Decode(&in); err != nil || strings.TrimSpace(in.Body) == "" {
+
+			meta := map[string]any{
+				"page":     page,
+				"per_page": per,
+				"total":    res.Total,
+				"post_id":  postID,
+			}
+			WriteOK(w, res.Comments, meta)
+
+		case http.MethodPost:
+
+			var in struct {
+				Body            string `json:"body"`
+				ParentCommentID *int64 `json:"parent_comment_id"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+				WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+				return
+			}
+			if strings.TrimSpace(in.Body) == "" {
 				WriteError(w, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 				return
 			}
-			WriteCreated(w, map[string]any{"id": 1, "post_id": postID, "body": in.Body})
+			//TODO: once auth exists, use authorID from authentication. For now its hard-coded
+			const fakeAuthorID = 1
+
+			commentID, err := db.CreateComment(r.Context(), p.db, db.CreateCommentInput{
+				PostID:          postID,
+				UserID:          fakeAuthorID,
+				ParentCommentID: in.ParentCommentID,
+				Body:            in.Body,
+			})
+			if err != nil {
+				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error creating comment", http.StatusInternalServerError))
+				return
+			}
+
+			comment, err := db.GetComment(r.Context(), p.db, commentID)
+			if err != nil {
+				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "comment created but failed to load", http.StatusInternalServerError))
+				return
+			}
+
+			WriteCreated(w, comment)
 		default:
 			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		}

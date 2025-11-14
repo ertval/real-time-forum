@@ -1,4 +1,3 @@
-
 --TODO updated_at field on comments,users,posts to be set by in app logic
 
 -- ===============================================================
@@ -132,13 +131,3 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_sessions_single_active
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
-
--- # list
--- curl -s "http://localhost:8080/api/v1/posts?page=1&per_page=10" | jq
---
--- # if empty, seed one row quickly
--- sqlite3 internal/db/forum.db \
--- "INSERT INTO posts (author_id, title, body, created_at) VALUES (1, 'Hello', 'World', datetime('now'));"
---
--- # list again (should show the post)
--- curl -s "http://localhost:8080/api/v1/posts?page=1&per_page=10" | jq
