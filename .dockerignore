@@ -1,0 +1,19 @@
+# Build artifacts
+bin/
+*.exe
+*.out
+*.log
+
+# IDE / system files
+.vscode/
+.idea/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# DB files (mounted by volume)
+*.db
+*.db-wal
+*.db-shm
