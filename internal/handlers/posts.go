@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -148,7 +149,17 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 			return
 		}
-		WriteOK(w, map[string]string{"status": "toggled"}, nil)
+		// TODO: once auth exists, take userID from authentication.
+		// For now it's hard-coded.
+		const fakeID int64 = 1
+		liked, count, err := db.TogglePostLike(r.Context(), p.db, fakeID, postID)
+		if err != nil {
+			log.Printf("TogglePostLike failed for user=%d post=%d: %v", fakeID, postID, err)
+			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError))
+			return
+		}
+
+		WriteOK(w, map[string]any{"post_id": postID, "liked": liked, "likes": count}, nil)
 
 	case "comments":
 		switch r.Method {
