@@ -29,7 +29,11 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api/v1/categories/", categories.List)
 	mux.HandleFunc("/api/v1/categories", categories.List)
 
-	//Catches all undefined routes and servers json 404 message
+	// JSON 404 is served for undefined API routes
+	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
+		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
+	})
+
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 	})
