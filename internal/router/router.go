@@ -14,6 +14,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	health := handlers.NewHealth()
 	posts := handlers.NewPosts(database)
 	users := handlers.NewUsers()
+	categories := handlers.NewCategories(database)
 	//v1 indicates this is version one of the api
 
 	//Health
@@ -24,6 +25,9 @@ func NewRouter(database *sql.DB) http.Handler {
 	//Users
 	mux.HandleFunc("/api/v1/users/me", users.Me)
 	mux.HandleFunc("/api/v1/users/", users.Item)
+	//Categories
+	mux.HandleFunc("/api/v1/categories/", categories.List)
+	mux.HandleFunc("/api/v1/categories", categories.List)
 
 	//Catches all undefined routes and servers json 404 message
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {

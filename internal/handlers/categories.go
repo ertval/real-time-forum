@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"forum/internal/db"
 	"net/http"
 )
 
@@ -14,10 +15,9 @@ func (c *Categories) List(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		return
 	}
-	// TODO: Fetch categories from DB
-	data := []map[string]any{
-		{"id": 1, "name": "General"},
-		{"id": 2, "name": "Tech"},
+	cats, err := db.ListCategories(r.Context(), c.db)
+	if err != nil {
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing categories", http.StatusInternalServerError))
 	}
-	WriteOK(w, data, nil)
+	WriteOK(w, cats, nil)
 }

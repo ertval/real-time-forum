@@ -10,7 +10,7 @@ import (
 
 func Start() {
 	// Initialize database
-	database, err := db.InitDB("internal/db/forum.db")
+	database, err := db.InitDB("./internal/db/forum.db")
 	if err != nil {
 		db.HandleInitError(err, "initializing database")
 		return
