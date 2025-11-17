@@ -2,7 +2,6 @@ package router
 
 import (
 	"database/sql"
-	"forum/internal/db"
 	"forum/internal/handlers"
 	"forum/internal/middleware"
 	"net/http"
@@ -39,13 +38,13 @@ func NewRouter(database *sql.DB) http.Handler {
 	})
 
 	// Example placeholder handler that uses the DB
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.InspectAllTables(database, w); err != nil {
-			db.HandleRuntimeError(err, "inspecting all tables")
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-	})
+	//mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	//	if err := db.InspectAllTables(database, w); err != nil {
+	//		db.HandleRuntimeError(err, "inspecting all tables")
+	//		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	//		return
+	//	}
+	//})
 	return addMiddlewares(mux)
 }
 
