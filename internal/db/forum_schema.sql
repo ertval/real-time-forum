@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   username      TEXT    NOT NULL UNIQUE CHECK (length(username) BETWEEN 3 AND 30),
   email         TEXT    NOT NULL UNIQUE CHECK (instr(email, '@') > 1),
-  password_hash TEXT    NOT NULL, -- bcrypt hashed password
+  password_hash TEXT    NOT NULL,
   is_active     INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
