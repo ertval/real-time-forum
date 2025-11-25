@@ -1,39 +1,44 @@
 # ================================================================
-# Stage 1: Build the Go binary
+# Stage 1: Build the Go Backend binary
 # ================================================================
 FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
-# Dependencies for go-sqlite3 (requires cgo)
+
+# Dependencies for go-sqlite3 (CGO)
 RUN apk add --no-cache build-base sqlite-dev
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# Enable CGO for sqlite
-RUN CGO_ENABLED=1 GOOS=linux go build -o forum ./cmd/main.go
+
+# Build backend server
+RUN CGO_ENABLED=1 GOOS=linux go build -o forum-backend ./cmd/backend/main.go
 
 
 # ================================================================
-# Stage 2: Runtime image (development-friendly)
+# Stage 2: Runtime Image
 # ================================================================
 FROM alpine:3.20
 
 WORKDIR /app
-# Added tzdata for proper timezone support
+
+# Required system packages
 RUN apk add --no-cache ca-certificates wget sqlite tzdata
 
-# Set default timezone (optional, can also be set via compose)
+# Set timezone
 ENV TZ=Europe/Athens
 
-# Copy compiled binary and database folder
-COPY --from=builder /app/forum .
+# Copy binary
+COPY --from=builder /app/forum-backend .
+
+# Copy DB folder
 COPY internal/db ./internal/db
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget --spider -q http://localhost:8080/ || exit 1
+  CMD wget --spider -q http://localhost:8080/api/v1/health || exit 1
 
-CMD ["./forum"]
+CMD ["./forum-backend"]
