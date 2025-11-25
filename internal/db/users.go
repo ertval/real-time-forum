@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -73,4 +74,20 @@ func CreateUser(ctx context.Context, db *sql.DB, in CreateUserRequest) (int64, e
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
 	return id, nil
+}
+
+func GetUser(ctx context.Context, db *sql.DB, id int64) (User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	q := `SELECT id, username, email, is_active, created_at, updated_at FROM users WHERE id = ?`
+	row := db.QueryRowContext(ctx, q, id)
+	var u User
+	if err := row.Scan(&u.ID, &u.Username, &u.Email, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return User{}, fmt.Errorf("user not found")
+		}
+		return User{}, fmt.Errorf("get user: %w", err)
+	}
+	return u, nil
 }
