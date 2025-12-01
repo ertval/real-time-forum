@@ -50,7 +50,7 @@ func NewRouter(database *sql.DB) http.Handler {
 
 func addMiddlewares(h http.Handler) http.Handler {
 	//here (h) is just the param for the returned function that runs instantly w
-	h = middleware.CORS("http://localhost:5173")(h) // dev frontend origin
+	h = middleware.CORS("http://localhost:3000")(h) // dev frontend origin
 	h = middleware.Recoverer(h)
 	h = middleware.Logger(h)
 	return h
