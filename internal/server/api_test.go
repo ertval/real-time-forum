@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -363,5 +364,63 @@ func TestAPIPostsLikeToggle(t *testing.T) {
 	}
 	if resp2.Likes > resp1.Likes {
 		t.Errorf("expected likes to stay same or decrease, got before=%d after=%d", resp1.Likes, resp2.Likes)
+	}
+}
+
+func TestUserRegistration(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	r := router.NewRouter(db)
+	// Test valid registration
+	validBody := `{"username":"newuser","email":"new@example.com","password":"password123"}`
+	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(validBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected status 201, got %d", rec.Code)
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	id, ok := resp["data"].(map[string]interface{})["id"]
+	if !ok {
+		t.Errorf("expected id in response")
+	}
+	// Test user retrieval
+	userID := int64(id.(float64))
+	req = httptest.NewRequest("GET", fmt.Sprintf("/api/v1/users/%d", userID), nil)
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200 for user get, got %d", rec.Code)
+	}
+	var userResp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&userResp); err != nil {
+		t.Fatalf("failed to decode user response: %v", err)
+	}
+	data, ok := userResp["data"].(map[string]interface{})
+	if !ok || data["username"] != "newuser" {
+		t.Errorf("expected user data with username 'newuser'")
+	}
+	// Test invalid cases
+	invalidCases := []struct {
+		body string
+		desc string
+	}{
+		{`{"username":"ab","email":"test@example.com","password":"password123"}`, "short username"},
+		{`{"username":"newuser2","email":"test@example.com","password":"123"}`, "weak password"},
+		{`{"username":"newuser2","email":"invalid","password":"password123"}`, "invalid email"},
+		{`{"username":"testuser","email":"dup@example.com","password":"password123"}`, "duplicate username"},
+	}
+	for _, tc := range invalidCases {
+		req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 for %s, got %d", tc.desc, rec.Code)
+		}
 	}
 }

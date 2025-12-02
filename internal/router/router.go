@@ -12,7 +12,7 @@ func NewRouter(database *sql.DB) http.Handler {
 
 	health := handlers.NewHealth()
 	posts := handlers.NewPosts(database)
-	users := handlers.NewUsers()
+	users := handlers.NewUsers(database)
 	categories := handlers.NewCategories(database)
 	//v1 indicates this is version one of the api
 
@@ -22,6 +22,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api/v1/posts", posts.Collection)
 	mux.HandleFunc("/api/v1/posts/", posts.Item)
 	//Users
+	mux.HandleFunc("/api/v1/users/register", users.Register)
 	mux.HandleFunc("/api/v1/users/me", users.Me)
 	mux.HandleFunc("/api/v1/users/", users.Item)
 	//Categories
