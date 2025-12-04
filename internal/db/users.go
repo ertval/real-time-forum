@@ -26,6 +26,12 @@ type CreateUserRequest struct {
 	Password string `json:"password"`
 }
 
+type LoginRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func CreateUser(ctx context.Context, db *sql.DB, in CreateUserRequest) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -74,6 +80,24 @@ func CreateUser(ctx context.Context, db *sql.DB, in CreateUserRequest) (int64, e
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
 	return id, nil
+}
+
+func LoginUser(ctx context.Context, db *sql.DB, in LoginRequest) (User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	q := `SELECT id, username, email, password_hash, is_active FROM users WHERE username = ? OR email = ?`
+	row := db.QueryRowContext(ctx, q, in.Username, in.Email)
+	var u User
+	if err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.IsActive); err != nil {
+		if err == sql.ErrNoRows {
+			return User{}, fmt.Errorf("invalid username/email or password")
+		}
+		return User{}, fmt.Errorf("login user: %w", err)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(in.Password)); err != nil {
+		return User{}, fmt.Errorf("invalid username/email or password")
+	}
+	return u, nil
 }
 
 func GetUser(ctx context.Context, db *sql.DB, id int64) (User, error) {

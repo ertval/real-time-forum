@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS users (
   email         TEXT    NOT NULL UNIQUE CHECK (instr(email, '@') > 1),
   password_hash TEXT    NOT NULL,
   is_active     INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
-  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
-  updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT    NOT NULL DEFAULT (strftime('%d-%m-%Y %H:%M', 'now')),
+  updated_at    TEXT    NOT NULL DEFAULT (strftime('%d-%m-%Y %H:%M', 'now'))
 );
 
 -- categories: thematic groups used to organize and filter posts
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS categories (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   name       TEXT NOT NULL UNIQUE,
   slug       TEXT NOT NULL UNIQUE,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (strftime('%d-%m-%Y %H:%M', 'now'))
 );
 
 -- posts: user-created threads; deleted with their author (ON DELETE CASCADE)
@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS posts (
   body         TEXT    NOT NULL CHECK (length(body) > 0),
   status       TEXT    NOT NULL DEFAULT 'published' CHECK (status IN ('draft','published','archived')),
   category_id  INTEGER,
-  created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-  updated_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+  created_at TEXT NOT NULL DEFAULT (strftime('%d-%m-%Y %H:%M', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%d-%m-%Y %H:%M', 'now')),
   FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS reactions (
     post_id     INTEGER,   -- one of (post_id, comment_id) must be non-NULL
     comment_id  INTEGER,
     value       INTEGER NOT NULL CHECK (value IN (-1, 1)), -- +1 like, -1 dislike
-    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at  TEXT NOT NULL DEFAULT (strftime('%d-%m-%Y %H:%M', 'now')),
     CHECK ((post_id IS NOT NULL) != (comment_id IS NOT NULL)),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
@@ -97,8 +97,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL,
   token       TEXT    NOT NULL UNIQUE,
-  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-  expires_at  TEXT    NOT NULL CHECK (expires_at > created_at),
+  created_at  TEXT NOT NULL DEFAULT (strftime('%d-%m-%Y %H:%M', 'now')),
+  expires_at  TEXT NOT NULL CHECK (expires_at > created_at),
   ip          TEXT,
   user_agent  TEXT CHECK (length(user_agent) <= 512),
   is_valid    INTEGER NOT NULL DEFAULT 1 CHECK (is_valid IN (0, 1)),

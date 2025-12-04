@@ -62,6 +62,44 @@ func (u *Users) Item(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, user, nil)
 }
 
+func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+		return
+	}
+	var req db.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, NewError("BAD_REQUEST", "invalid login json", http.StatusBadRequest))
+		return
+	}
+	user, err := db.LoginUser(r.Context(), u.db, req)
+	if err != nil {
+		WriteError(w, NewError("UNAUTHORIZED", err.Error(), http.StatusUnauthorized))
+		return
+	}
+	session, err := db.CreateSession(r.Context(), u.db, user.ID, r.RemoteAddr, r.UserAgent())
+	if err != nil {
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to create session", http.StatusInternalServerError))
+		return
+	}
+	WriteOK(w, map[string]string{"token": session.Token}, nil)
+}
+
 func (u *Users) Me(w http.ResponseWriter, r *http.Request) {
-	WriteError(w, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
+	userIDVal := r.Context().Value("userID")
+	if userIDVal == nil {
+		WriteError(w, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
+		return
+	}
+	userID, ok := userIDVal.(int64)
+	if !ok {
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "invalid user context", http.StatusInternalServerError))
+		return
+	}
+	user, err := db.GetUser(r.Context(), u.db, userID)
+	if err != nil {
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to get user", http.StatusInternalServerError))
+		return
+	}
+	WriteOK(w, user, nil)
 }

@@ -424,3 +424,57 @@ func TestUserRegistration(t *testing.T) {
 		}
 	}
 }
+
+func TestAuthFlow(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	r := router.NewRouter(db)
+	// Register a user
+	regBody := `{"username":"newuser123","email":"test2@example.com","password":"password123"}`
+	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	t.Logf("register response body: %s", rec.Body.String())
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for register, got %d", rec.Code)
+	}
+	// Login
+	loginBody := `{"username":"newuser123","password":"password123"}`
+	req = httptest.NewRequest("POST", "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	t.Logf("login response body: %s", rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for login, got %d", rec.Code)
+	}
+	var loginResp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&loginResp); err != nil {
+		t.Fatalf("failed to decode login response: %v", err)
+	}
+	userData, ok := loginResp["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected data in login response")
+	}
+	token, ok := userData["token"].(string) // Assuming login returns token
+	if !ok {
+		t.Fatalf("expected token in login response")
+	}
+	// Call /me with token
+	req = httptest.NewRequest("GET", "/api/v1/users/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 for /me, got %d", rec.Code)
+	}
+	var meResp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&meResp); err != nil {
+		t.Fatalf("failed to decode /me response: %v", err)
+	}
+	data, ok := meResp["data"].(map[string]interface{})
+	if !ok || data["username"] != "newuser123" {
+		t.Errorf("expected user data with username 'newuser123'")
+	}
+}

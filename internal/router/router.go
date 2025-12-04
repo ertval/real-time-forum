@@ -23,7 +23,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api/v1/posts/", posts.Item)
 	//Users
 	mux.HandleFunc("/api/v1/users/register", users.Register)
-	mux.HandleFunc("/api/v1/users/me", users.Me)
+	mux.HandleFunc("/api/v1/users/login", users.Login)
+	mux.Handle("/api/v1/users/me", middleware.Auth(database)(http.HandlerFunc(users.Me)))
 	mux.HandleFunc("/api/v1/users/", users.Item)
 	//Categories
 	mux.HandleFunc("/api/v1/categories/", categories.List)
