@@ -8,54 +8,40 @@ This document explains step-by-step how to set up and run the Forum project, inc
 
 Ensure the following are installed:
 
-- Go 1.23+
+- Go 1.24+
 - Make
 - SQLite (optional)
-- Docker & Docker Compose (optional)
+- Docker & Docker Compose (optional — backend only)
 
 ---
 
 ## 🛠️ 2. Install Dependencies
 
 ### Using Make:
-```
 make deps
-```
 
 ### Without Make:
-```
 go mod tidy
-```
 
 ---
 
 ## 🗄️ 3. Initialize / Reset Database
 
 If you want a clean SQLite database:
-
-### Using Make:
-```
 make reset-db
-```
 
 ---
 
 ## 🧱 4. Build the Project
 
-### Build backend only:
-```
+### Backend only:
 make build-backend
-```
 
-### Build frontend only:
-```
+### Frontend only:
 make build-frontend
-```
 
-### Build both:
-```
+### Build everything:
 make build-all
-```
 
 ---
 
@@ -63,115 +49,73 @@ make build-all
 
 The project uses two separate servers:
 
-- Backend API → http://localhost:8080  
-- Frontend UI → http://localhost:3000  
+- Backend API → http://localhost:8080
+- Frontend UI → http://localhost:3000
 
-### Run backend only:
-```
+### Run backend:
 make run-backend
-```
 
-### Run frontend only (auto-opens browser):
-```
+### Run frontend (auto-opens browser):
 make run-frontend
-```
 
-### Run both backend + frontend (recommended):
-```
+### Run both:
 make run-all
-```
-
-The frontend will automatically open in your browser.
 
 ---
 
 ## 🛑 6. Stopping the Servers
 
 ### Stop backend:
-```
 make stop-backend
-```
 
 ### Stop frontend:
-```
 make stop-frontend
-```
 
-### Stop all:
-```
+### Stop both:
 make stop-all
-```
 
 ---
 
-## 🐳 7. Running with Docker (Optional)
+## 🐳 7. Running Backend with Docker (Optional)
 
 ### Build Docker image:
-```
 make docker-build
-```
 
-### Run container:
-```
+### Run backend container:
 make docker-run
-```
 
-### Docker Compose:
-```
+### Using Docker Compose:
 make docker-up
-```
 
 ### Stop Compose:
-```
 make docker-down
-```
 
 ---
 
 ## 🧹 8. Clean Up
 
 ### Remove binaries:
-```
 make clean
-```
 
-### Clean everything (binaries + Docker artifacts):
-```
+### Clean everything:
 make clean-all
-```
 
 ---
 
 ## ✔️ Recommended Workflow
 
-1. Install dependencies:
-```
 make deps
-```
-
-2. Reset DB (optional):
-```
-make reset-db
-```
-
-3. Run both servers:
-```
+make reset-db   (optional)
 make run-all
-```
 
-Your browser will automatically open at:
-
-➡ http://localhost:3000
+Frontend will open automatically at:
+http://localhost:3000
 
 ---
 
 ## 📌 Notes
 
-- The backend and frontend are separate Go servers.
-- The frontend communicates with the backend through:
-  ```
+- Backend is the only service that runs inside Docker.
+- Frontend is designed to run locally (not containerized).
+- Frontend communicates with backend using:
   http://localhost:8080/api/v1
-  ```
-- Auto-opening browser works only for the frontend commands.
-
----

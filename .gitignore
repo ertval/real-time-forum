@@ -15,4 +15,8 @@ bin/
 internal/db/forum.db
 *.db
 *.db-wal
-*.db-shm
+*.db-shm 
+
+# Build binaries
+forum-backend
+forum-frontend
