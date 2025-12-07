@@ -82,7 +82,16 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to create session", http.StatusInternalServerError))
 		return
 	}
-	WriteOK(w, map[string]string{"token": session.Token}, nil)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    session.Token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, //False is for dev (HTTP); True is for prod (HTTPS)
+		SameSite: http.SameSiteStrictMode,
+		Expires:  session.ExpiresAt,
+	})
+	WriteOK(w, map[string]interface{}{"message": "Login successful"}, nil)
 }
 
 func (u *Users) Me(w http.ResponseWriter, r *http.Request) {
