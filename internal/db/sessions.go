@@ -32,7 +32,7 @@ func CreateSession(ctx context.Context, db *sql.DB, userID int64, ip, userAgent 
 
 	token := uuid.New().String()
 	expiresAt := time.Now().Add(time.Hour * 12)
-	expiresAtStr := expiresAt.Format("02-01-2006 15:04")
+	expiresAtStr := expiresAt.UTC().Format(time.RFC3339)
 	result, err := db.ExecContext(ctx, "INSERT INTO sessions (user_id, token, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?)", userID, token, expiresAtStr, ip, userAgent)
 	if err != nil {
 		return Session{}, fmt.Errorf("create session: %w", err)
@@ -57,11 +57,12 @@ func GetSessionByToken(ctx context.Context, db *sql.DB, token string) (Session, 
 		}
 		return Session{}, fmt.Errorf("get session: %w", err)
 	}
-	createdAt, err := time.Parse("02-01-2006 15:04", createdAtStr)
+	createdAt, err := time.Parse(time.RFC3339, createdAtStr)
+
 	if err != nil {
 		return Session{}, fmt.Errorf("parse created at: %w", err)
 	}
-	expiresAt, err := time.Parse("02-01-2006 15:04", expiresAtStr)
+	expiresAt, err := time.Parse(time.RFC3339, expiresAtStr)
 	if err != nil {
 		return Session{}, fmt.Errorf("parse expires at: %w", err)
 	}

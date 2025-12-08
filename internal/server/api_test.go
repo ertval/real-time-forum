@@ -45,13 +45,35 @@ func setupTestDB(t *testing.T) *sql.DB {
 	// Seed one user, one category, one post
 	_, err = db.Exec(`
 		INSERT INTO users (id, username, email, password_hash, is_active, created_at, updated_at)
-		VALUES (1, 'testuser', 'test@example.com', 'hash', 1, datetime('now'), datetime('now'));
+		VALUES (
+			1,
+			'testuser',
+			'test@example.com',
+			'hash',
+			1,
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+		);
 
 		INSERT INTO categories (id, name, slug, created_at)
-		VALUES (1, 'Test Category', 'test-category', datetime('now'));
+		VALUES (
+			1,
+			'Test Category',
+			'test-category',
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+		);
 
 		INSERT INTO posts (id, author_id, title, body, status, category_id, created_at, updated_at)
-		VALUES (1, 1, 'Seed Post', 'Seed post body', 'published', 1, datetime('now'), datetime('now'));
+		VALUES (
+			1,
+			1,
+			'Seed Post',
+			'Seed post body',
+			'published',
+			1,
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+		);
 	`)
 	if err != nil {
 		db.Close()
