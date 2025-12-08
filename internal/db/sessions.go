@@ -70,3 +70,14 @@ func GetSessionByToken(ctx context.Context, db *sql.DB, token string) (Session, 
 	return s, nil
 
 }
+
+func InvalidateSessionByToken(ctx context.Context, db *sql.DB, token string) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, "UPDATE sessions SET is_valid = 0 WHERE token = ?", token)
+	if err != nil {
+		return fmt.Errorf("invalidate session: %w", err)
+	}
+	return nil
+}

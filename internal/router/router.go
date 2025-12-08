@@ -33,6 +33,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	//Users: Register, Login are public, Me/Item require auth
 	mux.HandleFunc("/api/v1/users/register", users.Register)
 	mux.HandleFunc("/api/v1/users/login", users.Login)
+	mux.Handle("/api/v1/users/logout", middleware.Auth(database)(http.HandlerFunc(users.Logout)))
 	mux.Handle("/api/v1/users/me", middleware.Auth(database)(http.HandlerFunc(users.Me)))
 	mux.Handle("/api/v1/users/", middleware.Auth(database)(http.HandlerFunc(users.Item)))
 
