@@ -16,18 +16,25 @@ func NewRouter(database *sql.DB) http.Handler {
 	categories := handlers.NewCategories(database)
 	//v1 indicates this is version one of the api
 
-	//Health
+	//Public routes
 	mux.HandleFunc("/api/v1/health", health.Health)
-	//Posts
-	mux.HandleFunc("/api/v1/posts", posts.Collection)
-	mux.HandleFunc("/api/v1/posts/", posts.Item)
-	//Users
-	mux.HandleFunc("/api/v1/users/register", users.Register)
-	mux.HandleFunc("/api/v1/users/me", users.Me)
-	mux.HandleFunc("/api/v1/users/", users.Item)
-	//Categories
 	mux.HandleFunc("/api/v1/categories/", categories.List)
 	mux.HandleFunc("/api/v1/categories", categories.List)
+
+	//Posts: Get public, Post requires auth
+	mux.HandleFunc("/api/v1/posts", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			middleware.Auth(database)(http.HandlerFunc(posts.Collection)).ServeHTTP(w, r)
+		} else {
+			posts.Collection(w, r)
+		}
+	})
+	mux.HandleFunc("/api/v1/posts/", posts.Item) //For individual posts. Public for now
+	//Users: Register, Login are public, Me/Item require auth
+	mux.HandleFunc("/api/v1/users/register", users.Register)
+	mux.HandleFunc("/api/v1/users/login", users.Login)
+	mux.Handle("/api/v1/users/me", middleware.Auth(database)(http.HandlerFunc(users.Me)))
+	mux.Handle("/api/v1/users/", middleware.Auth(database)(http.HandlerFunc(users.Item)))
 
 	// JSON 404 is served for undefined API routes
 	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {

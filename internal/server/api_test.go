@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -168,6 +169,28 @@ func TestAPIPostsCreate(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
+	// Register and login a user
+	regBody := `{"username":"testuser2","email":"test2@example.com","password":"password123"}`
+	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("register failed: %d", rec.Code)
+	}
+	loginBody := `{"username":"testuser2","password":"password123"}`
+	req = httptest.NewRequest("POST", "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login failed: %d", rec.Code)
+	}
+	// Extract token from cookie
+	setCookie := rec.Header().Get("Set-Cookie")
+	parts := strings.Split(setCookie, ";")
+	token := strings.TrimPrefix(strings.TrimSpace(parts[0]), "session_token=")
+
 	payload := map[string]any{
 		"title": "API Test Post",
 		"body":  "Body from API test",
@@ -175,7 +198,13 @@ func TestAPIPostsCreate(t *testing.T) {
 	}
 	bodyBytes, _ := json.Marshal(payload)
 
-	w, body := doRequest(t, h, http.MethodPost, "/api/v1/posts", bodyBytes)
+	// POST with cookie
+	req = httptest.NewRequest("POST", "/api/v1/posts", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", "session_token="+token)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	body := w.Body.Bytes()
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected status 201, got %d, body=%s", w.Code, string(body))
 	}
@@ -388,9 +417,24 @@ func TestUserRegistration(t *testing.T) {
 	if !ok {
 		t.Errorf("expected id in response")
 	}
+	// Login the user
+	loginBody := `{"username":"newuser","password":"password123"}`
+	req = httptest.NewRequest("POST", "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login failed: %d", rec.Code)
+	}
+	// Extract token
+	setCookie := rec.Header().Get("Set-Cookie")
+	parts := strings.Split(setCookie, ";")
+	token := strings.TrimPrefix(strings.TrimSpace(parts[0]), "session_token=")
+
 	// Test user retrieval
 	userID := int64(id.(float64))
 	req = httptest.NewRequest("GET", fmt.Sprintf("/api/v1/users/%d", userID), nil)
+	req.Header.Set("Cookie", "session_token="+token)
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -422,5 +466,72 @@ func TestUserRegistration(t *testing.T) {
 		if rec.Code != http.StatusBadRequest {
 			t.Errorf("expected 400 for %s, got %d", tc.desc, rec.Code)
 		}
+	}
+}
+
+func TestAuthFlow(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	r := router.NewRouter(db)
+	// Register a user
+	regBody := `{"username":"newuser123","email":"test2@example.com","password":"password123"}`
+	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	t.Logf("register response body: %s", rec.Body.String())
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for register, got %d", rec.Code)
+	}
+	// Login
+	loginBody := `{"username":"newuser123","password":"password123"}`
+	req = httptest.NewRequest("POST", "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	t.Logf("login response body: %s", rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for login, got %d", rec.Code)
+	}
+	// Check login response has success message
+	var loginResp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&loginResp); err != nil {
+		t.Fatalf("failed to decode login response: %v", err)
+	}
+	userData, ok := loginResp["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected data in login response")
+	}
+	message, ok := userData["message"].(string)
+	if !ok || message != "Login successful" {
+		t.Fatalf("expected 'Login successful' message, got %v", userData)
+	}
+	// Extract token from Set-Cookie header
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatalf("expected Set-Cookie header")
+	}
+	// Parse cookie: "session_token=uuid; Path=/; HttpOnly; SameSite=StrictMode"
+	parts := strings.Split(setCookie, ";")
+	tokenPart := strings.TrimSpace(parts[0])
+	if !strings.HasPrefix(tokenPart, "session_token=") {
+		t.Fatalf("expected session_token in cookie")
+	}
+	token := strings.TrimPrefix(tokenPart, "session_token=")
+	// Call /me with cookie
+	req = httptest.NewRequest("GET", "/api/v1/users/me", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 for /me, got %d", rec.Code)
+	}
+	var meResp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&meResp); err != nil {
+		t.Fatalf("failed to decode /me response: %v", err)
+	}
+	data, ok := meResp["data"].(map[string]interface{})
+	if !ok || data["username"] != "newuser123" {
+		t.Errorf("expected user data with username 'newuser123'")
 	}
 }
