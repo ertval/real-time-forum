@@ -13,6 +13,9 @@ bin/
 .git/
 .gitignore
 
+# Web frontend (not needed in backend container)
+web/
+
 # DB files (mounted by volume)
 *.db
 *.db-wal

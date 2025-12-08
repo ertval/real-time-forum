@@ -45,13 +45,35 @@ func setupTestDB(t *testing.T) *sql.DB {
 	// Seed one user, one category, one post
 	_, err = db.Exec(`
 		INSERT INTO users (id, username, email, password_hash, is_active, created_at, updated_at)
-		VALUES (1, 'testuser', 'test@example.com', 'hash', 1, datetime('now'), datetime('now'));
+		VALUES (
+			1,
+			'testuser',
+			'test@example.com',
+			'hash',
+			1,
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+		);
 
 		INSERT INTO categories (id, name, slug, created_at)
-		VALUES (1, 'Test Category', 'test-category', datetime('now'));
+		VALUES (
+			1,
+			'Test Category',
+			'test-category',
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+		);
 
 		INSERT INTO posts (id, author_id, title, body, status, category_id, created_at, updated_at)
-		VALUES (1, 1, 'Seed Post', 'Seed post body', 'published', 1, datetime('now'), datetime('now'));
+		VALUES (
+			1,
+			1,
+			'Seed Post',
+			'Seed post body',
+			'published',
+			1,
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
+			strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+		);
 	`)
 	if err != nil {
 		db.Close()
@@ -533,5 +555,43 @@ func TestAuthFlow(t *testing.T) {
 	data, ok := meResp["data"].(map[string]interface{})
 	if !ok || data["username"] != "newuser123" {
 		t.Errorf("expected user data with username 'newuser123'")
+	}
+}
+
+func TestUserLogout(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	// Register + Login
+	regBody := `{"username":"logoutUser","email":"logout@example.com","password":"password123"}`
+	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
+
+	loginBody := `{"username":"logoutUser","password":"password123"}`
+	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
+
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatalf("expected cookie on login")
+	}
+	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
+
+	// Logout
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/logout", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 logout, got %d", w.Code)
+	}
+
+	// Try calling /me → should fail
+	req2 := httptest.NewRequest("GET", "/api/v1/users/me", nil)
+	req2.Header.Set("Cookie", "session_token="+token)
+	w2 := httptest.NewRecorder()
+	h.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 after logout, got %d", w2.Code)
 	}
 }

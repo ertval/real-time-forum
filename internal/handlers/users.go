@@ -112,3 +112,37 @@ func (u *Users) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	WriteOK(w, user, nil)
 }
+
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+		return
+	}
+
+	// Read cookie
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		WriteError(w, NewError("UNAUTHORIZED", "no session cookie", http.StatusUnauthorized))
+		return
+	}
+
+	// Invalidate session in DB
+	if err := db.InvalidateSessionByToken(r.Context(), u.db, cookie.Value); err != nil {
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to logout", http.StatusInternalServerError))
+		return
+	}
+
+	// Clear cookie in browser
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1, // delete cookie
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	WriteOK(w, map[string]string{
+		"message": "Logout successful",
+	}, nil)
+}
