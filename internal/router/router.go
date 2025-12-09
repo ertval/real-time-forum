@@ -14,30 +14,43 @@ func NewRouter(database *sql.DB) http.Handler {
 	posts := handlers.NewPosts(database)
 	users := handlers.NewUsers(database)
 	categories := handlers.NewCategories(database)
-	//v1 indicates this is version one of the api
 
-	//Public routes
+	// ---------------------------
+	// PUBLIC ROUTES (no auth)
+	// ---------------------------
 	mux.HandleFunc("/api/v1/health", health.Health)
-	mux.HandleFunc("/api/v1/categories/", categories.List)
-	mux.HandleFunc("/api/v1/categories", categories.List)
 
-	//Posts: Get public, Post requires auth
+	// Categories (GET list, POST create, GET single, DELETE single)
+	mux.HandleFunc("/api/v1/categories", categories.Collection)
+	mux.HandleFunc("/api/v1/categories/", categories.Item)
+
+	// Posts:
+	// GET /posts → public
+	// POST /posts → requires auth
 	mux.HandleFunc("/api/v1/posts", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" {
+		if r.Method == http.MethodPost {
+			// wrap only POST with Auth middleware
 			middleware.Auth(database)(http.HandlerFunc(posts.Collection)).ServeHTTP(w, r)
-		} else {
-			posts.Collection(w, r)
+			return
 		}
+		posts.Collection(w, r)
 	})
-	mux.HandleFunc("/api/v1/posts/", posts.Item) //For individual posts. Public for now
-	//Users: Register, Login are public, Me/Item require auth
+
+	// Single post + subroutes (comments, like) — currently all public
+	mux.HandleFunc("/api/v1/posts/", posts.Item)
+
+	// Users:
 	mux.HandleFunc("/api/v1/users/register", users.Register)
 	mux.HandleFunc("/api/v1/users/login", users.Login)
+
+	// Auth required routes
 	mux.Handle("/api/v1/users/logout", middleware.Auth(database)(http.HandlerFunc(users.Logout)))
 	mux.Handle("/api/v1/users/me", middleware.Auth(database)(http.HandlerFunc(users.Me)))
 	mux.Handle("/api/v1/users/", middleware.Auth(database)(http.HandlerFunc(users.Item)))
 
-	// JSON 404 is served for undefined API routes
+	// ---------------------------
+	// API NOT FOUND (JSON 404)
+	// ---------------------------
 	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 	})
@@ -46,19 +59,11 @@ func NewRouter(database *sql.DB) http.Handler {
 		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 	})
 
-	// Example placeholder handler that uses the DB
-	//mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	//	if err := db.InspectAllTables(database, w); err != nil {
-	//		db.HandleRuntimeError(err, "inspecting all tables")
-	//		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	//		return
-	//	}
-	//})
+	// Wrap everything with middleware (CORS, Recoverer, Logger)
 	return addMiddlewares(mux)
 }
 
 func addMiddlewares(h http.Handler) http.Handler {
-	//here (h) is just the param for the returned function that runs instantly w
 	h = middleware.CORS("http://localhost:3000")(h) // dev frontend origin
 	h = middleware.Recoverer(h)
 	h = middleware.Logger(h)

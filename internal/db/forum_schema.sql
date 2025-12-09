@@ -65,15 +65,14 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 
 
---Not implemented yet
--- -- post_categories: many-to-many relation between posts and categories
--- CREATE TABLE IF NOT EXISTS post_categories (
---   post_id     INTEGER NOT NULL,
---   category_id INTEGER NOT NULL,
---   PRIMARY KEY (post_id, category_id),
---   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
---   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
--- );
+-- post_categories: many-to-many relation between posts and categories
+CREATE TABLE IF NOT EXISTS post_categories (
+  post_id     INTEGER NOT NULL,
+  category_id INTEGER NOT NULL,
+  PRIMARY KEY (post_id, category_id),
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
 
 
 -- reactions: likes/dislikes by users on posts or comments (one per target)
@@ -109,7 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_comment_id);
 
--- CREATE INDEX IF NOT EXISTS idx_post_categories_category ON post_categories(category_id);
+CREATE INDEX IF NOT EXISTS idx_post_categories_category ON post_categories(category_id);
 
 -- one reaction per user per target
 CREATE UNIQUE INDEX IF NOT EXISTS ux_react_user_post
