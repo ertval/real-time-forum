@@ -38,7 +38,7 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 		result = append(result, c)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
+		return nil, fmt.Errorf("rows categories: %w", err)
 	}
 
 	return result, nil
