@@ -85,8 +85,27 @@ func CreateUser(ctx context.Context, db *sql.DB, in CreateUserRequest) (int64, e
 func LoginUser(ctx context.Context, db *sql.DB, in LoginRequest) (User, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	q := `SELECT id, username, email, password_hash, is_active FROM users WHERE username = ? OR email = ?`
-	row := db.QueryRowContext(ctx, q, in.Username, in.Email)
+
+	var row *sql.Row
+
+	// Prefer username if provided
+	if strings.TrimSpace(in.Username) != "" {
+		row = db.QueryRowContext(ctx,
+			`SELECT id, username, email, password_hash, is_active
+             FROM users
+             WHERE username = ?`,
+			in.Username,
+		)
+	} else {
+		// fallback to email
+		row = db.QueryRowContext(ctx,
+			`SELECT id, username, email, password_hash, is_active
+             FROM users
+             WHERE email = ?`,
+			in.Email,
+		)
+	}
+
 	var u User
 	if err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.IsActive); err != nil {
 		if err == sql.ErrNoRows {
@@ -94,9 +113,11 @@ func LoginUser(ctx context.Context, db *sql.DB, in LoginRequest) (User, error) {
 		}
 		return User{}, fmt.Errorf("login user: %w", err)
 	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(in.Password)); err != nil {
 		return User{}, fmt.Errorf("invalid username/email or password")
 	}
+
 	return u, nil
 }
 
