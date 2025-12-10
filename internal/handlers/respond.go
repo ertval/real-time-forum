@@ -5,44 +5,61 @@ import (
 	"net/http"
 )
 
-type envelope map[string]interface{}
+// APIResponse is the unified JSON envelope for success & errors.
+type APIResponse struct {
+	Data  any       `json:"data,omitempty"`
+	Meta  any       `json:"meta,omitempty"`
+	Error *APIError `json:"error,omitempty"`
+}
 
-// APIError represents an API error.
+// APIError is a standardized error message for JSON responses.
 type APIError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	Status  int    `json:"-"`
 }
 
-// WriteOK sends a 200 OK response with a data payload.
-func WriteOK(w http.ResponseWriter, data interface{}, meta interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(envelope{"data": data, "meta": meta})
+// --------------------------
+// SUCCESS RESPONSES
+// --------------------------
+
+func WriteOK(w http.ResponseWriter, data any, meta any) {
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Data: data,
+		Meta: meta,
+	})
 }
 
-func WriteCreated(w http.ResponseWriter, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(envelope{"data": data})
+func WriteCreated(w http.ResponseWriter, data any) {
+	writeJSON(w, http.StatusCreated, &APIResponse{
+		Data: data,
+	})
 }
 
 func WriteNoContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// --------------------------
+// ERROR RESPONSE
+// --------------------------
+
 func WriteError(w http.ResponseWriter, err *APIError) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(err.Status)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":    err.Code,
-			"message": err.Message,
-		},
+	writeJSON(w, err.Status, &APIResponse{
+		Error: err,
 	})
 }
 
-// NewError creates a new APIError.
 func NewError(code, message string, status int) *APIError {
 	return &APIError{Code: code, Message: message, Status: status}
+}
+
+// --------------------------
+// INTERNAL JSON WRITER
+// --------------------------
+
+func writeJSON(w http.ResponseWriter, status int, body *APIResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
 }

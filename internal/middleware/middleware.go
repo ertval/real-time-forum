@@ -1,48 +1,84 @@
 package middleware
 
 import (
+	"forum/internal/handlers"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"time"
 )
 
+// ------------------------------------------------------------
+// LOGGER MIDDLEWARE
+// Logs method, path and request duration.
+// ------------------------------------------------------------
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+
 		next.ServeHTTP(w, r)
-		log.Printf("%s %s %v", r.Method, r.URL.Path, time.Since(start))
+
+		// Nicely formatted aligned output
+		log.Printf("%-6s %-40s %s", r.Method, r.URL.Path, time.Since(start))
 	})
 }
 
-// Recoverer prevents panics and shuts down gracefully instead
+// ------------------------------------------------------------
+// RECOVERER MIDDLEWARE
+// Prevents server crash on panic and returns a safe JSON error.
+// ------------------------------------------------------------
 func Recoverer(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 		defer func() {
 			if rec := recover(); rec != nil {
-				http.Error(w, `{"error":{"code":"SERVER_ERROR","message":"internal"}}`, http.StatusInternalServerError)
+
+				// Log panic + stack trace (only in backend logs)
+				log.Printf("PANIC: %v\n%s", rec, debug.Stack())
+
+				// Send standard JSON error envelope
+				handlers.WriteError(
+					w,
+					handlers.NewError(
+						"SERVER_ERROR",
+						"internal server error",
+						http.StatusInternalServerError,
+					),
+				)
 			}
 		}()
+
 		next.ServeHTTP(w, r)
 	})
 }
 
-// CORS (Cross-Origin Resource Sharing) allows for communication between
-// frontend port and backend port which is by restricted
-// since they're on a different port
-func CORS(allowedOrigin string) func(next http.Handler) http.Handler {
+// ------------------------------------------------------------
+// CORS MIDDLEWARE
+// Enables frontend ↔ backend communication on different ports.
+// ------------------------------------------------------------
+func CORS(origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
-			//Won't allow cookies/Authorization headers to be sent unless Allow-Origin is specific (!= *)
-			//(* means allow everyone)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			// Allow frontend domain
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+
+			// Required to send cookies (sessions)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+			// Which headers are accepted
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+			// Which HTTP methods are allowed
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+
+			// Handle preflight request
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
+
 			next.ServeHTTP(w, r)
 		})
 	}

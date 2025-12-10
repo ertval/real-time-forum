@@ -29,11 +29,7 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 	// ----------------------------
 	case http.MethodGet:
 		page := parseIntOr(r.URL.Query().Get("page"), 1)
-		per := parseIntOr(r.URL.Query().Get("per_page"), 20)
-
-		if per > 100 {
-			per = 100
-		}
+		per := min(parseIntOr(r.URL.Query().Get("per_page"), 20), 100)
 		if page < 1 {
 			page = 1
 		}

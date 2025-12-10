@@ -7,59 +7,89 @@ import (
 	"time"
 )
 
-// TogglePostLike toggles a "like" for a given user & post.
-// If no reaction exists it inserts like (value = 1)
-// If there is a like (1) it removes it (unlike)
-// If there is a dislike (-1) it changes it to like (1)
-// It returns whether the post is liked after the toggle, and the total like count.
-func TogglePostLike(ctx context.Context, db *sql.DB, userID, postID int64) (liked bool, likeCount int, err error) {
+// TogglePostLike toggles a user's "like" on a post.
+// - If no reaction exists → insert like (1)
+// - If like exists (1) → remove it (unlike)
+// - If dislike exists (-1) → switch to like (1)
+// Returns:
+//
+//	liked (bool)   — whether it is liked after the toggle
+//	likeCount (int) — total number of likes for the post
+func TogglePostLike(ctx context.Context, db *sql.DB, userID, postID int64) (bool, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
+	// ----------------------------------------
+	// 1. Read existing reaction (if any)
+	// ----------------------------------------
 	var value int
-	err = db.QueryRowContext(ctx,
+	err := db.QueryRowContext(ctx,
 		`SELECT value FROM reactions WHERE user_id = ? AND post_id = ?`,
-		userID, postID).Scan(&value)
+		userID, postID,
+	).Scan(&value)
 
 	switch {
-	//No reaction yet
 	case err == sql.ErrNoRows:
-		q := `INSERT INTO reactions (user_id, post_id, value, created_at) VALUES (?, ?, 1, datetime('now'))`
-		_, err = db.ExecContext(ctx, q, userID, postID)
-
-		if err != nil {
-			return false, 0, fmt.Errorf("insert reaction: %w", err)
+		// ----------------------------------------
+		// No prior reaction → insert like
+		// ----------------------------------------
+		_, execErr := db.ExecContext(ctx, `
+			INSERT INTO reactions (user_id, post_id, value, created_at)
+			VALUES (?, ?, 1, datetime('now'))
+		`, userID, postID)
+		if execErr != nil {
+			return false, 0, fmt.Errorf("insert reaction: %w", execErr)
 		}
-		liked = true
-	//Some other DB error
+		value = 1 // reaction is now like
+
 	case err != nil:
+		// Unexpected DB error
 		return false, 0, fmt.Errorf("select reaction: %w", err)
-	//Reaction already exists
+
 	default:
-		//Already liked
-		if value == 1 {
-			q := `DELETE FROM reactions WHERE user_id = ? AND post_id = ?`
-			_, err = db.ExecContext(ctx, q, userID, postID)
-			if err != nil {
-				return false, 0, fmt.Errorf("delete reaction: %w", err)
+		// ----------------------------------------
+		// Reaction exists → toggle it
+		// ----------------------------------------
+		switch value {
+		case 1:
+			// Removing a like (unlike)
+			_, execErr := db.ExecContext(ctx,
+				`DELETE FROM reactions WHERE user_id = ? AND post_id = ?`,
+				userID, postID,
+			)
+			if execErr != nil {
+				return false, 0, fmt.Errorf("delete reaction: %w", execErr)
 			}
-			liked = false
-			//Already disliked
-		} else if value == -1 {
-			q := `UPDATE reactions SET value = 1 WHERE user_id = ? AND post_id = ?`
-			_, err = db.ExecContext(ctx, q, userID, postID)
-			if err != nil {
-				return false, 0, fmt.Errorf("update reaction: %w", err)
+			value = 0 // no reaction exists now
+
+		case -1:
+			// Switching dislike → like
+			_, execErr := db.ExecContext(ctx,
+				`UPDATE reactions SET value = 1 WHERE user_id = ? AND post_id = ?`,
+				userID, postID,
+			)
+			if execErr != nil {
+				return false, 0, fmt.Errorf("update reaction: %w", execErr)
 			}
-			liked = true
-		} else {
+			value = 1 // now liked
+
+		default:
+			// Should never happen unless data corruption
 			return false, 0, fmt.Errorf("unexpected reaction value: %d", value)
 		}
 	}
-	q := `SELECT COUNT(*) FROM reactions WHERE post_id = ? AND value = 1`
-	err = db.QueryRowContext(ctx, q, postID).Scan(&likeCount)
+
+	// ----------------------------------------
+	// 2. Count likes
+	// ----------------------------------------
+	var likeCount int
+	err = db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM reactions WHERE post_id = ? AND value = 1`,
+		postID,
+	).Scan(&likeCount)
 	if err != nil {
-		return liked, 0, fmt.Errorf("count likes: %w", err)
+		return value == 1, 0, fmt.Errorf("count likes: %w", err)
 	}
-	return liked, likeCount, nil
+
+	return value == 1, likeCount, nil
 }
