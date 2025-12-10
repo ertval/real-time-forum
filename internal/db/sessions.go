@@ -20,13 +20,15 @@ type Session struct {
 	IsValid   int
 }
 
-// CreateSession invalidates previous sessions and creates a new one.
-func CreateSession(ctx context.Context, db *sql.DB, userID int64, ip, userAgent string) (Session, error) {
+// ---------------------------------------------------------------------------
+// CreateSession: invalidate any previous active session and create a new one.
+// ---------------------------------------------------------------------------
+func CreateSession(ctx context.Context, database *sql.DB, userID int64, ip, userAgent string) (Session, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// Invalidate previous active sessions
-	_, err := db.ExecContext(ctx,
+	// Disable previous sessions for this user.
+	_, err := database.ExecContext(ctx,
 		`UPDATE sessions SET is_valid = 0 WHERE user_id = ? AND is_valid = 1`,
 		userID,
 	)
@@ -36,25 +38,25 @@ func CreateSession(ctx context.Context, db *sql.DB, userID int64, ip, userAgent 
 
 	token := uuid.New().String()
 	expiresAt := time.Now().Add(12 * time.Hour)
-	expiresAtStr := expiresAt.UTC().Format(time.RFC3339)
+	expiresAtUTC := expiresAt.UTC().Format(time.RFC3339)
 
-	// created_at is auto-filled by SQLite DEFAULT
-	result, err := db.ExecContext(ctx,
+	// created_at uses SQLite default timestamp
+	result, err := database.ExecContext(ctx,
 		`INSERT INTO sessions (user_id, token, expires_at, ip, user_agent)
 		 VALUES (?, ?, ?, ?, ?)`,
-		userID, token, expiresAtStr, ip, userAgent,
+		userID, token, expiresAtUTC, ip, userAgent,
 	)
 	if err != nil {
 		return Session{}, fmt.Errorf("create session: %w", err)
 	}
 
-	id, err := result.LastInsertId()
+	sessionID, err := result.LastInsertId()
 	if err != nil {
 		return Session{}, fmt.Errorf("last insert id: %w", err)
 	}
 
 	return Session{
-		ID:        id,
+		ID:        sessionID,
 		UserID:    userID,
 		Token:     token,
 		ExpiresAt: expiresAt,
@@ -64,8 +66,10 @@ func CreateSession(ctx context.Context, db *sql.DB, userID int64, ip, userAgent 
 	}, nil
 }
 
-// GetSessionByToken returns a valid, non-expired session.
-func GetSessionByToken(ctx context.Context, db *sql.DB, token string) (Session, error) {
+// ---------------------------------------------------------------------------
+// GetSessionByToken: return active session if token is valid & not expired.
+// ---------------------------------------------------------------------------
+func GetSessionByToken(ctx context.Context, database *sql.DB, token string) (Session, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
@@ -77,12 +81,19 @@ func GetSessionByToken(ctx context.Context, db *sql.DB, token string) (Session, 
 		  AND expires_at > strftime('%d-%m-%Y %H:%M', 'now')
 	`
 
-	var s Session
-	var createdStr, expiresStr string
+	var sess Session
+	var createdAtRaw, expiresAtRaw string
 
-	err := db.QueryRowContext(ctx, query, token).
-		Scan(&s.ID, &s.UserID, &s.Token, &createdStr, &expiresStr, &s.IP, &s.UserAgent, &s.IsValid)
-
+	err := database.QueryRowContext(ctx, query, token).Scan(
+		&sess.ID,
+		&sess.UserID,
+		&sess.Token,
+		&createdAtRaw,
+		&expiresAtRaw,
+		&sess.IP,
+		&sess.UserAgent,
+		&sess.IsValid,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return Session{}, fmt.Errorf("session not found")
@@ -90,27 +101,33 @@ func GetSessionByToken(ctx context.Context, db *sql.DB, token string) (Session, 
 		return Session{}, fmt.Errorf("get session: %w", err)
 	}
 
-	// Parse timestamps — tests expect RFC3339 for expires_at only
-	createdAt, _ := time.Parse(time.RFC3339, createdStr) // may fail → zero time (acceptable)
-	expiresAt, _ := time.Parse(time.RFC3339, expiresStr)
+	// Attempt to parse created_at (may not always be strict RFC3339)
+	if parsedTime, parseErr := time.Parse(time.RFC3339, createdAtRaw); parseErr == nil {
+		sess.CreatedAt = parsedTime
+	}
 
-	s.CreatedAt = createdAt
-	s.ExpiresAt = expiresAt
+	// expires_at is always RFC3339
+	if parsedTime, parseErr := time.Parse(time.RFC3339, expiresAtRaw); parseErr == nil {
+		sess.ExpiresAt = parsedTime
+	}
 
-	return s, nil
+	return sess, nil
 }
 
-// InvalidateSessionByToken disables a session (logout).
-func InvalidateSessionByToken(ctx context.Context, db *sql.DB, token string) error {
+// ---------------------------------------------------------------------------
+// InvalidateSessionByToken: mark a session as invalid (logout).
+// ---------------------------------------------------------------------------
+func InvalidateSessionByToken(ctx context.Context, database *sql.DB, token string) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx,
+	_, err := database.ExecContext(ctx,
 		`UPDATE sessions SET is_valid = 0 WHERE token = ?`,
 		token,
 	)
 	if err != nil {
 		return fmt.Errorf("invalidate session: %w", err)
 	}
+
 	return nil
 }
