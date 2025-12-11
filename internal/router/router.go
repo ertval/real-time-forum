@@ -7,65 +7,75 @@ import (
 	"net/http"
 )
 
+const apiPrefix = "/api/v1"
+
 func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
 
+	// Handlers
 	health := handlers.NewHealth()
 	posts := handlers.NewPosts(database)
 	users := handlers.NewUsers(database)
 	categories := handlers.NewCategories(database)
 
 	// ---------------------------
-	// PUBLIC ROUTES (no auth)
+	// PUBLIC ROUTES
 	// ---------------------------
-	mux.HandleFunc("/api/v1/health", health.Health)
+	mux.HandleFunc(apiPrefix+"/health", health.Health)
 
-	// Categories (GET list, POST create, GET single, DELETE single)
-	mux.HandleFunc("/api/v1/categories", categories.Collection)
-	mux.HandleFunc("/api/v1/categories/", categories.Item)
+	// Categories (public GETs, private POST/DELETE depending on design)
+	mux.HandleFunc(apiPrefix+"/categories", categories.Collection)
+	mux.HandleFunc(apiPrefix+"/categories/", categories.Item)
 
 	// Posts:
-	// GET /posts → public
-	// POST /posts → requires auth
-	mux.HandleFunc("/api/v1/posts", func(w http.ResponseWriter, r *http.Request) {
+	// GET = public
+	// POST = auth required
+	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			// wrap only POST with Auth middleware
+			// Only protect POST with Auth
 			middleware.Auth(database)(http.HandlerFunc(posts.Collection)).ServeHTTP(w, r)
 			return
 		}
 		posts.Collection(w, r)
 	})
 
-	// Single post + subroutes (comments, like) — currently all public
-	mux.HandleFunc("/api/v1/posts/", posts.Item)
-
-	// Users:
-	mux.HandleFunc("/api/v1/users/register", users.Register)
-	mux.HandleFunc("/api/v1/users/login", users.Login)
-
-	// Auth required routes
-	mux.Handle("/api/v1/users/logout", middleware.Auth(database)(http.HandlerFunc(users.Logout)))
-	mux.Handle("/api/v1/users/me", middleware.Auth(database)(http.HandlerFunc(users.Me)))
-	mux.Handle("/api/v1/users/", middleware.Auth(database)(http.HandlerFunc(users.Item)))
+	// Single post + nested resources (comments, like)
+	mux.HandleFunc(apiPrefix+"/posts/", posts.Item)
 
 	// ---------------------------
-	// API NOT FOUND (JSON 404)
+	// USERS
 	// ---------------------------
-	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
-		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
-	})
+	mux.HandleFunc(apiPrefix+"/users/register", users.Register)
+	mux.HandleFunc(apiPrefix+"/users/login", users.Login)
 
-	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
-		handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
-	})
+	// Auth-protected user routes
+	mux.Handle(apiPrefix+"/users/logout", middleware.Auth(database)(http.HandlerFunc(users.Logout)))
+	mux.Handle(apiPrefix+"/users/me", middleware.Auth(database)(http.HandlerFunc(users.Me)))
+	mux.Handle(apiPrefix+"/users/", middleware.Auth(database)(http.HandlerFunc(users.Item)))
 
-	// Wrap everything with middleware (CORS, Recoverer, Logger)
+	// ---------------------------
+	// NOT FOUND HANDLERS (JSON)
+	// ---------------------------
+	mux.HandleFunc("/api", notFoundJSON)
+	mux.HandleFunc("/api/", notFoundJSON)
+
+	// ---------------------------
+	// GLOBAL MIDDLEWARE
+	// ---------------------------
 	return addMiddlewares(mux)
 }
 
-func addMiddlewares(h http.Handler) http.Handler {
-	h = middleware.CORS("http://localhost:3000")(h) // dev frontend origin
-	h = middleware.Recoverer(h)
-	h = middleware.Logger(h)
-	return h
+func notFoundJSON(w http.ResponseWriter, r *http.Request) {
+	handlers.WriteError(w, handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound))
+}
+
+const frontendOrigin = "http://localhost:3000"
+
+func addMiddlewares(handler http.Handler) http.Handler {
+	// Order matters: Logger → Recoverer → CORS
+	handler = middleware.Logger(handler)
+	handler = middleware.Recoverer(handler)
+	handler = middleware.CORS(frontendOrigin)(handler)
+
+	return handler
 }

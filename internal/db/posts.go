@@ -18,7 +18,9 @@ type Post struct {
 	CategoryIDs []int64 `json:"category_ids,omitempty"`
 }
 
-// -------- LIST POSTS --------
+// ------------------------------------------------------------
+// LIST POSTS
+// ------------------------------------------------------------
 
 type ListPostsParams struct {
 	Page    int
@@ -52,7 +54,7 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 		return ListPostsResult{}, fmt.Errorf("count posts: %w", err)
 	}
 
-	// main query
+	// fetch posts
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, author_id, title, body, created_at, updated_at
 		FROM posts
@@ -64,10 +66,11 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 	}
 	defer rows.Close()
 
-	var out []Post
+	var posts []Post
 
 	for rows.Next() {
 		var post Post
+
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
@@ -79,33 +82,36 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 			return ListPostsResult{}, fmt.Errorf("scan post: %w", err)
 		}
 
-		// load category IDs
-		catRows, err := db.QueryContext(ctx, `
-			SELECT category_id FROM post_categories WHERE post_id = ?
-		`, post.ID)
+		// Load categories
+		categoryRows, err := db.QueryContext(ctx,
+			`SELECT category_id FROM post_categories WHERE post_id = ?`,
+			post.ID,
+		)
 		if err == nil {
-			var cats []int64
-			for catRows.Next() {
+			var catIDs []int64
+			for categoryRows.Next() {
 				var cid int64
-				if err := catRows.Scan(&cid); err == nil {
-					cats = append(cats, cid)
+				if err := categoryRows.Scan(&cid); err == nil {
+					catIDs = append(catIDs, cid)
 				}
 			}
-			catRows.Close()
-			post.CategoryIDs = cats
+			categoryRows.Close()
+			post.CategoryIDs = catIDs
 		}
 
-		out = append(out, post)
+		posts = append(posts, post)
 	}
 
 	if err := rows.Err(); err != nil {
 		return ListPostsResult{}, fmt.Errorf("rows posts: %w", err)
 	}
 
-	return ListPostsResult{Posts: out, Total: total}, nil
+	return ListPostsResult{Posts: posts, Total: total}, nil
 }
 
-// -------- GET POST --------
+// ------------------------------------------------------------
+// GET POST
+// ------------------------------------------------------------
 
 func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -128,10 +134,10 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 		return Post{}, err
 	}
 
-	// fetch categories
-	rows, err := db.QueryContext(ctx, `
-		SELECT category_id FROM post_categories WHERE post_id = ?
-	`, id)
+	rows, err := db.QueryContext(ctx,
+		`SELECT category_id FROM post_categories WHERE post_id = ?`,
+		id,
+	)
 	if err == nil {
 		var cats []int64
 		for rows.Next() {
@@ -147,13 +153,22 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	return p, nil
 }
 
-// -------- CREATE POST WITH CATEGORIES --------
+// ------------------------------------------------------------
+// CREATE POST WITH CATEGORIES
+// ------------------------------------------------------------
 
-func CreatePostWithCategories(ctx context.Context, db *sql.DB, authorID int64, title, body string, categoryIDs []int64) (int64, error) {
+func CreatePostWithCategories(
+	ctx context.Context,
+	db *sql.DB,
+	authorID int64,
+	title, body string,
+	categoryIDs []int64,
+) (int64, error) {
+
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// validate categories
+	// Validate categories exist
 	for _, cid := range categoryIDs {
 		var exists bool
 		if err := db.QueryRowContext(ctx,
@@ -167,7 +182,7 @@ func CreatePostWithCategories(ctx context.Context, db *sql.DB, authorID int64, t
 		}
 	}
 
-	// create post
+	// Create post
 	res, err := db.ExecContext(ctx, `
 		INSERT INTO posts (author_id, title, body, created_at, updated_at)
 		VALUES (?, ?, ?, datetime('now'), datetime('now'))
@@ -181,21 +196,22 @@ func CreatePostWithCategories(ctx context.Context, db *sql.DB, authorID int64, t
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
 
-	// insert categories
+	// Insert categories
 	for _, cid := range categoryIDs {
-		_, err := db.ExecContext(ctx, `
-			INSERT INTO post_categories (post_id, category_id)
-			VALUES (?, ?)
-		`, postID, cid)
-		if err != nil {
-			return 0, fmt.Errorf("insert category: %w", err)
+		if _, err := db.ExecContext(ctx,
+			`INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)`,
+			postID, cid,
+		); err != nil {
+			return 0, fmt.Errorf("insert category relation: %w", err)
 		}
 	}
 
 	return postID, nil
 }
 
-// -------- UPDATE POST --------
+// ------------------------------------------------------------
+// UPDATE POST
+// ------------------------------------------------------------
 
 type UpdatePostInput struct {
 	Title *string
@@ -203,42 +219,45 @@ type UpdatePostInput struct {
 }
 
 func UpdatePost(ctx context.Context, db *sql.DB, id int64, in UpdatePostInput) error {
-	set := []string{}
+	setParts := []string{}
 	args := []any{}
 
 	if in.Title != nil {
-		set = append(set, "title = ?")
+		setParts = append(setParts, "title = ?")
 		args = append(args, *in.Title)
 	}
+
 	if in.Body != nil {
-		set = append(set, "body = ?")
+		setParts = append(setParts, "body = ?")
 		args = append(args, *in.Body)
 	}
 
-	if len(set) == 0 {
-		return nil
+	if len(setParts) == 0 {
+		return nil // nothing to update
 	}
 
-	set = append(set, "updated_at = datetime('now')")
+	setParts = append(setParts, "updated_at = datetime('now')")
 	args = append(args, id)
 
-	q := `UPDATE posts SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
+	query := `UPDATE posts SET ` + strings.Join(setParts, ", ") + ` WHERE id = ?`
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, q, args...)
+	_, err := db.ExecContext(ctx, query, args...)
 	return err
 }
 
-// -------- DELETE POST --------
+// ------------------------------------------------------------
+// DELETE POST
+// ------------------------------------------------------------
 
 func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// delete categories
-	db.ExecContext(ctx, `DELETE FROM post_categories WHERE post_id = ?`, id)
+	// remove category relations
+	_, _ = db.ExecContext(ctx, `DELETE FROM post_categories WHERE post_id = ?`, id)
 
 	// delete post
 	_, err := db.ExecContext(ctx, `DELETE FROM posts WHERE id = ?`, id)
