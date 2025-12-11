@@ -30,6 +30,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	// Posts:
 	// GET = public
 	// POST = auth required
+	mux.HandleFunc(apiPrefix+"/posts/public", posts.PublicList)
+
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			// Only protect POST with Auth

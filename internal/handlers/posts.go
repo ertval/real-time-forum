@@ -14,46 +14,39 @@ import (
 
 type Posts struct{ db *sql.DB }
 
-func NewPosts(database *sql.DB) *Posts { return &Posts{db: database} }
+func NewPosts(database *sql.DB) *Posts {
+	return &Posts{db: database}
+}
 
-// ---------------------------------------------------------
 //
-//	/api/v1/posts  → GET list, POST create (with categories)
+// ─────────────────────────────────────────────────────────────
+//  /api/v1/posts → GET list, POST create
+// ─────────────────────────────────────────────────────────────
 //
-// ---------------------------------------------------------
+
 func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
-	// ----------------------------
-	// GET /posts → list with meta
-	// ----------------------------
 	case http.MethodGet:
-		page := parseIntOr(r.URL.Query().Get("page"), 1)
-		per := min(parseIntOr(r.URL.Query().Get("per_page"), 20), 100)
-		if page < 1 {
-			page = 1
-		}
+		// Pagination
+		page, per := sanitizePagination(r)
 
-		res, err := db.ListPosts(r.Context(), p.db, db.ListPostsParams{
-			Page:    page,
-			PerPage: per,
-		})
+		result, err := db.ListPosts(
+			r.Context(),
+			p.db,
+			db.ListPostsParams{
+				Page:    page,
+				PerPage: per,
+			},
+		)
 		if err != nil {
 			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
 			return
 		}
 
-		meta := map[string]any{
-			"page":     page,
-			"per_page": per,
-			"total":    res.Total,
-		}
+		meta := buildMeta(page, per, result.Total, nil)
+		WriteOK(w, result.Posts, meta)
 
-		WriteOK(w, res.Posts, meta)
-
-	// -------------------------------------------------
-	// POST /posts → create post + optional categories
-	// -------------------------------------------------
 	case http.MethodPost:
 		var in struct {
 			Title       string  `json:"title"`
@@ -71,12 +64,9 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// TODO: replace fake user when auth fully implemented
+		// TODO: replace with authenticated user
 		const fakeAuthorID = 1
 
-		// ----------------------------
-		// Create with categories
-		// ----------------------------
 		postID, err := db.CreatePostWithCategories(r.Context(), p.db,
 			fakeAuthorID,
 			in.Title,
@@ -88,7 +78,6 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// load full post after creation
 		post, err := db.GetPost(r.Context(), p.db, postID)
 		if err != nil {
 			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "post created but failed to load", http.StatusInternalServerError))
@@ -102,11 +91,12 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// -----------------------------------------------------------
 //
-//	/api/v1/posts/{id}  (+ /comments, /like subroutes)
+// ─────────────────────────────────────────────────────────────
+//  /api/v1/posts/{id} (+ comments & like subroutes)
+// ─────────────────────────────────────────────────────────────
 //
-// -----------------------------------------------------------
+
 func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 	tail := strings.TrimPrefix(r.URL.Path, "/api/v1/posts/")
 	parts := strings.Split(strings.Trim(tail, "/"), "/")
@@ -123,15 +113,12 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ------------------------------------------------------
+	//
 	// /posts/{id}
-	// ------------------------------------------------------
+	//
 	if len(parts) == 1 {
 		switch r.Method {
 
-		// --------------------------------------------------
-		// GET /posts/{id}
-		// --------------------------------------------------
 		case http.MethodGet:
 			post, err := db.GetPost(r.Context(), p.db, postID)
 			if err != nil {
@@ -144,9 +131,6 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 			}
 			WriteOK(w, post, nil)
 
-		// --------------------------------------------------
-		// PATCH /posts/{id} → update title/body only
-		// --------------------------------------------------
 		case http.MethodPatch:
 			var in struct {
 				Title *string `json:"title"`
@@ -163,19 +147,17 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if err := db.UpdatePost(r.Context(), p.db, postID, db.UpdatePostInput{
+			err = db.UpdatePost(r.Context(), p.db, postID, db.UpdatePostInput{
 				Title: in.Title,
 				Body:  in.Body,
-			}); err != nil {
+			})
+			if err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
 				return
 			}
 
 			WriteOK(w, map[string]string{"status": "updated"}, nil)
 
-		// --------------------------------------------------
-		// DELETE /posts/{id}
-		// --------------------------------------------------
 		case http.MethodDelete:
 			if err := db.DeletePost(r.Context(), p.db, postID); err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error deleting post", http.StatusInternalServerError))
@@ -186,27 +168,29 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 		default:
 			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		}
-
 		return
 	}
 
-	// ------------------------------------------------------
-	// /posts/{id}/like
-	// ------------------------------------------------------
+	//
+	// Subroutes: /posts/{id}/like /posts/{id}/comments
+	//
+
 	switch parts[1] {
 
+	//
+	// /posts/{id}/like
+	//
 	case "like":
 		if r.Method != http.MethodPost {
 			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 			return
 		}
 
-		// fake user
-		const fakeID int64 = 1
+		const fakeUserID int64 = 1
 
-		liked, count, err := db.TogglePostLike(r.Context(), p.db, fakeID, postID)
+		liked, count, err := db.TogglePostLike(r.Context(), p.db, fakeUserID, postID)
 		if err != nil {
-			log.Printf("TogglePostLike failed for user=%d post=%d: %v", fakeID, postID, err)
+			log.Printf("TogglePostLike failed for user=%d post=%d: %v", fakeUserID, postID, err)
 			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError))
 			return
 		}
@@ -217,21 +201,14 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 			"likes":   count,
 		}, nil)
 
-	// ------------------------------------------------------
+	//
 	// /posts/{id}/comments
-	// ------------------------------------------------------
+	//
 	case "comments":
 		switch r.Method {
 
 		case http.MethodGet:
-			page := parseIntOr(r.URL.Query().Get("page"), 1)
-			per := parseIntOr(r.URL.Query().Get("per_page"), 20)
-			if per > 100 {
-				per = 100
-			}
-			if page < 1 {
-				page = 1
-			}
+			page, per := sanitizePagination(r)
 
 			res, err := db.ListCommentsByPost(r.Context(), p.db, db.ListCommentsParams{
 				PostID:  postID,
@@ -243,13 +220,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			meta := map[string]any{
-				"page":     page,
-				"per_page": per,
-				"total":    res.Total,
-				"post_id":  postID,
-			}
-
+			meta := buildMeta(page, per, res.Total, map[string]any{"post_id": postID})
 			WriteOK(w, res.Comments, meta)
 
 		case http.MethodPost:
@@ -298,9 +269,26 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func parseIntOr(s string, def int) int {
-	if n, err := strconv.Atoi(s); err == nil {
-		return n
+//
+// ─────────────────────────────────────────────────────────────
+//  PUBLIC POSTS ENDPOINT (/api/v1/posts/public)
+// ─────────────────────────────────────────────────────────────
+//
+
+func (p *Posts) PublicList(w http.ResponseWriter, r *http.Request) {
+	page, per := sanitizePagination(r)
+	sort := sanitizeSort(r)
+
+	result, err := db.ListPublicPosts(r.Context(), p.db, db.ListPublicPostsParams{
+		Page:    page,
+		PerPage: per,
+		SortBy:  sort,
+	})
+	if err != nil {
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to list posts", http.StatusInternalServerError))
+		return
 	}
-	return def
+
+	meta := buildMeta(page, per, result.Total, map[string]any{"sort": sort})
+	WriteOK(w, result.Posts, meta)
 }
