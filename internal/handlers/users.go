@@ -3,36 +3,40 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	db "forum/internal/db"
 	"net/http"
 	"strconv"
 	"strings"
+
+	repository "forum/internal/db"
 )
 
-type Users struct{ db *sql.DB }
-
-func NewUsers(database *sql.DB) *Users {
-	return &Users{db: database}
+type UsersHandler struct {
+	conn *sql.DB
 }
 
-// -----------------------------
+func NewUsersHandler(database *sql.DB) *UsersHandler {
+	return &UsersHandler{conn: database}
+}
+
 //
-//	USER REGISTER
+// ─────────────────────────────────────────────────────────────
+//  USER REGISTER
+// ─────────────────────────────────────────────────────────────
 //
-// -----------------------------
-func (u *Users) Register(w http.ResponseWriter, r *http.Request) {
+
+func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		return
 	}
 
-	var req db.CreateUserRequest
+	var req repository.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
 		return
 	}
 
-	id, err := db.CreateUser(r.Context(), u.db, req)
+	id, err := repository.CreateUser(r.Context(), u.conn, req)
 	if err != nil {
 		WriteError(w, NewError("BAD_REQUEST", err.Error(), http.StatusBadRequest))
 		return
@@ -44,12 +48,13 @@ func (u *Users) Register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// -----------------------------
 //
-//	GET USER BY ID
+// ─────────────────────────────────────────────────────────────
+//  GET USER BY ID
+// ─────────────────────────────────────────────────────────────
 //
-// -----------------------------
-func (u *Users) Item(w http.ResponseWriter, r *http.Request) {
+
+func (u *UsersHandler) Item(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		return
@@ -67,7 +72,7 @@ func (u *Users) Item(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := db.GetUser(r.Context(), u.db, userID)
+	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			WriteError(w, NewError("NOT_FOUND", "user not found", http.StatusNotFound))
@@ -80,30 +85,31 @@ func (u *Users) Item(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, user, nil)
 }
 
-// -----------------------------
 //
-//	LOGIN
+// ─────────────────────────────────────────────────────────────
+//  LOGIN
+// ─────────────────────────────────────────────────────────────
 //
-// -----------------------------
-func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+
+func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		return
 	}
 
-	var req db.LoginRequest
+	var req repository.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid login json", http.StatusBadRequest))
 		return
 	}
 
-	user, err := db.LoginUser(r.Context(), u.db, req)
+	user, err := repository.LoginUser(r.Context(), u.conn, req)
 	if err != nil {
 		WriteError(w, NewError("UNAUTHORIZED", "invalid username/email or password", http.StatusUnauthorized))
 		return
 	}
 
-	session, err := db.CreateSession(r.Context(), u.db, user.ID, r.RemoteAddr, r.UserAgent())
+	session, err := repository.CreateSession(r.Context(), u.conn, user.ID, r.RemoteAddr, r.UserAgent())
 	if err != nil {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to create session", http.StatusInternalServerError))
 		return
@@ -120,13 +126,13 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, map[string]any{"message": "Login successful"}, nil)
 }
 
-// -----------------------------
 //
-//	/me — CURRENT USER
+// ─────────────────────────────────────────────────────────────
+//  /me — CURRENT USER
+// ─────────────────────────────────────────────────────────────
 //
-// -----------------------------
-func (u *Users) Me(w http.ResponseWriter, r *http.Request) {
-	// Read userID from context (middleware)
+
+func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	val := r.Context().Value("userID")
 	if val == nil {
 		WriteError(w, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
@@ -139,7 +145,7 @@ func (u *Users) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := db.GetUser(r.Context(), u.db, userID)
+	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to get user", http.StatusInternalServerError))
 		return
@@ -148,12 +154,13 @@ func (u *Users) Me(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, user, nil)
 }
 
-// -----------------------------
 //
-//	LOGOUT
+// ─────────────────────────────────────────────────────────────
+//  LOGOUT
+// ─────────────────────────────────────────────────────────────
 //
-// -----------------------------
-func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+
+func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 		return
@@ -165,12 +172,11 @@ func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.InvalidateSessionByToken(r.Context(), u.db, cookie.Value); err != nil {
+	if err := repository.InvalidateSessionByToken(r.Context(), u.conn, cookie.Value); err != nil {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to logout", http.StatusInternalServerError))
 		return
 	}
 
-	// Clear cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    "",

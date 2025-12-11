@@ -4,14 +4,12 @@ import (
 	"net/http"
 )
 
-type Health struct{}
+type HealthHandler struct{}
 
-// NewHealth returns a simple healthcheck handler.
-func NewHealth() *Health {
-	return &Health{}
+func NewHealthHandler() *HealthHandler {
+	return &HealthHandler{}
 }
 
-// Health responds with a basic API health status.
-func (h *Health) Health(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, map[string]any{"status": "ok"}, nil)
 }

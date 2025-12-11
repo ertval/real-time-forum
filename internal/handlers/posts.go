@@ -9,13 +9,15 @@ import (
 	"strconv"
 	"strings"
 
-	db "forum/internal/db"
+	repository "forum/internal/db"
 )
 
-type Posts struct{ db *sql.DB }
+type PostsHandler struct {
+	conn *sql.DB
+}
 
-func NewPosts(database *sql.DB) *Posts {
-	return &Posts{db: database}
+func NewPostsHandler(database *sql.DB) *PostsHandler {
+	return &PostsHandler{conn: database}
 }
 
 //
@@ -24,17 +26,17 @@ func NewPosts(database *sql.DB) *Posts {
 // ─────────────────────────────────────────────────────────────
 //
 
-func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
+func (p *PostsHandler) Collection(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
 		// Pagination
 		page, per := sanitizePagination(r)
 
-		result, err := db.ListPosts(
+		result, err := repository.ListPosts(
 			r.Context(),
-			p.db,
-			db.ListPostsParams{
+			p.conn,
+			repository.ListPostsParams{
 				Page:    page,
 				PerPage: per,
 			},
@@ -67,7 +69,7 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 		// TODO: replace with authenticated user
 		const fakeAuthorID = 1
 
-		postID, err := db.CreatePostWithCategories(r.Context(), p.db,
+		postID, err := repository.CreatePostWithCategories(r.Context(), p.conn,
 			fakeAuthorID,
 			in.Title,
 			in.Body,
@@ -78,7 +80,7 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		post, err := db.GetPost(r.Context(), p.db, postID)
+		post, err := repository.GetPost(r.Context(), p.conn, postID)
 		if err != nil {
 			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "post created but failed to load", http.StatusInternalServerError))
 			return
@@ -97,7 +99,7 @@ func (p *Posts) Collection(w http.ResponseWriter, r *http.Request) {
 // ─────────────────────────────────────────────────────────────
 //
 
-func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
+func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 	tail := strings.TrimPrefix(r.URL.Path, "/api/v1/posts/")
 	parts := strings.Split(strings.Trim(tail, "/"), "/")
 
@@ -120,7 +122,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 
 		case http.MethodGet:
-			post, err := db.GetPost(r.Context(), p.db, postID)
+			post, err := repository.GetPost(r.Context(), p.conn, postID)
 			if err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
 					WriteError(w, NewError("NOT_FOUND", "post not found", http.StatusNotFound))
@@ -147,7 +149,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			err = db.UpdatePost(r.Context(), p.db, postID, db.UpdatePostInput{
+			err = repository.UpdatePost(r.Context(), p.conn, postID, repository.UpdatePostInput{
 				Title: in.Title,
 				Body:  in.Body,
 			})
@@ -159,7 +161,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 			WriteOK(w, map[string]string{"status": "updated"}, nil)
 
 		case http.MethodDelete:
-			if err := db.DeletePost(r.Context(), p.db, postID); err != nil {
+			if err := repository.DeletePost(r.Context(), p.conn, postID); err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error deleting post", http.StatusInternalServerError))
 				return
 			}
@@ -188,7 +190,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 
 		const fakeUserID int64 = 1
 
-		liked, count, err := db.TogglePostLike(r.Context(), p.db, fakeUserID, postID)
+		liked, count, err := repository.TogglePostLike(r.Context(), p.conn, fakeUserID, postID)
 		if err != nil {
 			log.Printf("TogglePostLike failed for user=%d post=%d: %v", fakeUserID, postID, err)
 			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError))
@@ -210,7 +212,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 		case http.MethodGet:
 			page, per := sanitizePagination(r)
 
-			res, err := db.ListCommentsByPost(r.Context(), p.db, db.ListCommentsParams{
+			res, err := repository.ListCommentsByPost(r.Context(), p.conn, repository.ListCommentsParams{
 				PostID:  postID,
 				Page:    page,
 				PerPage: per,
@@ -241,7 +243,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 
 			const fakeUserID int64 = 1
 
-			commentID, err := db.CreateComment(r.Context(), p.db, db.CreateCommentInput{
+			commentID, err := repository.CreateComment(r.Context(), p.conn, repository.CreateCommentInput{
 				PostID:          postID,
 				UserID:          fakeUserID,
 				ParentCommentID: in.ParentCommentID,
@@ -252,7 +254,7 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			comment, err := db.GetComment(r.Context(), p.db, commentID)
+			comment, err := repository.GetComment(r.Context(), p.conn, commentID)
 			if err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "comment created but failed to load", http.StatusInternalServerError))
 				return
@@ -275,11 +277,11 @@ func (p *Posts) Item(w http.ResponseWriter, r *http.Request) {
 // ─────────────────────────────────────────────────────────────
 //
 
-func (p *Posts) PublicList(w http.ResponseWriter, r *http.Request) {
+func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 	page, per := sanitizePagination(r)
 	sort := sanitizeSort(r)
 
-	result, err := db.ListPublicPosts(r.Context(), p.db, db.ListPublicPostsParams{
+	result, err := repository.ListPublicPosts(r.Context(), p.conn, repository.ListPublicPostsParams{
 		Page:    page,
 		PerPage: per,
 		SortBy:  sort,

@@ -13,10 +13,10 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
 
 	// Handlers
-	health := handlers.NewHealth()
-	posts := handlers.NewPosts(database)
-	users := handlers.NewUsers(database)
-	categories := handlers.NewCategories(database)
+	health := handlers.NewHealthHandler()
+	posts := handlers.NewPostsHandler(database)
+	users := handlers.NewUsersHandler(database)
+	categories := handlers.NewCategoriesHandler(database)
 
 	// ---------------------------
 	// PUBLIC ROUTES
