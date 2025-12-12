@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	repository "forum/internal/db"
+	"forum/internal/middleware"
 )
 
 type PostsHandler struct {
@@ -20,26 +21,20 @@ func NewPostsHandler(database *sql.DB) *PostsHandler {
 	return &PostsHandler{conn: database}
 }
 
-//
-// ─────────────────────────────────────────────────────────────
-//  /api/v1/posts → GET list, POST create
-// ─────────────────────────────────────────────────────────────
-//
+// ============================================================
+// /api/v1/posts → GET list, POST create post
+// ============================================================
 
 func (p *PostsHandler) Collection(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
-		// Pagination
 		page, per := sanitizePagination(r)
 
 		result, err := repository.ListPosts(
 			r.Context(),
 			p.conn,
-			repository.ListPostsParams{
-				Page:    page,
-				PerPage: per,
-			},
+			repository.ListPostsParams{Page: page, PerPage: per},
 		)
 		if err != nil {
 			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
@@ -50,6 +45,11 @@ func (p *PostsHandler) Collection(w http.ResponseWriter, r *http.Request) {
 		WriteOK(w, result.Posts, meta)
 
 	case http.MethodPost:
+		userID, ok := requireUserID(w, r)
+		if !ok {
+			return
+		}
+
 		var in struct {
 			Title       string  `json:"title"`
 			Body        string  `json:"body"`
@@ -66,17 +66,16 @@ func (p *PostsHandler) Collection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// TODO: replace with authenticated user
-		const fakeAuthorID = 1
-
-		postID, err := repository.CreatePostWithCategories(r.Context(), p.conn,
-			fakeAuthorID,
+		postID, err := repository.CreatePostWithCategories(
+			r.Context(),
+			p.conn,
+			userID,
 			in.Title,
 			in.Body,
 			in.CategoryIDs,
 		)
 		if err != nil {
-			WriteError(w, NewError("INTERNAL_SERVER_ERROR", err.Error(), http.StatusInternalServerError))
+			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
 			return
 		}
 
@@ -93,31 +92,28 @@ func (p *PostsHandler) Collection(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//
-// ─────────────────────────────────────────────────────────────
-//  /api/v1/posts/{id} (+ comments & like subroutes)
-// ─────────────────────────────────────────────────────────────
-//
+// ============================================================
+// /api/v1/posts/{id}
+// ============================================================
 
 func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 	tail := strings.TrimPrefix(r.URL.Path, "/api/v1/posts/")
 	parts := strings.Split(strings.Trim(tail, "/"), "/")
 
-	if len(parts) == 0 || parts[0] == "" {
+	if parts[0] == "" {
 		WriteError(w, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 		return
 	}
 
-	idStr := parts[0]
-	postID, err := strconv.ParseInt(idStr, 10, 64)
+	postID, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid post ID", http.StatusBadRequest))
 		return
 	}
 
-	//
+	// --------------------------------------------------------
 	// /posts/{id}
-	//
+	// --------------------------------------------------------
 	if len(parts) == 1 {
 		switch r.Method {
 
@@ -128,19 +124,23 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 					WriteError(w, NewError("NOT_FOUND", "post not found", http.StatusNotFound))
 					return
 				}
-				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error getting post", http.StatusInternalServerError))
+				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error loading post", http.StatusInternalServerError))
 				return
 			}
 			WriteOK(w, post, nil)
 
 		case http.MethodPatch:
+			if _, ok := requireUserID(w, r); !ok {
+				return
+			}
+
 			var in struct {
 				Title *string `json:"title"`
 				Body  *string `json:"body"`
 			}
 
 			if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-				WriteError(w, NewError("BAD_REQUEST", "invalid JSON", http.StatusBadRequest))
+				WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
 				return
 			}
 
@@ -149,11 +149,12 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			err = repository.UpdatePost(r.Context(), p.conn, postID, repository.UpdatePostInput{
-				Title: in.Title,
-				Body:  in.Body,
-			})
-			if err != nil {
+			if err := repository.UpdatePost(
+				r.Context(),
+				p.conn,
+				postID,
+				repository.UpdatePostInput{Title: in.Title, Body: in.Body},
+			); err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
 				return
 			}
@@ -161,10 +162,15 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 			WriteOK(w, map[string]string{"status": "updated"}, nil)
 
 		case http.MethodDelete:
+			if _, ok := requireUserID(w, r); !ok {
+				return
+			}
+
 			if err := repository.DeletePost(r.Context(), p.conn, postID); err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error deleting post", http.StatusInternalServerError))
 				return
 			}
+
 			WriteNoContent(w)
 
 		default:
@@ -173,26 +179,26 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//
-	// Subroutes: /posts/{id}/like /posts/{id}/comments
-	//
+	// --------------------------------------------------------
+	// /posts/{id}/like | /comments
+	// --------------------------------------------------------
 
 	switch parts[1] {
 
-	//
-	// /posts/{id}/like
-	//
 	case "like":
 		if r.Method != http.MethodPost {
 			WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 			return
 		}
 
-		const fakeUserID int64 = 1
+		userID, ok := requireUserID(w, r)
+		if !ok {
+			return
+		}
 
-		liked, count, err := repository.TogglePostLike(r.Context(), p.conn, fakeUserID, postID)
+		liked, count, err := repository.TogglePostLike(r.Context(), p.conn, userID, postID)
 		if err != nil {
-			log.Printf("TogglePostLike failed for user=%d post=%d: %v", fakeUserID, postID, err)
+			log.Printf("TogglePostLike failed: %v", err)
 			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError))
 			return
 		}
@@ -203,20 +209,21 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 			"likes":   count,
 		}, nil)
 
-	//
-	// /posts/{id}/comments
-	//
 	case "comments":
 		switch r.Method {
 
 		case http.MethodGet:
 			page, per := sanitizePagination(r)
 
-			res, err := repository.ListCommentsByPost(r.Context(), p.conn, repository.ListCommentsParams{
-				PostID:  postID,
-				Page:    page,
-				PerPage: per,
-			})
+			res, err := repository.ListCommentsByPost(
+				r.Context(),
+				p.conn,
+				repository.ListCommentsParams{
+					PostID:  postID,
+					Page:    page,
+					PerPage: per,
+				},
+			)
 			if err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing comments", http.StatusInternalServerError))
 				return
@@ -226,6 +233,11 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 			WriteOK(w, res.Comments, meta)
 
 		case http.MethodPost:
+			userID, ok := requireUserID(w, r)
+			if !ok {
+				return
+			}
+
 			var in struct {
 				Body            string `json:"body"`
 				ParentCommentID *int64 `json:"parent_comment_id"`
@@ -241,25 +253,22 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			const fakeUserID int64 = 1
-
-			commentID, err := repository.CreateComment(r.Context(), p.conn, repository.CreateCommentInput{
-				PostID:          postID,
-				UserID:          fakeUserID,
-				ParentCommentID: in.ParentCommentID,
-				Body:            in.Body,
-			})
+			commentID, err := repository.CreateComment(
+				r.Context(),
+				p.conn,
+				repository.CreateCommentInput{
+					PostID:          postID,
+					UserID:          userID,
+					ParentCommentID: in.ParentCommentID,
+					Body:            in.Body,
+				},
+			)
 			if err != nil {
 				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error creating comment", http.StatusInternalServerError))
 				return
 			}
 
-			comment, err := repository.GetComment(r.Context(), p.conn, commentID)
-			if err != nil {
-				WriteError(w, NewError("INTERNAL_SERVER_ERROR", "comment created but failed to load", http.StatusInternalServerError))
-				return
-			}
-
+			comment, _ := repository.GetComment(r.Context(), p.conn, commentID)
 			WriteCreated(w, comment)
 
 		default:
@@ -271,26 +280,15 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//
-// ─────────────────────────────────────────────────────────────
-//  PUBLIC POSTS ENDPOINT (/api/v1/posts/public)
-// ─────────────────────────────────────────────────────────────
-//
+// ------------------------------------------------------------
+// AUTH HELPER (DRY)
+// ------------------------------------------------------------
 
-func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
-	page, per := sanitizePagination(r)
-	sort := sanitizeSort(r)
-
-	result, err := repository.ListPublicPosts(r.Context(), p.conn, repository.ListPublicPostsParams{
-		Page:    page,
-		PerPage: per,
-		SortBy:  sort,
-	})
+func requireUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to list posts", http.StatusInternalServerError))
-		return
+		WriteError(w, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
+		return 0, false
 	}
-
-	meta := buildMeta(page, per, result.Total, map[string]any{"sort": sort})
-	WriteOK(w, result.Posts, meta)
+	return userID, true
 }

@@ -1,8 +1,11 @@
 package tests
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -10,14 +13,50 @@ func TestAPIPostsLikeToggle(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
-	// First call: should create a like
-	w1, body1 := doRequest(t, h, http.MethodPost, "/api/v1/posts/1/like", nil)
-	if w1.Code != http.StatusOK {
-		t.Fatalf("expected 200 on first like, got %d, body=%s", w1.Code, string(body1))
+	// ------------------------------------------------------------
+	// Register user
+	// ------------------------------------------------------------
+	regBody := `{"username":"liker","email":"liker@example.com","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("register failed: %d", rec.Code)
+	}
+
+	// ------------------------------------------------------------
+	// Login user
+	// ------------------------------------------------------------
+	loginBody := `{"username":"liker","password":"password123"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login failed: %d", rec.Code)
+	}
+
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatalf("expected Set-Cookie header on login")
+	}
+	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
+
+	// ------------------------------------------------------------
+	// First call: like
+	// ------------------------------------------------------------
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on first like, got %d, body=%s", rec.Code, rec.Body.String())
 	}
 
 	var env1 apiEnvelope
-	if err := json.Unmarshal(body1, &env1); err != nil {
+	if err := json.Unmarshal(rec.Body.Bytes(), &env1); err != nil {
 		t.Fatalf("unmarshal envelope 1: %v", err)
 	}
 	if env1.Error != nil {
@@ -43,14 +82,20 @@ func TestAPIPostsLikeToggle(t *testing.T) {
 		t.Errorf("expected likes >= 1 after first toggle, got %d", resp1.Likes)
 	}
 
-	// Second call: should unlike
-	w2, body2 := doRequest(t, h, http.MethodPost, "/api/v1/posts/1/like", nil)
-	if w2.Code != http.StatusOK {
-		t.Fatalf("expected 200 on second like (unlike), got %d, body=%s", w2.Code, string(body2))
+	// ------------------------------------------------------------
+	// Second call: unlike
+	// ------------------------------------------------------------
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on second like (unlike), got %d, body=%s", rec.Code, rec.Body.String())
 	}
 
 	var env2 apiEnvelope
-	if err := json.Unmarshal(body2, &env2); err != nil {
+	if err := json.Unmarshal(rec.Body.Bytes(), &env2); err != nil {
 		t.Fatalf("unmarshal envelope 2: %v", err)
 	}
 	if env2.Error != nil {
@@ -73,6 +118,10 @@ func TestAPIPostsLikeToggle(t *testing.T) {
 		t.Errorf("expected liked=false after second toggle")
 	}
 	if resp2.Likes > resp1.Likes {
-		t.Errorf("expected likes to stay same or decrease, got before=%d after=%d", resp1.Likes, resp2.Likes)
+		t.Errorf(
+			"expected likes to stay same or decrease, got before=%d after=%d",
+			resp1.Likes,
+			resp2.Likes,
+		)
 	}
 }

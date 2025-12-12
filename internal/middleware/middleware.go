@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"forum/internal/handlers"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -18,7 +17,6 @@ func Logger(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 
-		// Nicely formatted aligned output
 		log.Printf("%-6s %-40s %s", r.Method, r.URL.Path, time.Since(start))
 	})
 }
@@ -33,18 +31,15 @@ func Recoverer(next http.Handler) http.Handler {
 		defer func() {
 			if rec := recover(); rec != nil {
 
-				// Log panic + stack trace (only in backend logs)
+				// Log panic + stack trace (backend only)
 				log.Printf("PANIC: %v\n%s", rec, debug.Stack())
 
-				// Send standard JSON error envelope
-				handlers.WriteError(
-					w,
-					handlers.NewError(
-						"SERVER_ERROR",
-						"internal server error",
-						http.StatusInternalServerError,
-					),
-				)
+				// Minimal, framework-agnostic response
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(
+					`{"error":{"code":"SERVER_ERROR","message":"internal server error"}}`,
+				))
 			}
 		}()
 
@@ -58,22 +53,13 @@ func Recoverer(next http.Handler) http.Handler {
 // ------------------------------------------------------------
 func CORS(origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			// Allow frontend domain
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-
-			// Required to send cookies (sessions)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-			// Which headers are accepted
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-			// Which HTTP methods are allowed
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 
-			// Handle preflight request
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
 				return
