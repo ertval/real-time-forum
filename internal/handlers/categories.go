@@ -8,14 +8,16 @@ import (
 	"strconv"
 	"strings"
 
-	db "forum/internal/db"
+	repository "forum/internal/db"
 )
 
-type Categories struct {
-	db *sql.DB
+type CategoriesHandler struct {
+	conn *sql.DB
 }
 
-func NewCategories(database *sql.DB) *Categories { return &Categories{db: database} }
+func NewCategoriesHandler(database *sql.DB) *CategoriesHandler {
+	return &CategoriesHandler{conn: database}
+}
 
 //
 // ---------------------------------------------------------
@@ -23,7 +25,7 @@ func NewCategories(database *sql.DB) *Categories { return &Categories{db: databa
 // ---------------------------------------------------------
 //
 
-func (c *Categories) Collection(w http.ResponseWriter, r *http.Request) {
+func (c *CategoriesHandler) Collection(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
@@ -41,8 +43,8 @@ func (c *Categories) Collection(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/categories
 //
 
-func (c *Categories) handleList(w http.ResponseWriter, r *http.Request) {
-	categories, err := db.ListCategories(r.Context(), c.db)
+func (c *CategoriesHandler) handleList(w http.ResponseWriter, r *http.Request) {
+	categories, err := repository.ListCategories(r.Context(), c.conn)
 	if err != nil {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "could not list categories", http.StatusInternalServerError))
 		return
@@ -54,7 +56,7 @@ func (c *Categories) handleList(w http.ResponseWriter, r *http.Request) {
 // POST /api/v1/categories
 //
 
-func (c *Categories) handleCreate(w http.ResponseWriter, r *http.Request) {
+func (c *CategoriesHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Name string `json:"name"`
 	}
@@ -66,7 +68,7 @@ func (c *Categories) handleCreate(w http.ResponseWriter, r *http.Request) {
 
 	slug := slugify(in.Name)
 
-	id, err := db.CreateCategory(r.Context(), c.db, in.Name, slug)
+	id, err := repository.CreateCategory(r.Context(), c.conn, in.Name, slug)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
 			WriteError(w, NewError("CONFLICT", "category name already exists", http.StatusConflict))
@@ -76,7 +78,7 @@ func (c *Categories) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category, err := db.GetCategory(r.Context(), c.db, id)
+	category, err := repository.GetCategory(r.Context(), c.conn, id)
 	if err != nil {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "created but failed to load", http.StatusInternalServerError))
 		return
@@ -91,7 +93,7 @@ func (c *Categories) handleCreate(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------
 //
 
-func (c *Categories) Item(w http.ResponseWriter, r *http.Request) {
+func (c *CategoriesHandler) Item(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r.URL.Path, "/api/v1/categories/")
 	if err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid category ID", http.StatusBadRequest))
@@ -118,8 +120,8 @@ func (c *Categories) Item(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/categories/{id}
 //
 
-func (c *Categories) handleGet(w http.ResponseWriter, r *http.Request, id int64) {
-	category, err := db.GetCategory(r.Context(), c.db, id)
+func (c *CategoriesHandler) handleGet(w http.ResponseWriter, r *http.Request, id int64) {
+	category, err := repository.GetCategory(r.Context(), c.conn, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			WriteError(w, NewError("NOT_FOUND", "category not found", http.StatusNotFound))
@@ -135,7 +137,7 @@ func (c *Categories) handleGet(w http.ResponseWriter, r *http.Request, id int64)
 // PATCH /api/v1/categories/{id}
 //
 
-func (c *Categories) handlePatch(w http.ResponseWriter, r *http.Request, id int64) {
+func (c *CategoriesHandler) handlePatch(w http.ResponseWriter, r *http.Request, id int64) {
 	var in struct {
 		Name *string `json:"name"`
 	}
@@ -150,7 +152,7 @@ func (c *Categories) handlePatch(w http.ResponseWriter, r *http.Request, id int6
 		return
 	}
 
-	err := db.UpdateCategoryName(r.Context(), c.db, id, *in.Name)
+	err := repository.UpdateCategoryName(r.Context(), c.conn, id, *in.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
 			WriteError(w, NewError("CONFLICT", "category name already exists", http.StatusConflict))
@@ -160,7 +162,7 @@ func (c *Categories) handlePatch(w http.ResponseWriter, r *http.Request, id int6
 		return
 	}
 
-	category, _ := db.GetCategory(r.Context(), c.db, id)
+	category, _ := repository.GetCategory(r.Context(), c.conn, id)
 	WriteOK(w, category, nil)
 }
 
@@ -168,8 +170,8 @@ func (c *Categories) handlePatch(w http.ResponseWriter, r *http.Request, id int6
 // DELETE /api/v1/categories/{id}
 //
 
-func (c *Categories) handleDelete(w http.ResponseWriter, r *http.Request, id int64) {
-	err := db.DeleteCategory(r.Context(), c.db, id)
+func (c *CategoriesHandler) handleDelete(w http.ResponseWriter, r *http.Request, id int64) {
+	err := repository.DeleteCategory(r.Context(), c.conn, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			WriteError(w, NewError("NOT_FOUND", "category not found", http.StatusNotFound))
@@ -187,13 +189,11 @@ func (c *Categories) handleDelete(w http.ResponseWriter, r *http.Request, id int
 // HELPERS
 // ---------------------------------------------------------
 
-// extract numeric ID from URL path
 func parseID(path, prefix string) (int64, error) {
 	raw := strings.TrimPrefix(path, prefix)
 	return strconv.ParseInt(raw, 10, 64)
 }
 
-// very simple slugify helper
 func slugify(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
 	name = strings.ReplaceAll(name, " ", "-")
