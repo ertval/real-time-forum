@@ -9,17 +9,16 @@ import (
 )
 
 // Embed database schema inside the binary.
-var (
-	//go:embed forum_schema.sql
-	schemaFS embed.FS
-)
+//
+//go:embed forum_schema.sql
+var schemaFS embed.FS
 
-// InitDB opens/creates the SQLite database file,
-// applies PRAGMA settings through DSN,
-// loads the embedded schema, and returns *sql.DB.
+// InitDB opens/creates the SQLite database,
+// applies PRAGMA options via DSN,
+// loads the embedded schema,
+// and returns a ready-to-use *sql.DB.
 func InitDB(dbPath string) (*sql.DB, error) {
 
-	// Configure SQLite via DSN parameters.
 	dsn := fmt.Sprintf(
 		"%s?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL",
 		dbPath,
@@ -30,25 +29,24 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		return nil, WrapError("open database", err)
 	}
 
-	// Verify connection before continuing.
+	// Ensure the database is reachable
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, WrapError("ping database", err)
 	}
 
-	// Read SQL schema from embedded file.
+	// Load embedded schema
 	schema, err := schemaFS.ReadFile("forum_schema.sql")
 	if err != nil {
 		db.Close()
-		return nil, WrapError("load schema file", err)
+		return nil, WrapError("read schema file", err)
 	}
 
-	// Apply schema (should contain CREATE TABLE IF NOT EXISTS).
+	// Apply schema (CREATE TABLE IF NOT EXISTS ...)
 	if _, err := db.Exec(string(schema)); err != nil {
 		db.Close()
 		return nil, WrapError("apply schema", MapSQLError(err))
 	}
 
-	LogInfo("SQLite database initialized at %s", dbPath)
 	return db, nil
 }

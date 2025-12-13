@@ -3,13 +3,16 @@ package db
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 )
 
+//
 // ------------------------------------------------------------
-// COMMON DATABASE ERROR SENTINELS
+// DOMAIN / DATABASE ERROR SENTINELS
 // ------------------------------------------------------------
+// These errors are used across the db layer and can be matched
+// using errors.Is(...) from callers (handlers, services, etc).
+//
 
 var (
 	ErrNotFound      = errors.New("record not found")
@@ -20,38 +23,30 @@ var (
 	ErrConnection    = errors.New("database connection error")
 )
 
+//
 // ------------------------------------------------------------
-// ERROR WRAPPING + LOGGING
+// ERROR WRAPPING
 // ------------------------------------------------------------
+// WrapError adds context while preserving the original error.
+// Logging is intentionally NOT done here to avoid double-logging.
+// The caller (handler / main) decides how to log or expose errors.
+//
 
-// WrapError attaches context and logs it.
-// Example: return WrapError("create user", err)
 func WrapError(context string, err error) error {
 	if err == nil {
 		return nil
 	}
-	wrapped := fmt.Errorf("%s: %w", context, err)
-	log.Printf("[DB ERROR] %s", wrapped)
-	return wrapped
+	return fmt.Errorf("%s: %w", context, err)
 }
 
-// ------------------------------------------------------------
-// GENERIC LOG HELPERS
-// ------------------------------------------------------------
-
-func LogInfo(format string, args ...any) {
-	log.Printf("[DB INFO] "+format, args...)
-}
-
-func LogWarn(format string, args ...any) {
-	log.Printf("[DB WARN] "+format, args...)
-}
-
+//
 // ------------------------------------------------------------
 // SQLITE ERROR CLASSIFICATION
 // ------------------------------------------------------------
+// Converts SQLite-specific error messages into domain errors.
+// This keeps vendor-specific logic isolated inside the db layer.
+//
 
-// MapSQLError converts raw SQLite errors into friendly Go errors.
 func MapSQLError(err error) error {
 	if err == nil {
 		return nil
@@ -68,27 +63,5 @@ func MapSQLError(err error) error {
 		return ErrSchemaMissing
 	default:
 		return err
-	}
-}
-
-// ------------------------------------------------------------
-// PROCESS LIFECYCLE ERROR HELPERS
-// ------------------------------------------------------------
-
-func HandleInitError(err error, context string) {
-	if err != nil {
-		log.Fatalf("[FATAL] %s: %v", context, err)
-	}
-}
-
-func HandleRuntimeError(err error, context string) {
-	if err != nil {
-		log.Printf("[RUNTIME ERROR] %s: %v", context, err)
-	}
-}
-
-func HandleFatalError(err error, context string) {
-	if err != nil {
-		log.Fatalf("[FATAL] %s: %v", context, err)
 	}
 }

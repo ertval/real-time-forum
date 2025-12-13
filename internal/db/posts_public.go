@@ -89,30 +89,6 @@ SELECT COUNT(*) FROM posts WHERE status = 'published'
 
 //
 // ─────────────────────────────────────────────────────────────
-//  HELPERS
-// ─────────────────────────────────────────────────────────────
-//
-
-// Loads the category names for a given post
-func loadCategoriesForPost(ctx context.Context, db *sql.DB, postID int64) ([]string, error) {
-	rows, err := db.QueryContext(ctx, sqlSelectCategories, postID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var cats []string
-	for rows.Next() {
-		var c string
-		if err := rows.Scan(&c); err == nil {
-			cats = append(cats, c)
-		}
-	}
-	return cats, nil
-}
-
-//
-// ─────────────────────────────────────────────────────────────
 //  MAIN FUNCTION: PUBLIC POSTS LIST
 // ─────────────────────────────────────────────────────────────
 //

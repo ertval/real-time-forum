@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"strconv"
-	"strings"
 
 	repository "forum/internal/db"
 	"forum/internal/middleware"
@@ -19,13 +17,14 @@ func NewUsersHandler(database *sql.DB) *UsersHandler {
 	return &UsersHandler{conn: database}
 }
 
-// ------------------------------------------------------------
-// REGISTER
-// ------------------------------------------------------------
+// ============================================================
+// COLLECTION / SINGLE ROUTES
+// ============================================================
 
+// Register → POST /api/v1/users/register
 func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+		methodNotAllowed(w)
 		return
 	}
 
@@ -47,18 +46,14 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ------------------------------------------------------------
-// GET USER BY ID (AUTH REQUIRED)
-// ------------------------------------------------------------
-
+// Item → GET /api/v1/users/{id} (auth required via router)
 func (u *UsersHandler) Item(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+		methodNotAllowed(w)
 		return
 	}
 
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/users/")
-	userID, err := strconv.ParseInt(idStr, 10, 64)
+	userID, err := parseID(r.URL.Path, "/api/v1/users/")
 	if err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid user ID", http.StatusBadRequest))
 		return
@@ -73,13 +68,14 @@ func (u *UsersHandler) Item(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, user, nil)
 }
 
-// ------------------------------------------------------------
-// LOGIN
-// ------------------------------------------------------------
+// ============================================================
+// AUTH
+// ============================================================
 
+// Login → POST /api/v1/users/login
 func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+		methodNotAllowed(w)
 		return
 	}
 
@@ -112,16 +108,13 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Value:    session.Token,
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // IMPORTANT for tests
+		SameSite: http.SameSiteLaxMode, // important for tests
 	})
 
 	WriteOK(w, map[string]any{"message": "Login successful"}, nil)
 }
 
-// ------------------------------------------------------------
-// /me
-// ------------------------------------------------------------
-
+// Me → GET /api/v1/users/me
 func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
@@ -138,13 +131,10 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, user, nil)
 }
 
-// ------------------------------------------------------------
-// LOGOUT
-// ------------------------------------------------------------
-
+// Logout → POST /api/v1/users/logout
 func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+		methodNotAllowed(w)
 		return
 	}
 

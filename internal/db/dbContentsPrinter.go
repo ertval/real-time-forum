@@ -1,117 +1,215 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	"io"
-	"strings"
+	"time"
 )
 
-// InspectAllTablesTo writes a readable dump of all tables to the provided writer.
-// Useful for debugging database state.
-func InspectAllTables(database *sql.DB, out io.Writer) error {
-	LogInfo("Inspecting SQLite tables...")
+// NOTE:
+// This file is a DEBUG / DEVELOPMENT utility.
+// It is NOT used by handlers, middleware, or production flow.
 
-	// ---------------------------------------------------------
-	// 1) Fetch all user tables (skip internal sqlite_% tables)
-	// ---------------------------------------------------------
-	rows, err := database.Query(`
-		SELECT name
-		FROM sqlite_master
-		WHERE type = 'table'
-		  AND name NOT LIKE 'sqlite_%'
-		ORDER BY name;
-	`)
-	if err != nil {
-		return WrapError("list tables", MapSQLError(err))
-	}
-	defer rows.Close()
+// PrintDBContents prints basic database contents for debugging purposes.
+// It performs READ-ONLY queries and must not contain business logic.
+func PrintDBContents(ctx context.Context, db *sql.DB) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 
-	var tableNames []string
-	for rows.Next() {
-		var t string
-		if err := rows.Scan(&t); err != nil {
-			return WrapError("scan table name", err)
-		}
-		tableNames = append(tableNames, t)
+	if err := printUsers(ctx, db); err != nil {
+		return err
 	}
-	if err := rows.Err(); err != nil {
-		return WrapError("iterate tables", err)
+	if err := printPosts(ctx, db); err != nil {
+		return err
+	}
+	if err := printCategories(ctx, db); err != nil {
+		return err
+	}
+	if err := printComments(ctx, db); err != nil {
+		return err
+	}
+	if err := printReactions(ctx, db); err != nil {
+		return err
+	}
+	if err := printSessions(ctx, db); err != nil {
+		return err
 	}
 
-	// ---------------------------------------------------------
-	// 2) Iterate tables and dump content
-	// ---------------------------------------------------------
-	for _, table := range tableNames {
-
-		fmt.Fprintf(out, "\nTable: %s\n", table)
-		fmt.Fprintln(out, strings.Repeat("-", len(table)+8))
-
-		r, err := database.Query("SELECT * FROM " + table + " LIMIT 50;")
-		if err != nil {
-			LogWarn("Query failed for table %s: %v", table, err)
-			fmt.Fprintf(out, "  (error querying table: %v)\n", err)
-			continue
-		}
-
-		cols, err := r.Columns()
-		if err != nil {
-			LogWarn("Failed to read column names for %s: %v", table, err)
-			fmt.Fprintf(out, "  (error reading columns: %v)\n", err)
-			_ = r.Close()
-			continue
-		}
-
-		if len(cols) == 0 {
-			fmt.Fprintln(out, "  (no columns)")
-			_ = r.Close()
-			continue
-		}
-
-		// Prepare scan buffers
-		values := make([]interface{}, len(cols))
-		ptrs := make([]interface{}, len(cols))
-		for i := range values {
-			ptrs[i] = &values[i]
-		}
-
-		// ---------------------------------------------------------
-		// 3) Print rows
-		// ---------------------------------------------------------
-		for r.Next() {
-			if err := r.Scan(ptrs...); err != nil {
-				LogWarn("Scan error in table %s: %v", table, err)
-				fmt.Fprintf(out, "  scan error: %v\n", err)
-				continue
-			}
-
-			for i, col := range cols {
-				val := formatValue(values[i])
-				fmt.Fprintf(out, "%s=%s  ", col, val)
-			}
-			fmt.Fprintln(out)
-		}
-		if err := r.Err(); err != nil {
-			LogWarn("Row iteration error in %s: %v", table, err)
-			fmt.Fprintf(out, "  (rows error: %v)\n", err)
-		}
-
-		_ = r.Close()
-	}
-
-	fmt.Fprintln(out, "\n=== Inspection Complete ===")
-	LogInfo("Completed inspection of %d tables", len(tableNames))
 	return nil
 }
 
-// formatValue converts scanned SQL values into human-readable strings.
-func formatValue(v interface{}) string {
-	switch vv := v.(type) {
-	case nil:
-		return "NULL"
-	case []byte:
-		return string(vv)
-	default:
-		return fmt.Sprintf("%v", vv)
+// ---------------------------------------------------------
+// USERS
+// ---------------------------------------------------------
+
+func printUsers(ctx context.Context, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, username, email, is_active, created_at FROM users`,
+	)
+	if err != nil {
+		return fmt.Errorf("print users: %w", err)
 	}
+	defer rows.Close()
+
+	fmt.Println("---- USERS ----")
+	for rows.Next() {
+		var id int64
+		var username, email, createdAt string
+		var isActive bool
+
+		if err := rows.Scan(&id, &username, &email, &isActive, &createdAt); err != nil {
+			return err
+		}
+
+		fmt.Printf("ID=%d USERNAME=%s EMAIL=%s ACTIVE=%v CREATED=%s\n",
+			id, username, email, isActive, createdAt)
+	}
+
+	return rows.Err()
+}
+
+// ---------------------------------------------------------
+// POSTS
+// ---------------------------------------------------------
+
+func printPosts(ctx context.Context, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, author_id, title, created_at FROM posts`,
+	)
+	if err != nil {
+		return fmt.Errorf("print posts: %w", err)
+	}
+	defer rows.Close()
+
+	fmt.Println("---- POSTS ----")
+	for rows.Next() {
+		var id, authorID int64
+		var title, createdAt string
+
+		if err := rows.Scan(&id, &authorID, &title, &createdAt); err != nil {
+			return err
+		}
+
+		fmt.Printf("ID=%d AUTHOR=%d TITLE=%q CREATED=%s\n",
+			id, authorID, title, createdAt)
+	}
+
+	return rows.Err()
+}
+
+// ---------------------------------------------------------
+// CATEGORIES
+// ---------------------------------------------------------
+
+func printCategories(ctx context.Context, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, name, slug FROM categories`,
+	)
+	if err != nil {
+		return fmt.Errorf("print categories: %w", err)
+	}
+	defer rows.Close()
+
+	fmt.Println("---- CATEGORIES ----")
+	for rows.Next() {
+		var id int64
+		var name, slug string
+
+		if err := rows.Scan(&id, &name, &slug); err != nil {
+			return err
+		}
+
+		fmt.Printf("ID=%d NAME=%s SLUG=%s\n", id, name, slug)
+	}
+
+	return rows.Err()
+}
+
+// ---------------------------------------------------------
+// COMMENTS
+// ---------------------------------------------------------
+
+func printComments(ctx context.Context, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, post_id, user_id, body, created_at FROM comments`,
+	)
+	if err != nil {
+		return fmt.Errorf("print comments: %w", err)
+	}
+	defer rows.Close()
+
+	fmt.Println("---- COMMENTS ----")
+	for rows.Next() {
+		var id, postID, userID int64
+		var body, createdAt string
+
+		if err := rows.Scan(&id, &postID, &userID, &body, &createdAt); err != nil {
+			return err
+		}
+
+		fmt.Printf("ID=%d POST=%d USER=%d BODY=%q CREATED=%s\n",
+			id, postID, userID, body, createdAt)
+	}
+
+	return rows.Err()
+}
+
+// ---------------------------------------------------------
+// REACTIONS
+// ---------------------------------------------------------
+
+func printReactions(ctx context.Context, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx,
+		`SELECT user_id, post_id, value FROM reactions`,
+	)
+	if err != nil {
+		return fmt.Errorf("print reactions: %w", err)
+	}
+	defer rows.Close()
+
+	fmt.Println("---- REACTIONS ----")
+	for rows.Next() {
+		var userID, postID int64
+		var value int
+
+		if err := rows.Scan(&userID, &postID, &value); err != nil {
+			return err
+		}
+
+		fmt.Printf("USER=%d POST=%d VALUE=%d\n",
+			userID, postID, value)
+	}
+
+	return rows.Err()
+}
+
+// ---------------------------------------------------------
+// SESSIONS
+// ---------------------------------------------------------
+
+func printSessions(ctx context.Context, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, user_id, token, is_valid, expires_at FROM sessions`,
+	)
+	if err != nil {
+		return fmt.Errorf("print sessions: %w", err)
+	}
+	defer rows.Close()
+
+	fmt.Println("---- SESSIONS ----")
+	for rows.Next() {
+		var id, userID int64
+		var token, expiresAt string
+		var isValid int
+
+		if err := rows.Scan(&id, &userID, &token, &isValid, &expiresAt); err != nil {
+			return err
+		}
+
+		fmt.Printf("ID=%d USER=%d VALID=%d EXPIRES=%s TOKEN=%s\n",
+			id, userID, isValid, expiresAt, token)
+	}
+
+	return rows.Err()
 }
