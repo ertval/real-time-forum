@@ -11,15 +11,15 @@ import (
 // ------------------------------------------------------------
 
 // Normalize pagination for comments
-func normalizeCommentsPagination(p *ListCommentsParams) {
-	if p.Page < 1 {
-		p.Page = 1
+func normalizeCommentsPagination(params *ListCommentsParams) {
+	if params.Page < 1 {
+		params.Page = 1
 	}
-	if p.PerPage < 1 {
-		p.PerPage = 20
+	if params.PerPage < 1 {
+		params.PerPage = 20
 	}
-	if p.PerPage > 100 {
-		p.PerPage = 100
+	if params.PerPage > 100 {
+		params.PerPage = 100
 	}
 }
 
@@ -45,10 +45,10 @@ func countCommentsByPost(
 func fetchCommentsByPost(
 	ctx context.Context,
 	db *sql.DB,
-	p ListCommentsParams,
+	params ListCommentsParams,
 ) ([]Comment, error) {
 
-	offset := (p.Page - 1) * p.PerPage
+	offset := (params.Page - 1) * params.PerPage
 
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, post_id, user_id, parent_comment_id, body, created_at, updated_at
@@ -56,7 +56,7 @@ func fetchCommentsByPost(
 		WHERE post_id = ?
 		ORDER BY created_at ASC
 		LIMIT ? OFFSET ?
-	`, p.PostID, p.PerPage, offset)
+	`, params.PostID, params.PerPage, offset)
 	if err != nil {
 		return nil, fmt.Errorf("query comments: %w", err)
 	}
@@ -65,27 +65,27 @@ func fetchCommentsByPost(
 	var comments []Comment
 
 	for rows.Next() {
-		var c Comment
+		var comment Comment
 		var parentID sql.NullInt64
 
 		if err := rows.Scan(
-			&c.ID,
-			&c.PostID,
-			&c.UserID,
+			&comment.ID,
+			&comment.PostID,
+			&comment.UserID,
 			&parentID,
-			&c.Body,
-			&c.CreatedAt,
-			&c.UpdatedAt,
+			&comment.Body,
+			&comment.CreatedAt,
+			&comment.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan comment: %w", err)
 		}
 
 		if parentID.Valid {
 			id := parentID.Int64
-			c.ParentCommentID = &id
+			comment.ParentCommentID = &id
 		}
 
-		comments = append(comments, c)
+		comments = append(comments, comment)
 	}
 
 	if err := rows.Err(); err != nil {

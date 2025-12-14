@@ -39,7 +39,6 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-//
 // ---------------------------------------------------------
 // PUBLIC API
 // ---------------------------------------------------------
@@ -47,22 +46,22 @@ type LoginRequest struct {
 func CreateUser(
 	ctx context.Context,
 	db *sql.DB,
-	in CreateUserRequest,
+	req CreateUserRequest,
 ) (int64, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, userTimeout)
 	defer cancel()
 
-	if err := validateCreateUser(in); err != nil {
+	if err := validateCreateUser(req); err != nil {
 		return 0, err
 	}
 
-	hash, err := hashPassword(in.Password)
+	hash, err := hashPassword(req.Password)
 	if err != nil {
 		return 0, err
 	}
 
-	id, err := insertUser(ctx, db, in.Username, in.Email, hash)
+	id, err := insertUser(ctx, db, req.Username, req.Email, hash)
 	if err != nil {
 		return 0, err
 	}
@@ -73,22 +72,22 @@ func CreateUser(
 func LoginUser(
 	ctx context.Context,
 	db *sql.DB,
-	in LoginRequest,
+	req LoginRequest,
 ) (User, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, userTimeout)
 	defer cancel()
 
-	u, err := fetchUserForLogin(ctx, db, in)
+	user, err := fetchUserForLogin(ctx, db, req)
 	if err != nil {
 		return User{}, err
 	}
 
-	if err := comparePassword(u.PasswordHash, in.Password); err != nil {
-		return User{}, fmt.Errorf("invalid username/email or password")
+	if err := comparePassword(user.PasswordHash, req.Password); err != nil {
+		return User{}, ErrInvalidCredentials
 	}
 
-	return u, nil
+	return user, nil
 }
 
 func GetUser(
@@ -100,13 +99,13 @@ func GetUser(
 	ctx, cancel := context.WithTimeout(ctx, userTimeout)
 	defer cancel()
 
-	var u User
+	var user User
 	err := db.QueryRowContext(ctx,
 		`SELECT id, username, email, is_active, created_at, updated_at
 		 FROM users
 		 WHERE id = ?`,
 		id,
-	).Scan(&u.ID, &u.Username, &u.Email, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+	).Scan(&user.ID, &user.Username, &user.Email, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -115,7 +114,7 @@ func GetUser(
 		return User{}, fmt.Errorf("get user: %w", err)
 	}
 
-	return u, nil
+	return user, nil
 }
 
 //
@@ -123,15 +122,15 @@ func GetUser(
 // HELPERS
 // ---------------------------------------------------------
 
-func validateCreateUser(in CreateUserRequest) error {
+func validateCreateUser(req CreateUserRequest) error {
 	switch {
-	case len(in.Username) < minUsernameLength:
+	case len(req.Username) < minUsernameLength:
 		return fmt.Errorf("username must be at least %d characters long", minUsernameLength)
-	case len(in.Username) > maxUsernameLength:
+	case len(req.Username) > maxUsernameLength:
 		return fmt.Errorf("username can't be longer than %d characters", maxUsernameLength)
-	case len(in.Password) < minPasswordLength:
+	case len(req.Password) < minPasswordLength:
 		return fmt.Errorf("password must be at least %d characters long", minPasswordLength)
-	case !strings.Contains(in.Email, "@"):
+	case !strings.Contains(req.Email, "@"):
 		return fmt.Errorf("invalid email address")
 	}
 	return nil
@@ -163,7 +162,7 @@ func insertUser(
 	passwordHash string,
 ) (int64, error) {
 
-	res, err := db.ExecContext(ctx,
+	result, err := db.ExecContext(ctx,
 		`INSERT INTO users (username, email, password_hash)
 		 VALUES (?, ?, ?)`,
 		username,
@@ -183,7 +182,7 @@ func insertUser(
 		return 0, fmt.Errorf("insert user: %w", err)
 	}
 
-	id, err := res.LastInsertId()
+	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
@@ -194,41 +193,41 @@ func insertUser(
 func fetchUserForLogin(
 	ctx context.Context,
 	db *sql.DB,
-	in LoginRequest,
+	req LoginRequest,
 ) (User, error) {
 
 	var row *sql.Row
 
-	if strings.TrimSpace(in.Username) != "" {
+	if strings.TrimSpace(req.Username) != "" {
 		row = db.QueryRowContext(ctx,
 			`SELECT id, username, email, password_hash, is_active
 			 FROM users
 			 WHERE username = ?`,
-			in.Username,
+			req.Username,
 		)
 	} else {
 		row = db.QueryRowContext(ctx,
 			`SELECT id, username, email, password_hash, is_active
 			 FROM users
 			 WHERE email = ?`,
-			in.Email,
+			req.Email,
 		)
 	}
 
-	var u User
+	var user User
 	if err := row.Scan(
-		&u.ID,
-		&u.Username,
-		&u.Email,
-		&u.PasswordHash,
-		&u.IsActive,
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.IsActive,
 	); err != nil {
 
 		if err == sql.ErrNoRows {
-			return User{}, fmt.Errorf("invalid username/email or password")
+			return User{}, ErrInvalidCredentials
 		}
 		return User{}, fmt.Errorf("fetch user: %w", err)
 	}
 
-	return u, nil
+	return user, nil
 }

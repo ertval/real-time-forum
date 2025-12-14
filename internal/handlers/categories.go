@@ -18,24 +18,22 @@ func NewCategoriesHandler(database *sql.DB) *CategoriesHandler {
 	return &CategoriesHandler{conn: database}
 }
 
-//
 // ---------------------------------------------------------
-// COLLECTION: GET / POST
+// HandleCategories: GET / POST
 // ---------------------------------------------------------
-//
 
-func (c *CategoriesHandler) Collection(w http.ResponseWriter, r *http.Request) {
+func (c *CategoriesHandler) HandleCategories(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		c.list(w, r)
+		c.listCategories(w, r)
 	case http.MethodPost:
-		c.create(w, r)
+		c.createCategory(w, r)
 	default:
 		methodNotAllowed(w)
 	}
 }
 
-func (c *CategoriesHandler) list(w http.ResponseWriter, r *http.Request) {
+func (c *CategoriesHandler) listCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := repository.ListCategories(r.Context(), c.conn)
 	if err != nil {
 		WriteError(w, NewError(
@@ -49,13 +47,14 @@ func (c *CategoriesHandler) list(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, categories, nil)
 }
 
-func (c *CategoriesHandler) create(w http.ResponseWriter, r *http.Request) {
-	var in struct {
+func (c *CategoriesHandler) createCategory(w http.ResponseWriter, r *http.Request) {
+
+	var req struct {
 		Name string `json:"name"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil ||
-		strings.TrimSpace(in.Name) == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil ||
+		strings.TrimSpace(req.Name) == "" {
 
 		WriteError(w, NewError(
 			"BAD_REQUEST",
@@ -65,12 +64,12 @@ func (c *CategoriesHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slug := slugify(in.Name)
+	slug := slugify(req.Name)
 
 	id, err := repository.CreateCategory(
 		r.Context(),
 		c.conn,
-		in.Name,
+		req.Name,
 		slug,
 	)
 	if err != nil {
@@ -104,13 +103,11 @@ func (c *CategoriesHandler) create(w http.ResponseWriter, r *http.Request) {
 	WriteCreated(w, category)
 }
 
-//
 // ---------------------------------------------------------
-// ITEM: GET / PATCH / DELETE
+// HandleCategory: GET / PATCH / DELETE
 // ---------------------------------------------------------
-//
 
-func (c *CategoriesHandler) Item(w http.ResponseWriter, r *http.Request) {
+func (c *CategoriesHandler) HandleCategory(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r.URL.Path, "/api/v1/categories/")
 	if err != nil {
 		WriteError(w, NewError(
@@ -123,17 +120,18 @@ func (c *CategoriesHandler) Item(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		c.get(w, r, id)
+		c.getCategory(w, r, id)
 	case http.MethodPatch:
-		c.update(w, r, id)
+		c.updateCategory(w, r, id)
 	case http.MethodDelete:
-		c.delete(w, r, id)
+		c.deleteCategory(w, r, id)
 	default:
 		methodNotAllowed(w)
 	}
+
 }
 
-func (c *CategoriesHandler) get(w http.ResponseWriter, r *http.Request, id int64) {
+func (c *CategoriesHandler) getCategory(w http.ResponseWriter, r *http.Request, id int64) {
 	category, err := repository.GetCategory(r.Context(), c.conn, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -156,12 +154,12 @@ func (c *CategoriesHandler) get(w http.ResponseWriter, r *http.Request, id int64
 	WriteOK(w, category, nil)
 }
 
-func (c *CategoriesHandler) update(w http.ResponseWriter, r *http.Request, id int64) {
-	var in struct {
+func (c *CategoriesHandler) updateCategory(w http.ResponseWriter, r *http.Request, id int64) {
+	var req struct {
 		Name *string `json:"name"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, NewError(
 			"BAD_REQUEST",
 			"invalid json",
@@ -170,7 +168,7 @@ func (c *CategoriesHandler) update(w http.ResponseWriter, r *http.Request, id in
 		return
 	}
 
-	if in.Name == nil || strings.TrimSpace(*in.Name) == "" {
+	if req.Name == nil || strings.TrimSpace(*req.Name) == "" {
 		WriteError(w, NewError(
 			"BAD_REQUEST",
 			"name cannot be empty",
@@ -183,7 +181,7 @@ func (c *CategoriesHandler) update(w http.ResponseWriter, r *http.Request, id in
 		r.Context(),
 		c.conn,
 		id,
-		*in.Name,
+		*req.Name,
 	); err != nil {
 
 		if isUniqueConstraint(err) {
@@ -216,7 +214,7 @@ func (c *CategoriesHandler) update(w http.ResponseWriter, r *http.Request, id in
 	WriteOK(w, category, nil)
 }
 
-func (c *CategoriesHandler) delete(w http.ResponseWriter, r *http.Request, id int64) {
+func (c *CategoriesHandler) deleteCategory(w http.ResponseWriter, r *http.Request, id int64) {
 	if err := repository.DeleteCategory(r.Context(), c.conn, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			WriteError(w, NewError(

@@ -19,13 +19,11 @@ func NewPostsHandler(database *sql.DB) *PostsHandler {
 	return &PostsHandler{conn: database}
 }
 
-//
 // ============================================================
-// COLLECTION: /api/v1/posts
+// HandlePosts: /api/v1/posts
 // ============================================================
-//
 
-func (p *PostsHandler) Collection(w http.ResponseWriter, r *http.Request) {
+func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		p.listPosts(w, r)
@@ -56,8 +54,8 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	meta := buildPaginationMeta(page, perPage, result.Total, nil)
-	WriteOK(w, result.Posts, meta)
+	paginationInfo := buildPaginationInfo(page, perPage, result.Total, nil)
+	WriteOK(w, result.Posts, paginationInfo)
 }
 
 func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
@@ -66,18 +64,18 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var in struct {
+	var req struct {
 		Title       string  `json:"title"`
 		Body        string  `json:"body"`
 		CategoryIDs []int64 `json:"category_ids"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
 		return
 	}
 
-	if strings.TrimSpace(in.Title) == "" || strings.TrimSpace(in.Body) == "" {
+	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Body) == "" {
 		WriteError(w, NewError("BAD_REQUEST", "title and body required", http.StatusBadRequest))
 		return
 	}
@@ -86,15 +84,16 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		p.conn,
 		userID,
-		in.Title,
-		in.Body,
-		in.CategoryIDs,
+		req.Title,
+		req.Body,
+		req.CategoryIDs,
 	)
 	if err != nil {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
 		return
 	}
 
+	// Reload post to return the full persisted representation
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
 		WriteError(w, NewError(
@@ -108,14 +107,12 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 	WriteCreated(w, post)
 }
 
-//
 // ============================================================
-// ITEM: /api/v1/posts/{id}
+// HandlePost: /api/v1/posts/{id}
 // ============================================================
-//
 
-func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
-	postID, action, ok := parsePostPath(w, r)
+func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
+	postID, action, ok := resolvePostRoute(w, r)
 	if !ok {
 		return
 	}
@@ -156,11 +153,9 @@ func (p *PostsHandler) Item(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//
 // ============================================================
 // POST ACTIONS
 // ============================================================
-//
 
 func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID int64) {
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
@@ -180,17 +175,17 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 		return
 	}
 
-	var in struct {
+	var req struct {
 		Title *string `json:"title"`
 		Body  *string `json:"body"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
 		return
 	}
 
-	if in.Title == nil && in.Body == nil {
+	if req.Title == nil && req.Body == nil {
 		WriteError(w, NewError("BAD_REQUEST", "nothing to update", http.StatusBadRequest))
 		return
 	}
@@ -199,7 +194,7 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 		r.Context(),
 		p.conn,
 		postID,
-		repository.UpdatePostInput{Title: in.Title, Body: in.Body},
+		repository.UpdatePostInput{Title: req.Title, Body: req.Body},
 	); err != nil {
 		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
 		return
@@ -241,16 +236,14 @@ func (p *PostsHandler) toggleLike(w http.ResponseWriter, r *http.Request, postID
 	}, nil)
 }
 
-//
 // ============================================================
 // COMMENTS
 // ============================================================
-//
 
 func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, postID int64) {
 	page, perPage := sanitizePagination(r)
 
-	res, err := repository.ListCommentsByPost(
+	listResult, err := repository.ListCommentsByPost(
 		r.Context(),
 		p.conn,
 		repository.ListCommentsParams{
@@ -264,11 +257,11 @@ func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, post
 		return
 	}
 
-	meta := buildPaginationMeta(page, perPage, res.Total, map[string]any{
+	paginationInfo := buildPaginationInfo(page, perPage, listResult.Total, map[string]any{
 		"post_id": postID,
 	})
 
-	WriteOK(w, res.Comments, meta)
+	WriteOK(w, listResult.Comments, paginationInfo)
 }
 
 func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, postID int64) {
@@ -277,17 +270,17 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
-	var in struct {
+	var req struct {
 		Body            string `json:"body"`
 		ParentCommentID *int64 `json:"parent_comment_id"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
 		return
 	}
 
-	if strings.TrimSpace(in.Body) == "" {
+	if strings.TrimSpace(req.Body) == "" {
 		WriteError(w, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 		return
 	}
@@ -298,8 +291,8 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		repository.CreateCommentInput{
 			PostID:          postID,
 			UserID:          userID,
-			ParentCommentID: in.ParentCommentID,
-			Body:            in.Body,
+			ParentCommentID: req.ParentCommentID,
+			Body:            req.Body,
 		},
 	)
 	if err != nil {
@@ -311,13 +304,12 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
-	// ✅ DO NOT re-fetch from DB (SQLite :memory: safe)
 	comment := repository.Comment{
 		ID:              commentID,
 		PostID:          postID,
 		UserID:          userID,
-		ParentCommentID: in.ParentCommentID,
-		Body:            in.Body,
+		ParentCommentID: req.ParentCommentID,
+		Body:            req.Body,
 	}
 
 	WriteCreated(w, comment)

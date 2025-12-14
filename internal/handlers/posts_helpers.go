@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func parsePostPath(w http.ResponseWriter, r *http.Request) (postID int64, action string, ok bool) {
+func resolvePostRoute(w http.ResponseWriter, r *http.Request) (postID int64, action string, ok bool) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/posts/")
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 

@@ -189,8 +189,8 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 	var post map[string]any
 	json.Unmarshal(env.Data, &post)
 
-	cats := post["category_ids"].([]interface{})
-	if len(cats) != 2 {
-		t.Fatalf("expected 2 categories, got %d", len(cats))
+	categoryIDs := post["category_ids"].([]any)
+	if len(categoryIDs) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(categoryIDs))
 	}
 }

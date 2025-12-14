@@ -141,8 +141,8 @@ func ListPublicPosts(ctx context.Context, db *sql.DB, p ListPublicPostsParams) (
 		}
 
 		// Load categories
-		if cats, err := loadCategoriesForPost(ctx, db, post.ID); err == nil {
-			post.Categories = cats
+		if categoryIDs, err := loadCategoriesForPost(ctx, db, post.ID); err == nil {
+			post.Categories = categoryIDs
 		}
 
 		posts = append(posts, post)

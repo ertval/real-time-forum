@@ -7,11 +7,9 @@ import (
 	"time"
 )
 
-//
 // ---------------------------------------------------------
 // DATA STRUCTURES
 // ---------------------------------------------------------
-//
 
 type Comment struct {
 	ID              int64  `json:"id"`
@@ -34,29 +32,27 @@ type ListCommentsResult struct {
 	Total    int
 }
 
-//
 // ---------------------------------------------------------
 // LIST COMMENTS (ORCHESTRATOR)
 // ---------------------------------------------------------
-//
 
 func ListCommentsByPost(
 	ctx context.Context,
 	db *sql.DB,
-	p ListCommentsParams,
+	params ListCommentsParams,
 ) (ListCommentsResult, error) {
 
-	normalizeCommentsPagination(&p)
+	normalizeCommentsPagination(&params)
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	total, err := countCommentsByPost(ctx, db, p.PostID)
+	total, err := countCommentsByPost(ctx, db, params.PostID)
 	if err != nil {
 		return ListCommentsResult{}, err
 	}
 
-	comments, err := fetchCommentsByPost(ctx, db, p)
+	comments, err := fetchCommentsByPost(ctx, db, params)
 	if err != nil {
 		return ListCommentsResult{}, err
 	}
@@ -67,11 +63,9 @@ func ListCommentsByPost(
 	}, nil
 }
 
-//
 // ---------------------------------------------------------
 // CREATE COMMENT
 // ---------------------------------------------------------
-//
 
 type CreateCommentInput struct {
 	PostID          int64
@@ -83,22 +77,22 @@ type CreateCommentInput struct {
 func CreateComment(
 	ctx context.Context,
 	db *sql.DB,
-	in CreateCommentInput,
+	input CreateCommentInput,
 ) (int64, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	const q = `
+	const query = `
 		INSERT INTO comments (post_id, user_id, parent_comment_id, body, created_at, updated_at)
 		VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
 	`
 
-	res, err := db.ExecContext(ctx, q,
-		in.PostID,
-		in.UserID,
-		in.ParentCommentID,
-		in.Body,
+	res, err := db.ExecContext(ctx, query,
+		input.PostID,
+		input.UserID,
+		input.ParentCommentID,
+		input.Body,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create comment: %w", err)
@@ -112,34 +106,32 @@ func CreateComment(
 	return id, nil
 }
 
-//
 // ---------------------------------------------------------
 // GET COMMENT
 // ---------------------------------------------------------
-//
 
 func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	const q = `
+	const query = `
 		SELECT id, post_id, user_id, parent_comment_id, body, created_at, updated_at
 		FROM comments
 		WHERE id = ?
 	`
 
-	var c Comment
+	var comment Comment
 	var parentID sql.NullInt64
 
-	err := db.QueryRowContext(ctx, q).
+	err := db.QueryRowContext(ctx, query).
 		Scan(
-			&c.ID,
-			&c.PostID,
-			&c.UserID,
+			&comment.ID,
+			&comment.PostID,
+			&comment.UserID,
 			&parentID,
-			&c.Body,
-			&c.CreatedAt,
-			&c.UpdatedAt,
+			&comment.Body,
+			&comment.CreatedAt,
+			&comment.UpdatedAt,
 		)
 
 	if err != nil {
@@ -147,9 +139,9 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 	}
 
 	if parentID.Valid {
-		v := parentID.Int64
-		c.ParentCommentID = &v
+		parentCommentID := parentID.Int64
+		comment.ParentCommentID = &parentCommentID
 	}
 
-	return c, nil
+	return comment, nil
 }

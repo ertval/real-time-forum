@@ -51,7 +51,7 @@ func Recoverer(next http.Handler) http.Handler {
 // CORS MIDDLEWARE
 // Enables frontend ↔ backend communication on different ports.
 // ------------------------------------------------------------
-func CORS(origin string) func(http.Handler) http.Handler {
+func EnableCORS(origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

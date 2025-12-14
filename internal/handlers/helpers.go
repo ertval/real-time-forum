@@ -37,16 +37,16 @@ func sanitizeSort(r *http.Request) string {
 	}
 }
 
-func buildPaginationMeta(page, perPage, total int, extra map[string]any) map[string]any {
-	meta := map[string]any{
+func buildPaginationInfo(page, perPage, total int, extra map[string]any) map[string]any {
+	paginationInfo := map[string]any{
 		"page":     page,
 		"per_page": perPage,
 		"total":    total,
 	}
 	if extra != nil {
-		maps.Copy(meta, extra)
+		maps.Copy(paginationInfo, extra)
 	}
-	return meta
+	return paginationInfo
 }
 
 // ------------------------------------------------------------
@@ -54,8 +54,8 @@ func buildPaginationMeta(page, perPage, total int, extra map[string]any) map[str
 // ------------------------------------------------------------
 
 func atoiOrDefault(str string, def int) int {
-	if v, err := strconv.Atoi(str); err == nil {
-		return v
+	if value, err := strconv.Atoi(str); err == nil {
+		return value
 	}
 	return def
 }
@@ -102,7 +102,6 @@ func slugify(value string) string {
 }
 
 // isUniqueConstraint checks UNIQUE constraint errors via message matching.
-// NOTE: SQLite/MySQL compatible – not driver-agnostic.
 func isUniqueConstraint(err error) bool {
 	if err == nil {
 		return false

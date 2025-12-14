@@ -11,10 +11,10 @@ func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 		methodNotAllowed(w)
 		return
 	}
-	p.listPublicPosts(w, r)
+	p.publicListPosts(w, r)
 }
 
-func (p *PostsHandler) listPublicPosts(w http.ResponseWriter, r *http.Request) {
+func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
 	sort := sanitizeSort(r)
 
@@ -36,7 +36,7 @@ func (p *PostsHandler) listPublicPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	paginationMeta := buildPaginationMeta(page, perPage, result.Total, map[string]any{
+	paginationMeta := buildPaginationInfo(page, perPage, result.Total, map[string]any{
 		"sort": sort,
 	})
 

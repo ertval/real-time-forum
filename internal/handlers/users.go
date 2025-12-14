@@ -21,6 +21,28 @@ func NewUsersHandler(database *sql.DB) *UsersHandler {
 // COLLECTION / SINGLE ROUTES
 // ============================================================
 
+// HandleUser → GET /api/v1/users/{id} (auth required via router)
+func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+
+	userID, err := parseID(r.URL.Path, "/api/v1/users/")
+	if err != nil {
+		WriteError(w, NewError("BAD_REQUEST", "invalid user ID", http.StatusBadRequest))
+		return
+	}
+
+	user, err := repository.GetUser(r.Context(), u.conn, userID)
+	if err != nil {
+		WriteError(w, NewError("NOT_FOUND", "user not found", http.StatusNotFound))
+		return
+	}
+
+	WriteOK(w, user, nil)
+}
+
 // Register → POST /api/v1/users/register
 func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -44,28 +66,6 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 		"id":      id,
 		"message": "user created",
 	})
-}
-
-// Item → GET /api/v1/users/{id} (auth required via router)
-func (u *UsersHandler) Item(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		methodNotAllowed(w)
-		return
-	}
-
-	userID, err := parseID(r.URL.Path, "/api/v1/users/")
-	if err != nil {
-		WriteError(w, NewError("BAD_REQUEST", "invalid user ID", http.StatusBadRequest))
-		return
-	}
-
-	user, err := repository.GetUser(r.Context(), u.conn, userID)
-	if err != nil {
-		WriteError(w, NewError("NOT_FOUND", "user not found", http.StatusNotFound))
-		return
-	}
-
-	WriteOK(w, user, nil)
 }
 
 // ============================================================

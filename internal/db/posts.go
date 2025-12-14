@@ -27,6 +27,43 @@ type ListPostsParams struct {
 	PerPage int
 }
 
+type ListPostsResult struct {
+	Posts []Post
+	Total int
+}
+
+func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsResult, error) {
+	// Apply default pagination values if not provided
+	p.ApplyDefaults()
+
+	// Ensure the entire operation is bounded by a timeout
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	// Count total number of posts (used for pagination metadata)
+	total, err := countPosts(ctx, db)
+	if err != nil {
+		return ListPostsResult{}, err
+	}
+
+	// Fetch paginated posts for the current page
+	posts, err := fetchPosts(ctx, db, p)
+	if err != nil {
+		return ListPostsResult{}, err
+	}
+
+	// Attach categories to each post (data enrichment)
+	if err := attachPostCategories(ctx, db, posts); err != nil {
+		return ListPostsResult{}, err
+	}
+
+	// Return posts along with total count
+	return ListPostsResult{
+		Posts: posts,
+		Total: total,
+	}, nil
+}
+
 func (p *ListPostsParams) ApplyDefaults() {
 	if p.Page < 1 {
 		p.Page = 1
@@ -39,37 +76,6 @@ func (p *ListPostsParams) ApplyDefaults() {
 	}
 }
 
-type ListPostsResult struct {
-	Posts []Post
-	Total int
-}
-
-func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsResult, error) {
-	p.ApplyDefaults()
-
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
-	total, err := countPosts(ctx, db)
-	if err != nil {
-		return ListPostsResult{}, err
-	}
-
-	posts, err := fetchPosts(ctx, db, p)
-	if err != nil {
-		return ListPostsResult{}, err
-	}
-
-	if err := attachPostCategories(ctx, db, posts); err != nil {
-		return ListPostsResult{}, err
-	}
-
-	return ListPostsResult{
-		Posts: posts,
-		Total: total,
-	}, nil
-}
-
 // ------------------------------------------------------------
 // GET POST
 // ------------------------------------------------------------
@@ -78,30 +84,30 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	var p Post
+	var post Post
 
 	err := db.QueryRowContext(ctx, `
 		SELECT id, author_id, title, body, created_at, updated_at
 		FROM posts WHERE id = ?
 	`, id).Scan(
-		&p.ID,
-		&p.AuthorID,
-		&p.Title,
-		&p.Body,
-		&p.CreatedAt,
-		&p.UpdatedAt,
+		&post.ID,
+		&post.AuthorID,
+		&post.Title,
+		&post.Body,
+		&post.CreatedAt,
+		&post.UpdatedAt,
 	)
 	if err != nil {
 		return Post{}, err
 	}
 
-	cats, err := getCategoryIDsByPostID(ctx, db, id)
+	categoryIDs, err := getCategoryIDsByPostID(ctx, db, id)
 	if err != nil {
 		return Post{}, err
 	}
-	p.CategoryIDs = cats
+	post.CategoryIDs = categoryIDs
 
-	return p, nil
+	return post, nil
 }
 
 // ------------------------------------------------------------
@@ -123,7 +129,7 @@ func CreatePostWithCategories(
 		return 0, err
 	}
 
-	res, err := db.ExecContext(ctx, `
+	result, err := db.ExecContext(ctx, `
 		INSERT INTO posts (author_id, title, body, created_at, updated_at)
 		VALUES (?, ?, ?, datetime('now'), datetime('now'))
 	`, authorID, title, body)
@@ -131,7 +137,7 @@ func CreatePostWithCategories(
 		return 0, fmt.Errorf("create post: %w", err)
 	}
 
-	postID, err := res.LastInsertId()
+	postID, err := result.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}

@@ -25,7 +25,6 @@ type Session struct {
 	IsValid   bool
 }
 
-//
 // ---------------------------------------------------------
 // PUBLIC API
 // ---------------------------------------------------------
@@ -95,7 +94,6 @@ func InvalidateSessionByToken(
 	return nil
 }
 
-//
 // ---------------------------------------------------------
 // HELPERS
 // ---------------------------------------------------------
@@ -126,7 +124,7 @@ func insertSession(
 	userAgent string,
 ) (int64, error) {
 
-	res, err := db.ExecContext(ctx,
+	result, err := db.ExecContext(ctx,
 		`INSERT INTO sessions (user_id, token, expires_at, ip, user_agent)
 		 VALUES (?, ?, ?, ?, ?)`,
 		userID,
@@ -139,7 +137,7 @@ func insertSession(
 		return 0, fmt.Errorf("create session: %w", err)
 	}
 
-	id, err := res.LastInsertId()
+	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
@@ -153,7 +151,7 @@ func fetchValidSession(
 	token string,
 ) (Session, error) {
 
-	const q = `
+	const query = `
 		SELECT id, user_id, token, created_at, expires_at, ip, user_agent
 		FROM sessions
 		WHERE token = ?
@@ -161,17 +159,16 @@ func fetchValidSession(
 		  AND expires_at > datetime('now')
 	`
 
-	var s Session
+	var session Session
 	var createdRaw, expiresRaw string
 
-	err := db.QueryRowContext(ctx, q, token).Scan(
-		&s.ID,
-		&s.UserID,
-		&s.Token,
+	err := db.QueryRowContext(ctx, query, token).Scan(
+		&session.ID,
+		&session.UserID,
+		&session.Token,
 		&createdRaw,
 		&expiresRaw,
-		&s.IP,
-		&s.UserAgent,
+		&session.UserAgent,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -180,11 +177,11 @@ func fetchValidSession(
 		return Session{}, fmt.Errorf("get session: %w", err)
 	}
 
-	s.CreatedAt, _ = time.Parse(time.RFC3339, createdRaw)
-	s.ExpiresAt, _ = time.Parse(time.RFC3339, expiresRaw)
-	s.IsValid = true
+	session.CreatedAt, _ = time.Parse(time.RFC3339, createdRaw)
+	session.ExpiresAt, _ = time.Parse(time.RFC3339, expiresRaw)
+	session.IsValid = true
 
-	return s, nil
+	return session, nil
 }
 
 func generateSessionToken() string {

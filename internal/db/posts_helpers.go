@@ -48,11 +48,11 @@ func fetchPosts(ctx context.Context, db *sql.DB, p ListPostsParams) ([]Post, err
 
 func attachPostCategories(ctx context.Context, db *sql.DB, posts []Post) error {
 	for i := range posts {
-		cats, err := getCategoryIDsByPostID(ctx, db, posts[i].ID)
+		categoryIDs, err := getCategoryIDsByPostID(ctx, db, posts[i].ID)
 		if err != nil {
 			return err
 		}
-		posts[i].CategoryIDs = cats
+		posts[i].CategoryIDs = categoryIDs
 	}
 	return nil
 }

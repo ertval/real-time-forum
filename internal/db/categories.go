@@ -17,10 +17,6 @@ type Category struct {
 
 const categoryTimeout = 2 * time.Second
 
-// ---------------------------------------------------------
-// LIST CATEGORIES
-// ---------------------------------------------------------
-
 func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
@@ -52,38 +48,30 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	return categories, nil
 }
 
-// ---------------------------------------------------------
-// GET CATEGORY
-// ---------------------------------------------------------
-
 func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
-	var c Category
+	var category Category
 
 	err := db.QueryRowContext(ctx, `
 		SELECT id, name, slug, created_at
 		FROM categories
 		WHERE id = ?
-	`, id).Scan(&c.ID, &c.Name, &c.Slug, &c.CreatedAt)
+	`, id).Scan(&category.ID, &category.Name, &category.Slug, &category.CreatedAt)
 
 	if err != nil {
 		return Category{}, err // ErrNoRows handled by caller
 	}
 
-	return c, nil
+	return category, nil
 }
-
-// ---------------------------------------------------------
-// CREATE CATEGORY
-// ---------------------------------------------------------
 
 func CreateCategory(ctx context.Context, db *sql.DB, name, slug string) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
-	res, err := db.ExecContext(ctx, `
+	result, err := db.ExecContext(ctx, `
 		INSERT INTO categories (name, slug, created_at)
 		VALUES (?, ?, datetime('now'))
 	`, name, slug)
@@ -91,17 +79,13 @@ func CreateCategory(ctx context.Context, db *sql.DB, name, slug string) (int64, 
 		return 0, fmt.Errorf("create category: %w", err)
 	}
 
-	id, err := res.LastInsertId()
+	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("get last insert id: %w", err)
 	}
 
 	return id, nil
 }
-
-// ---------------------------------------------------------
-// UPDATE CATEGORY NAME
-// ---------------------------------------------------------
 
 func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -119,10 +103,6 @@ func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) 
 
 	return nil
 }
-
-// ---------------------------------------------------------
-// DELETE CATEGORY
-// ---------------------------------------------------------
 
 func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)

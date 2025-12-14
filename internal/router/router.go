@@ -33,8 +33,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/health", health.Health)
 
 	// Categories
-	mux.HandleFunc(apiPrefix+"/categories", categories.Collection)
-	mux.HandleFunc(apiPrefix+"/categories/", categories.Item)
+	mux.HandleFunc(apiPrefix+"/categories", categories.HandleCategories)
+	mux.HandleFunc(apiPrefix+"/categories/", categories.HandleCategory)
 
 	// Public posts listing
 	mux.HandleFunc(apiPrefix+"/posts/public", posts.PublicList)
@@ -46,19 +46,19 @@ func NewRouter(database *sql.DB) http.Handler {
 	// /posts → GET public, POST auth
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			auth(http.HandlerFunc(posts.Collection)).ServeHTTP(w, r)
+			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 			return
 		}
-		posts.Collection(w, r)
+		posts.HandlePosts(w, r)
 	})
 
 	// /posts/{id}, /posts/{id}/comments, /posts/{id}/like
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			auth(http.HandlerFunc(posts.Item)).ServeHTTP(w, r)
+			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
 			return
 		}
-		posts.Item(w, r)
+		posts.HandlePost(w, r)
 	})
 
 	// ---------------------------------------------------------
@@ -74,7 +74,7 @@ func NewRouter(database *sql.DB) http.Handler {
 		auth(http.HandlerFunc(users.Me)),
 	)
 	mux.Handle(apiPrefix+"/users/",
-		auth(http.HandlerFunc(users.Item)),
+		auth(http.HandlerFunc(users.HandleUser)),
 	)
 
 	// ---------------------------------------------------------
@@ -99,6 +99,6 @@ func notFoundJSON(w http.ResponseWriter, r *http.Request) {
 func addMiddlewares(handler http.Handler) http.Handler {
 	handler = middleware.Logger(handler)
 	handler = middleware.Recoverer(handler)
-	handler = middleware.CORS(frontendOrigin)(handler)
+	handler = middleware.EnableCORS(frontendOrigin)(handler)
 	return handler
 }
