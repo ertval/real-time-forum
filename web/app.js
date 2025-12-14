@@ -10,6 +10,7 @@ async function loadPosts() {
             postDiv.innerHTML = `
                 <div class="header">
                     <div class="left">
+<!--                    TODO replace author_id with author username-->
                         <div class="author">Author: ${post.author_id}</div>
                         <div class="title">${post.title}</div>
                     </div>
@@ -19,7 +20,7 @@ async function loadPosts() {
                 </div>
                 <div class="body">${post.body}</div>
                 <div class="bottom">
-                    <button class="load-comments" onclick="loadComments(${post.id})">Load comments</button>
+                    <button class="load-comments" onclick="toggleComments(this, ${post.id})">Load comments</button>
                 </div>
                 <div class="comments" id="comments-${post.id}"></div>
             `;
@@ -28,20 +29,32 @@ async function loadPosts() {
     }
 }
 
-function loadComments(postId) {
-    fetch(`http://localhost:8080/api/v1/posts/${postId}/comments`)
-        .then(res => res.json())
-        .then(data => {
-            const commentsDiv = document.getElementById(`comments-${postId}`);
-            commentsDiv.innerHTML = '';
-            if (data.data && Array.isArray(data.data)) {
-                data.data.forEach(comment => {
-                    const commentDiv = document.createElement('div');
-                    commentDiv.className = 'comment';
-                    commentDiv.innerHTML = `<strong>${comment.author_id}</strong>: ${comment.body}`;
-                    commentsDiv.appendChild(commentDiv);
-                });
-            }
-        });
+function toggleComments(button, postId) {
+    const commentsDiv = document.getElementById(`comments-${postId}`);
+    if (!commentsDiv.innerHTML.trim()) {
+        // Load comments
+        fetch(`http://localhost:8080/api/v1/posts/${postId}/comments`)
+            .then(res => res.json())
+            .then(data => {
+                commentsDiv.innerHTML = '';
+                let hasComments = false;
+                if (data.data && Array.isArray(data.data)) {
+                    data.data.forEach(comment => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'comment';
+                        commentDiv.innerHTML = `<strong>${comment.author_id}</strong>: ${comment.body}`;
+                        commentsDiv.appendChild(commentDiv);
+                        hasComments = true;
+                    });
+                }
+                if (hasComments) {
+                    button.textContent = 'Hide comments';
+                }
+            });
+    } else {
+        // Hide comments
+        commentsDiv.innerHTML = '';
+        button.textContent = 'Load comments';
+    }
 }
 
