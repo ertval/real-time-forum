@@ -79,8 +79,21 @@ body {
 
 .comments {
     margin-top: 10px;
-    max-height: 200px;
-    overflow-y: auto;
+}
+
+.comment-input {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+    resize: none;
+    font-family: inherit;
+    font-size: 1em;
+    align-content: center;
+    margin-bottom: 10px;
+    overflow: hidden;
 }
 
 .comment {
@@ -89,4 +102,5 @@ body {
     margin-bottom: 5px;
     border-radius: 3px;
     font-size: 0.9em;
+    overflow-wrap: break-word;
 }
