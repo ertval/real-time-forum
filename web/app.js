@@ -37,6 +37,21 @@ function toggleComments(button, postId) {
             .then(res => res.json())
             .then(data => {
                 commentsDiv.innerHTML = '';
+                // Add comment input
+                const inputDiv = document.createElement('div');
+                inputDiv.innerHTML = `<textarea placeholder="Join the conversation" class="comment-input"></textarea>`;
+                commentsDiv.appendChild(inputDiv);
+                const textarea = inputDiv.querySelector('.comment-input');
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+                textarea.addEventListener('keyup', function(e) {
+                    if (e.key === 'Enter') {
+                        this.style.height = 'auto';
+                        this.style.height = this.scrollHeight + 'px';
+                    }
+                });
                 let hasComments = false;
                 if (data.data && Array.isArray(data.data)) {
                     data.data.forEach(comment => {
