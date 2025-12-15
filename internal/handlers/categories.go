@@ -29,7 +29,7 @@ func (c *CategoriesHandler) HandleCategories(w http.ResponseWriter, r *http.Requ
 	case http.MethodPost:
 		c.createCategory(w, r)
 	default:
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 	}
 }
 
@@ -126,7 +126,7 @@ func (c *CategoriesHandler) HandleCategory(w http.ResponseWriter, r *http.Reques
 	case http.MethodDelete:
 		c.deleteCategory(w, r, id)
 	default:
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 	}
 
 }

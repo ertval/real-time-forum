@@ -23,16 +23,16 @@ func NewRouter(database *sql.DB) http.Handler {
 	categories := handlers.NewCategoriesHandler(database)
 
 	// ---------------------------------------------------------
-	// MIDDLEWARE INSTANCES (micro-optimization)
+	// MIDDLEWARE INSTANCES
 	// ---------------------------------------------------------
 	auth := middleware.Auth(database)
 
 	// ---------------------------------------------------------
-	// PUBLIC ROUTES
+	// PUBLIC ROUTES (NO AUTH)
 	// ---------------------------------------------------------
 	mux.HandleFunc(apiPrefix+"/health", health.Health)
 
-	// Categories
+	// Categories (read-only)
 	mux.HandleFunc(apiPrefix+"/categories", categories.HandleCategories)
 	mux.HandleFunc(apiPrefix+"/categories/", categories.HandleCategory)
 
@@ -43,22 +43,32 @@ func NewRouter(database *sql.DB) http.Handler {
 	// POSTS
 	// ---------------------------------------------------------
 
-	// /posts → GET public, POST auth
+	// /posts → GET public, POST requires auth
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodGet:
+			posts.HandlePosts(w, r)
+		case http.MethodPost:
 			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
-			return
+		default:
+			handlers.MethodNotAllowed(w)
 		}
-		posts.HandlePosts(w, r)
 	})
 
 	// /posts/{id}, /posts/{id}/comments, /posts/{id}/like
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodGet:
+			// View post OR list comments → public
+			posts.HandlePost(w, r)
+
+		case http.MethodPost, http.MethodPatch, http.MethodDelete:
+			// create comment, like, update/delete post → auth required
 			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
-			return
+
+		default:
+			handlers.MethodNotAllowed(w)
 		}
-		posts.HandlePost(w, r)
 	})
 
 	// ---------------------------------------------------------

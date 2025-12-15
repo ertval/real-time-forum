@@ -8,7 +8,7 @@ import (
 
 func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 		return
 	}
 	p.publicListPosts(w, r)

@@ -30,7 +30,7 @@ func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		p.createPost(w, r)
 	default:
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 	}
 }
 
@@ -128,7 +128,7 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 		case http.MethodDelete:
 			p.deletePost(w, r, postID)
 		default:
-			methodNotAllowed(w)
+			MethodNotAllowed(w)
 		}
 
 	case "like":
@@ -136,7 +136,7 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 			p.toggleLike(w, r, postID)
 			return
 		}
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 
 	case "comments":
 		switch r.Method {
@@ -145,7 +145,7 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			p.createComment(w, r, postID)
 		default:
-			methodNotAllowed(w)
+			MethodNotAllowed(w)
 		}
 
 	default:
