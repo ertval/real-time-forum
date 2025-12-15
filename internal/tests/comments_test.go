@@ -124,3 +124,62 @@ func TestAPICommentsCreateAndList(t *testing.T) {
 		t.Errorf("expected to find created comment body in list")
 	}
 }
+
+func TestGuestCannotCreateComment(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	payload := []byte(`{"body":"hello"}`)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/posts/1/comments",
+		bytes.NewReader(payload),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestGuestCanListComments(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	w, _ := doRequest(
+		t,
+		h,
+		http.MethodGet,
+		"/api/v1/posts/1/comments",
+		nil,
+	)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestGuestCannotCreatePost(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	payload := []byte(`{"title":"x","body":"y"}`)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/posts",
+		bytes.NewReader(payload),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}

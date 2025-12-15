@@ -82,7 +82,7 @@ func requireUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 // RESPONSE HELPERS
 // ------------------------------------------------------------
 
-func methodNotAllowed(w http.ResponseWriter) {
+func MethodNotAllowed(w http.ResponseWriter) {
 	WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 }
 

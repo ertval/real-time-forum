@@ -24,7 +24,7 @@ func NewUsersHandler(database *sql.DB) *UsersHandler {
 // HandleUser → GET /api/v1/users/{id} (auth required via router)
 func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 		return
 	}
 
@@ -46,7 +46,7 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 // Register → POST /api/v1/users/register
 func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 // Login → POST /api/v1/users/login
 func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 		return
 	}
 
@@ -134,7 +134,7 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 // Logout → POST /api/v1/users/logout
 func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		methodNotAllowed(w)
+		MethodNotAllowed(w)
 		return
 	}
 
