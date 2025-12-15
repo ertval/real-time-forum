@@ -1,146 +1,209 @@
-
 # Forum Project — Architecture Overview
 
-This document provides an overview of the backend and frontend architecture of the Forum project.  
-It describes how the application is structured, how components interact, and how responsibilities are organized within the codebase.
+This document provides an up-to-date overview of the backend and frontend architecture of the Forum project,
+reflecting the latest refactors, naming conventions, and structural decisions.
 
 ---
 
 ## 1. High-Level Architecture
 
-The project follows a **clean modular structure** separating backend and frontend concerns:
+The project follows a **clean, modular Go architecture** with strict separation of concerns:
 
-- `/cmd` — Entry points for running backend and frontend servers.
-- `/internal` — All backend logic (not importable externally, per Go’s `internal/` rule).
-- `/web` — Static frontend assets (HTML, JS, CSS).
-- Root-level scripts and configuration files (Docker, Makefile, etc.)
+- `/cmd` — Application entry points (backend & frontend).
+- `/internal` — Core application logic (enforced by Go `internal/` visibility rules).
+- `/web` — Static frontend assets.
+- Root-level configuration and tooling (Docker, Makefile, CI helpers).
 
-Communication between frontend and backend occurs via a **REST API** served under `/api/v1/...`.
+The frontend communicates with the backend exclusively through a **REST API** exposed under:
+
+```
+/api/v1/...
+```
 
 ---
 
 ## 2. Backend Architecture
 
-The backend is a Go HTTP server using standard library components and SQLite as the data store.
+The backend is a Go HTTP server built on the standard library, using **SQLite** for persistence and a layered design.
 
-### Key directories under `/internal`:
+### Directory overview:
 
-### **2.1 `internal/db`**
-Contains all database-related logic:
-
-- `forum_schema.sql` — SQLite schema defining tables and constraints.
-- `users.go` — CRUD logic for users, registration, login validation.
-- `sessions.go` — Session management using cookies (create, validate, invalidate).
-- `posts.go`, `comments.go`, `categories.go`, `reactions.go` — Database operations for forum resources.
-- `db.go` — Database initialization, connection creation.
-- `error.go` — Shared DB error helpers.
-
-This layer contains **no HTTP logic** — it only handles persistence and data validation related to the database.
+```
+internal/
+ ├── db          → Persistence layer (SQL + domain data)
+ ├── handlers    → HTTP handlers (controllers)
+ ├── middleware  → Cross-cutting HTTP concerns
+ ├── router      → Route definitions & middleware wiring
+ ├── server      → Server bootstrap
+ └── tests       → Integration & API tests
+```
 
 ---
 
-### **2.2 `internal/handlers`**
-These files define HTTP handlers for API endpoints.  
-Each handler translates incoming HTTP requests into DB operations and returns JSON responses.
+## 2.1 `internal/db` — Persistence Layer
 
-Examples:
-- `users.go` — Register, Login, Get User, Me.
-- `posts.go` — List posts, create post, view post.
-- `comments.go` — create & list comments.
-- `categories.go` — list categories.
-- `health.go` — health check endpoint.
-- `respond.go` — standardized JSON response envelope.
+This package contains **all database-related logic** and **no HTTP code**.
 
-Handlers must remain stateless, using only:
+### Responsibilities:
+- SQL queries & transactions
+- Domain validation at persistence level
+- Timeouts via `context.Context`
+- SQLite schema ownership
+
+### Key files:
+- `forum_schema.sql` — Full database schema.
+- `users.go` — User creation, login validation, retrieval.
+- `sessions.go` — Cookie-based session lifecycle (create, validate, invalidate).
+- `posts.go` — Posts CRUD logic.
+- `comments.go` — Comment creation and listing.
+- `categories.go` — Category queries.
+- `reactions.go` — Like/dislike logic.
+- `errors.go` — Shared DB error helpers.
+- `db.go` — DB initialization & helpers.
+- `dbContentsPrinter.go` — **Development-only debug utility** (not used in production).
+
+### Design rules:
+- No `http.*` imports
+- No JSON marshaling
+- No handler logic
+- Uses `context.Context` consistently
+
+---
+
+## 2.2 `internal/handlers` — HTTP Handlers
+
+Handlers translate HTTP requests into DB operations and format JSON responses.
+
+### Responsibilities:
+- Parse request paths & bodies
+- Validate input (HTTP-level)
+- Call `internal/db`
+- Return standardized JSON responses
+
+### Key files:
+- `users.go` — Register, Login, Logout, Me, User item.
+- `posts.go` — Posts collection & single-post routing.
+- `posts_public.go` — Public-only post listing.
+- `comments.go` — Comment creation & listing.
+- `categories.go` — Categories collection & item.
+- `health.go` — Health check endpoint.
+- `response.go` — Unified JSON response envelope.
+- `helpers.go` / `posts_helpers.go` — Path parsing, pagination helpers.
+
+### Naming conventions:
+- `HandlePosts` → collection-level handler
+- `HandlePost` → item-level handler
+- Internal helpers like `listPosts`, `createPost`, etc.
+- Request payloads named `req` (instead of `in`)
+
+Handlers are **stateless** and depend only on:
 - `http.ResponseWriter`
 - `*http.Request`
-- DB connections passed via composition (`NewUsers(db)`)
+- Injected DB connection
 
 ---
 
-### **2.3 `internal/middleware`**
-Cross-cutting HTTP middleware:
+## 2.3 `internal/middleware` — HTTP Middleware
 
-- `auth.go` — Validates session cookie and attaches `userID` to the request context.
-- `logger.go` — Logs requests.
-- `recoverer.go` — Recovers from panics and prevents server crashes.
-- `cors.go` — Enables frontend communication (localhost:3000 during development).
+Reusable middleware components applied globally or per-route.
 
-Middleware wraps handlers inside the router.
+### Files:
+- `auth.go` — Session validation, injects `userID` into request context.
+- `middleware.go`:
+  - Logger
+  - Recoverer (panic safety)
+  - CORS (`EnableCORS`)
 
----
-
-### **2.4 `internal/router`**
-Defines all API routes and attaches handlers + middleware.
-
-Examples:
-
+### Middleware flow:
 ```
-/api/v1/users/register     → public
-/api/v1/users/login        → public
-/api/v1/users/me           → requires auth
-/api/v1/posts              → GET public, POST requires auth
-/api/v1/categories         → public
+Request → Logger → Recoverer → CORS → Auth (optional) → Handler
 ```
 
-The router builds the entire HTTP handler tree.
+---
+
+## 2.4 `internal/router` — Routing
+
+The router defines **all API endpoints** and wires handlers with middleware.
+
+### Example routes:
+```
+/api/v1/health
+/api/v1/users/register
+/api/v1/users/login
+/api/v1/users/me        (auth)
+/api/v1/posts           (GET public, POST auth)
+/api/v1/posts/{id}
+/api/v1/posts/{id}/comments
+/api/v1/categories
+```
+
+### Design:
+- Uses `http.ServeMux`
+- Explicit routing (no magic frameworks)
+- Auth middleware applied selectively
 
 ---
 
-### **2.5 `internal/server`**
-Contains:
+## 2.5 `internal/server` — Server Bootstrap
 
-- `server.go` — Starts the backend server, initializes DB, mounts router.
-- `api_test.go` — Full API test suite using httptest + in‑memory SQLite.
+Responsible for application startup.
 
-This package contains all top-level orchestration required to boot the backend.
+### Contains:
+- `server.go` — Initializes DB, builds router, starts HTTP server.
+
+This layer **coordinates** components but contains no business logic.
 
 ---
 
 ## 3. Frontend Architecture (`/web`)
 
-This directory contains static assets served independently:
+The frontend is a lightweight static application.
 
-- `index.html` — Main page.
-- `app.js` — Frontend logic (calls backend API endpoints).
-- `styles.css` — UI styling.
+### Contents:
+- `index.html`
+- `app.js`
+- `styles.css`
 
-A minimal Go server (under `/cmd/frontend`) can serve these assets locally for development.
+A minimal Go server (`/cmd/frontend`) can serve these assets locally.
 
-Frontend communicates exclusively via **fetch() to /api/v1/...**
+The frontend communicates only via:
+```
+fetch("/api/v1/...")
+```
 
 ---
 
 ## 4. Authentication Architecture
 
-The project implements secure cookie-based sessions:
+The project uses **secure cookie-based sessions**.
 
 ### Login flow:
-1. User submits username/email + password.
-2. Password is checked with bcrypt.
-3. A session is created in DB with:
+1. User submits credentials.
+2. Password verified with bcrypt.
+3. Session created in DB:
    - UUID token
    - user_id
    - expires_at
    - ip, user_agent
-4. Server sends:
-   ```
-   Set-Cookie: session_token=<uuid>
-   ```
+4. Server responds with:
+```
+Set-Cookie: session_token=<uuid>; HttpOnly
+```
 
 ### Authenticated requests:
-- Middleware reads the cookie → validates session → attaches userID to request context → handler executes.
+- Auth middleware validates cookie
+- Loads session from DB
+- Injects `userID` into request context
 
 ### Logout:
-- Session is invalidated in DB.
-- Cookie is cleared from client.
+- Session invalidated
+- Cookie cleared
 
 ---
 
-## 5. Database Schema Overview
+## 5. Database Overview
 
-Key tables:
-
+Core tables:
 - `users`
 - `sessions`
 - `posts`
@@ -148,61 +211,64 @@ Key tables:
 - `categories`
 - `reactions`
 
-Important constraints:
-- One active session per user (unique partial index).
-- Reactions enforce one like/dislike per user per target.
-- Comments support nesting (parent_comment_id).
-- Cascading foreign keys ensure consistent cleanup.
+Key constraints:
+- One active session per user
+- One reaction per user per post
+- Nested comments via `parent_comment_id`
+- Foreign keys ensure integrity
 
 ---
 
 ## 6. Testing Architecture
 
-The file `internal/server/api_test.go` includes full integration tests:
+Located under:
+```
+internal/tests
+```
 
-- Health checks  
-- Posts listing & creation  
-- Comment creation & listing  
-- Like toggling  
-- User registration  
-- Login  
-- Authenticated `/me`  
-- Full session flow  
+### Characteristics:
+- Full API-level integration tests
+- Uses `httptest`
+- Uses **in-memory SQLite**
+- Schema loaded automatically
+- Tests include:
+  - Auth flow
+  - Comments
+  - Posts
+  - Categories
+  - Likes
+  - Health check
 
-Tests run against **in-memory SQLite** with schema autoload.
+Tests validate **real HTTP behavior**, not internal functions.
 
 ---
 
-## 7. Future Extensions (not yet implemented)
+## 7. Design Principles
 
-- Edit/Delete posts
-- Full category filtering
-- Pagination abstraction
-- Email verification
-- Admin panel
-- Real frontend UI integration
+- Clear separation of concerns
+- Explicit routing
+- Context-aware DB operations
+- Stateless handlers
+- Predictable naming
+- SRP-compliant files
 
 ---
 
 ## Summary
 
-The project is organized into clear layers:
-
 ```
-cmd/           → entrypoints
-internal/db    → persistence layer
-internal/handlers → HTTP controllers
-internal/middleware → cross‑cutting concerns
-internal/router → routing configuration
-internal/server → server startup + tests
-web/           → static frontend
+cmd/                → entrypoints
+internal/db         → persistence
+internal/handlers   → HTTP handlers
+internal/middleware → middleware
+internal/router     → routing
+internal/server     → startup
+internal/tests      → API tests
+web/                → frontend
 ```
 
-This modular architecture ensures:
-- maintainability  
-- clarity  
-- separation of concerns  
-- ability to add features safely  
-
----
-
+This architecture provides:
+- clarity
+- testability
+- maintainability
+- safe extensibility

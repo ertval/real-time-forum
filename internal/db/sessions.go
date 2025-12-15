@@ -168,6 +168,7 @@ func fetchValidSession(
 		&session.Token,
 		&createdRaw,
 		&expiresRaw,
+		&session.IP,
 		&session.UserAgent,
 	)
 	if err != nil {
