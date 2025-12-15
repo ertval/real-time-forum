@@ -7,7 +7,15 @@ import (
 )
 
 func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
-	page, per := sanitizePagination(r)
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	p.publicListPosts(w, r)
+}
+
+func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
+	page, perPage := sanitizePagination(r)
 	sort := sanitizeSort(r)
 
 	result, err := repository.ListPublicPosts(
@@ -15,7 +23,7 @@ func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 		p.conn,
 		repository.ListPublicPostsParams{
 			Page:    page,
-			PerPage: per,
+			PerPage: perPage,
 			SortBy:  sort,
 		},
 	)
@@ -28,9 +36,9 @@ func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	meta := buildMeta(page, per, result.Total, map[string]any{
+	paginationMeta := buildPaginationInfo(page, perPage, result.Total, map[string]any{
 		"sort": sort,
 	})
 
-	WriteOK(w, result.Posts, meta)
+	WriteOK(w, result.Posts, paginationMeta)
 }

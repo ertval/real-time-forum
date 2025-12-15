@@ -23,10 +23,10 @@ func TestCategoriesList(t *testing.T) {
 		t.Fatalf("unexpected error: %+v", env.Error)
 	}
 
-	var cats []map[string]any
-	json.Unmarshal(env.Data, &cats)
+	var categories []map[string]any
+	json.Unmarshal(env.Data, &categories)
 
-	if len(cats) == 0 {
+	if len(categories) == 0 {
 		t.Fatalf("expected at least 1 category")
 	}
 }

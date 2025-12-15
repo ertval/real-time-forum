@@ -1,36 +1,45 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"forum/internal/db"
 	"forum/internal/router"
 )
 
+const (
+	dbPath = "./internal/db/forum.db"
+	addr   = ":8080"
+)
+
 func Start() {
+	// ---------------------------------------------------------
 	// Initialize database
-	database, err := db.InitDB("./internal/db/forum.db")
+	// ---------------------------------------------------------
+	database, err := db.InitDB(dbPath)
 	if err != nil {
-		db.HandleInitError(err, "initializing database")
-		return
+		log.Fatal(err)
 	}
-
-	fmt.Println("✅ Database initialized successfully.")
-
 	defer func() {
-		if cerr := database.Close(); cerr != nil {
-			db.HandleRuntimeError(cerr, "closing database")
+		if err := database.Close(); err != nil {
+			log.Printf("error closing database: %v", err)
 		}
 	}()
 
-	// Build full HTTP handler (routes + middleware)
+	log.Println("Database initialized")
+
+	// ---------------------------------------------------------
+	// Build HTTP handler (router + middleware)
+	// ---------------------------------------------------------
 	handler := router.NewRouter(database)
 
-	port := ":8080"
-	fmt.Printf("✅ Server running on http://localhost%s\n", port)
+	log.Printf("Server running on http://localhost%s", addr)
 
-	if err := http.ListenAndServe(port, handler); err != nil {
-		db.HandleFatalError(err, "starting HTTP server")
+	// ---------------------------------------------------------
+	// Start HTTP server
+	// ---------------------------------------------------------
+	if err := http.ListenAndServe(addr, handler); err != nil {
+		log.Fatal(err)
 	}
 }

@@ -15,21 +15,18 @@ type contextKey string
 const UserIDKey contextKey = "userID"
 
 // Auth ensures a valid session and injects userID into context.
-// Supports BOTH:
-//   - Cookie: session_token
-//   - Header: Authorization: Bearer <token>
 func Auth(database *sql.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			token := ""
 
-			// 1️⃣ Try cookie first
+			// Cookie first
 			if cookie, err := r.Cookie("session_token"); err == nil {
 				token = cookie.Value
 			}
 
-			// 2️⃣ Fallback to Authorization header
+			// Authorization header fallback
 			if token == "" {
 				auth := r.Header.Get("Authorization")
 				if strings.HasPrefix(auth, "Bearer ") {

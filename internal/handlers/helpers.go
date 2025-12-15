@@ -1,50 +1,110 @@
 package handlers
 
 import (
+	"forum/internal/middleware"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-func sanitizePagination(r *http.Request) (page int, per int) {
-	page = parseIntOr(r.URL.Query().Get("page"), 1)
-	per = parseIntOr(r.URL.Query().Get("per_page"), 20)
+// ------------------------------------------------------------
+// REQUEST HELPERS
+// ------------------------------------------------------------
+
+func sanitizePagination(r *http.Request) (page int, perPage int) {
+	page = atoiOrDefault(r.URL.Query().Get("page"), 1)
+	perPage = atoiOrDefault(r.URL.Query().Get("per_page"), 20)
 
 	if page < 1 {
 		page = 1
 	}
-	if per < 1 {
-		per = 20
+	if perPage < 1 {
+		perPage = 20
 	}
-	if per > 100 {
-		per = 100
+	if perPage > 100 {
+		perPage = 100
 	}
 	return
 }
 
 func sanitizeSort(r *http.Request) string {
-	sort := strings.ToLower(r.URL.Query().Get("sort"))
-	if sort == "" {
+	switch strings.ToLower(r.URL.Query().Get("sort")) {
+	case "oldest", "top":
+		return r.URL.Query().Get("sort")
+	default:
 		return "newest"
 	}
-	return sort
 }
 
-func buildMeta(page, per, total int, extra map[string]any) map[string]any {
-	meta := map[string]any{
+func buildPaginationInfo(page, perPage, total int, extra map[string]any) map[string]any {
+	paginationInfo := map[string]any{
 		"page":     page,
-		"per_page": per,
+		"per_page": perPage,
 		"total":    total,
 	}
-	for k, v := range extra {
-		meta[k] = v
+	if extra != nil {
+		maps.Copy(paginationInfo, extra)
 	}
-	return meta
+	return paginationInfo
 }
 
-func parseIntOr(s string, def int) int {
-	if n, err := strconv.Atoi(s); err == nil {
-		return n
+// ------------------------------------------------------------
+// GENERIC HELPERS
+// ------------------------------------------------------------
+
+func atoiOrDefault(str string, def int) int {
+	if value, err := strconv.Atoi(str); err == nil {
+		return value
 	}
 	return def
+}
+
+func parseID(path, prefix string) (int64, error) {
+	raw := strings.TrimPrefix(path, prefix)
+	return strconv.ParseInt(raw, 10, 64)
+}
+
+// ------------------------------------------------------------
+// AUTH HELPERS
+// ------------------------------------------------------------
+
+func requireUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		WriteError(w, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
+		return 0, false
+	}
+	return userID, true
+}
+
+// ------------------------------------------------------------
+// RESPONSE HELPERS
+// ------------------------------------------------------------
+
+func methodNotAllowed(w http.ResponseWriter) {
+	WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+}
+
+func notFound(w http.ResponseWriter) {
+	WriteError(w, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
+}
+
+// ------------------------------------------------------------
+// STRING / DB HELPERS
+// ------------------------------------------------------------
+
+func slugify(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.ReplaceAll(value, " ", "-")
+	value = strings.ReplaceAll(value, "_", "-")
+	return value
+}
+
+// isUniqueConstraint checks UNIQUE constraint errors via message matching.
+func isUniqueConstraint(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "UNIQUE")
 }

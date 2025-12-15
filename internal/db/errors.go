@@ -3,55 +3,45 @@ package db
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 )
 
 // ------------------------------------------------------------
-// COMMON DATABASE ERROR SENTINELS
+// DOMAIN / DATABASE ERROR SENTINELS
 // ------------------------------------------------------------
+// These errors are used across the db layer and can be matched
+// using errors.Is(...) from callers (handlers, services, etc).
 
 var (
-	ErrNotFound      = errors.New("record not found")
-	ErrDuplicate     = errors.New("duplicate entry")
-	ErrForeignKey    = errors.New("foreign key constraint failed")
-	ErrInvalidInput  = errors.New("invalid input")
-	ErrSchemaMissing = errors.New("database schema not applied")
-	ErrConnection    = errors.New("database connection error")
+	ErrNotFound           = errors.New("record not found")
+	ErrDuplicate          = errors.New("duplicate entry")
+	ErrForeignKey         = errors.New("foreign key constraint failed")
+	ErrInvalidInput       = errors.New("invalid input")
+	ErrSchemaMissing      = errors.New("database schema not applied")
+	ErrConnection         = errors.New("database connection error")
+	ErrInvalidCredentials = errors.New("invalid username/email or password")
 )
 
 // ------------------------------------------------------------
-// ERROR WRAPPING + LOGGING
+// ERROR WRAPPING
 // ------------------------------------------------------------
 
-// WrapError attaches context and logs it.
-// Example: return WrapError("create user", err)
+// WrapError adds context while preserving the original error.
+// Logging is intentionally NOT done here to avoid double-logging.
+// The caller (handler / main) decides how to log or expose errors.
 func WrapError(context string, err error) error {
 	if err == nil {
 		return nil
 	}
-	wrapped := fmt.Errorf("%s: %w", context, err)
-	log.Printf("[DB ERROR] %s", wrapped)
-	return wrapped
-}
-
-// ------------------------------------------------------------
-// GENERIC LOG HELPERS
-// ------------------------------------------------------------
-
-func LogInfo(format string, args ...any) {
-	log.Printf("[DB INFO] "+format, args...)
-}
-
-func LogWarn(format string, args ...any) {
-	log.Printf("[DB WARN] "+format, args...)
+	return fmt.Errorf("%s: %w", context, err)
 }
 
 // ------------------------------------------------------------
 // SQLITE ERROR CLASSIFICATION
 // ------------------------------------------------------------
 
-// MapSQLError converts raw SQLite errors into friendly Go errors.
+// Converts SQLite-specific error messages into domain errors.
+// This keeps vendor-specific logic isolated inside the db layer.
 func MapSQLError(err error) error {
 	if err == nil {
 		return nil
@@ -68,27 +58,5 @@ func MapSQLError(err error) error {
 		return ErrSchemaMissing
 	default:
 		return err
-	}
-}
-
-// ------------------------------------------------------------
-// PROCESS LIFECYCLE ERROR HELPERS
-// ------------------------------------------------------------
-
-func HandleInitError(err error, context string) {
-	if err != nil {
-		log.Fatalf("[FATAL] %s: %v", context, err)
-	}
-}
-
-func HandleRuntimeError(err error, context string) {
-	if err != nil {
-		log.Printf("[RUNTIME ERROR] %s: %v", context, err)
-	}
-}
-
-func HandleFatalError(err error, context string) {
-	if err != nil {
-		log.Fatalf("[FATAL] %s: %v", context, err)
 	}
 }
