@@ -77,3 +77,15 @@ func getCategoryIDsByPostID(ctx context.Context, db *sql.DB, postID int64) ([]in
 	}
 	return ids, nil
 }
+
+func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post) error {
+	for i := range posts {
+		likes, dislikes, err := CountReactionsForPost(ctx, db, posts[i].ID)
+		if err != nil {
+			return err
+		}
+		posts[i].Likes = likes
+		posts[i].Dislikes = dislikes
+	}
+	return nil
+}
