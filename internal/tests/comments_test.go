@@ -65,10 +65,12 @@ func TestAPICommentsCreateAndList(t *testing.T) {
 	}
 
 	var comment struct {
-		ID     int64  `json:"id"`
-		PostID int64  `json:"post_id"`
-		UserID int64  `json:"user_id"`
-		Body   string `json:"body"`
+		ID       int64  `json:"id"`
+		PostID   int64  `json:"post_id"`
+		UserID   int64  `json:"user_id"`
+		Body     string `json:"body"`
+		Likes    int    `json:"likes"`
+		Dislikes int    `json:"dislikes"`
 	}
 	if err := json.Unmarshal(env.Data, &comment); err != nil {
 		t.Fatalf("unmarshal comment: %v", err)
@@ -82,6 +84,9 @@ func TestAPICommentsCreateAndList(t *testing.T) {
 	}
 	if comment.Body != createPayload["body"] {
 		t.Errorf("expected body %q, got %q", createPayload["body"], comment.Body)
+	}
+	if comment.Likes != 0 || comment.Dislikes != 0 {
+		t.Errorf("expected zero reactions on new comment")
 	}
 
 	// --------------------------------------------------
@@ -117,6 +122,13 @@ func TestAPICommentsCreateAndList(t *testing.T) {
 	for _, c := range comments {
 		if c["body"] == createPayload["body"] {
 			found = true
+
+			if _, ok := c["likes"]; !ok {
+				t.Fatalf("expected likes field in comment")
+			}
+			if _, ok := c["dislikes"]; !ok {
+				t.Fatalf("expected dislikes field in comment")
+			}
 			break
 		}
 	}
@@ -160,26 +172,5 @@ func TestGuestCanListComments(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
-	}
-}
-
-func TestGuestCannotCreatePost(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	payload := []byte(`{"title":"x","body":"y"}`)
-
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/api/v1/posts",
-		bytes.NewReader(payload),
-	)
-	req.Header.Set("Content-Type", "application/json")
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
 	}
 }

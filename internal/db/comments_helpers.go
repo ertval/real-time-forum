@@ -41,7 +41,7 @@ func countCommentsByPost(
 	return total, nil
 }
 
-// Fetch paginated comments for a post
+// Fetch paginated comments for a post (NO reactions here)
 func fetchCommentsByPost(
 	ctx context.Context,
 	db *sql.DB,
@@ -93,4 +93,22 @@ func fetchCommentsByPost(
 	}
 
 	return comments, nil
+}
+
+// Attach like/dislike counts to each comment
+func attachCommentReactions(
+	ctx context.Context,
+	db *sql.DB,
+	comments []Comment,
+) error {
+
+	for i := range comments {
+		likes, dislikes, err := CountReactionsForComment(ctx, db, comments[i].ID)
+		if err != nil {
+			return fmt.Errorf("attach comment reactions: %w", err)
+		}
+		comments[i].Likes = likes
+		comments[i].Dislikes = dislikes
+	}
+	return nil
 }

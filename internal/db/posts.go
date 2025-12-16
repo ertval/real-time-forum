@@ -16,6 +16,8 @@ type Post struct {
 	CreatedAt   string  `json:"created_at"`
 	UpdatedAt   string  `json:"updated_at,omitempty"`
 	CategoryIDs []int64 `json:"category_ids,omitempty"`
+	Likes       int     `json:"likes"`
+	Dislikes    int     `json:"dislikes"`
 }
 
 // ------------------------------------------------------------
@@ -54,6 +56,11 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 
 	// Attach categories to each post (data enrichment)
 	if err := attachPostCategories(ctx, db, posts); err != nil {
+		return ListPostsResult{}, err
+	}
+
+	// Attach like/dislike counts to each post
+	if err := attachPostReactions(ctx, db, posts); err != nil {
 		return ListPostsResult{}, err
 	}
 
@@ -106,6 +113,14 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 		return Post{}, err
 	}
 	post.CategoryIDs = categoryIDs
+
+	likes, dislikes, err := CountReactionsForPost(ctx, db, id)
+	if err != nil {
+		return Post{}, fmt.Errorf("get post reactions: %w", err)
+
+	}
+	post.Likes = likes
+	post.Dislikes = dislikes
 
 	return post, nil
 }
