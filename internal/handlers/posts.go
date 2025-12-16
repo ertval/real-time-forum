@@ -241,9 +241,19 @@ func (p *PostsHandler) toggleLike(
 		return
 	}
 
+	likesCount, err := repository.CountPostLikes(r.Context(), p.conn, postID)
+	if err != nil {
+		log.Printf("CountPostLikes failed: %v", err)
+		WriteError(
+			w,
+			NewError("INTERNAL_SERVER_ERROR", "error counting likes", http.StatusInternalServerError),
+		)
+	}
+
 	WriteOK(w, map[string]any{
-		"post_id": postID,
-		"liked":   liked,
+		"post_id":     postID,
+		"liked":       liked,
+		"likes_count": likesCount,
 	}, nil)
 }
 
