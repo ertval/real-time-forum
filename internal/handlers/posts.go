@@ -216,23 +216,34 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	WriteNoContent(w)
 }
 
-func (p *PostsHandler) toggleLike(w http.ResponseWriter, r *http.Request, postID int64) {
+func (p *PostsHandler) toggleLike(
+	w http.ResponseWriter,
+	r *http.Request,
+	postID int64,
+) {
 	userID, ok := requireUserID(w, r)
 	if !ok {
 		return
 	}
 
-	liked, count, err := repository.TogglePostLike(r.Context(), p.conn, userID, postID)
+	liked, err := repository.TogglePostLike(
+		r.Context(),
+		p.conn,
+		userID,
+		postID,
+	)
 	if err != nil {
 		log.Printf("TogglePostLike failed: %v", err)
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError))
+		WriteError(
+			w,
+			NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError),
+		)
 		return
 	}
 
 	WriteOK(w, map[string]any{
 		"post_id": postID,
 		"liked":   liked,
-		"likes":   count,
 	}, nil)
 }
 
