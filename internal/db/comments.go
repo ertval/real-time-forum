@@ -19,6 +19,8 @@ type Comment struct {
 	Body            string `json:"body"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at,omitempty"`
+	Likes           int    `json:"likes"`
+	Dislikes        int    `json:"dislikes"`
 }
 
 type ListCommentsParams struct {
@@ -54,6 +56,11 @@ func ListCommentsByPost(
 
 	comments, err := fetchCommentsByPost(ctx, db, params)
 	if err != nil {
+		return ListCommentsResult{}, err
+	}
+
+	// Attach reactions AFTER fetching comments
+	if err := attachCommentReactions(ctx, db, comments); err != nil {
 		return ListCommentsResult{}, err
 	}
 
@@ -133,15 +140,21 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 			&comment.CreatedAt,
 			&comment.UpdatedAt,
 		)
-
 	if err != nil {
 		return Comment{}, err
 	}
 
 	if parentID.Valid {
-		parentCommentID := parentID.Int64
-		comment.ParentCommentID = &parentCommentID
+		id := parentID.Int64
+		comment.ParentCommentID = &id
 	}
+
+	likes, dislikes, err := CountReactionsForComment(ctx, db, id)
+	if err != nil {
+		return Comment{}, err
+	}
+	comment.Likes = likes
+	comment.Dislikes = dislikes
 
 	return comment, nil
 }
