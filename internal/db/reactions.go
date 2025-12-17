@@ -112,12 +112,3 @@ func applyReactionToggle(
 		return 0, fmt.Errorf("unexpected reaction value: %d", current)
 	}
 }
-
-func CountPostLikes(ctx context.Context, db *sql.DB, postID int64) (int, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	const query = `SELECT COUNT(*) FROM post_reactions WHERE post_id = ? AND value = 1`
-	var count int
-	err := db.QueryRowContext(ctx, query, postID).Scan(&count)
-	return count, err
-}
