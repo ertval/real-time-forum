@@ -133,7 +133,14 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 
 	case "like":
 		if r.Method == http.MethodPost {
-			p.toggleLike(w, r, postID)
+			p.handlePostReaction(w, r, postID, 1)
+			return
+		}
+		MethodNotAllowed(w)
+
+	case "dislike":
+		if r.Method == http.MethodPost {
+			p.handlePostReaction(w, r, postID, -1)
 			return
 		}
 		MethodNotAllowed(w)
@@ -216,32 +223,34 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	WriteNoContent(w)
 }
 
-func (p *PostsHandler) toggleLike(
+func (p *PostsHandler) handlePostReaction(
 	w http.ResponseWriter,
 	r *http.Request,
 	postID int64,
+	targetReaction int,
 ) {
 	userID, ok := requireUserID(w, r)
 	if !ok {
 		return
 	}
 
-	liked, err := repository.TogglePostLike(
+	reaction, err := repository.TogglePostReaction(
 		r.Context(),
 		p.conn,
 		userID,
 		postID,
+		targetReaction,
 	)
 	if err != nil {
-		log.Printf("TogglePostLike failed: %v", err)
+		log.Printf("ToggleReaction failed: %v", err)
 		WriteError(
 			w,
-			NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError),
+			NewError("INTERNAL_SERVER_ERROR", "error toggling reaction", http.StatusInternalServerError),
 		)
 		return
 	}
 
-	likesCount, err := repository.CountPostLikes(r.Context(), p.conn, postID)
+	likesCount, dislikesCount, err := repository.CountReactionsForPost(r.Context(), p.conn, postID)
 	if err != nil {
 		log.Printf("CountPostLikes failed: %v", err)
 		WriteError(
@@ -251,9 +260,10 @@ func (p *PostsHandler) toggleLike(
 	}
 
 	WriteOK(w, map[string]any{
-		"post_id":     postID,
-		"liked":       liked,
-		"likes_count": likesCount,
+		"post_id":        postID,
+		"reaction":       reaction,
+		"likes_count":    likesCount,
+		"dislikes_count": dislikesCount,
 	}, nil)
 }
 

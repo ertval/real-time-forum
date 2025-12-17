@@ -55,7 +55,7 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
-	// /posts/{id}, /posts/{id}/comments, /posts/{id}/like
+	// /posts/{id}, /posts/{id}/comments, /posts/{id}/like /posts/{id}/dislike
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
