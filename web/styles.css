@@ -56,25 +56,15 @@ body {
 }
 
 .bottom {
-    position: relative;
-    height: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
 }
 
-.load-comments {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 120px;
-    height: 40px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.load-comments:hover {
-    background: #0056b3;
+.reactions {
+    display: flex;
+    gap: 10px;
 }
 
 .comments {
@@ -103,4 +93,36 @@ body {
     border-radius: 3px;
     font-size: 0.9em;
     overflow-wrap: break-word;
+}
+
+.load-comments,
+.like-btn,
+.dislike-btn {
+    height: 40px;
+    padding: 0 15px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.load-comments:hover,
+.like-btn:hover,
+.dislike-btn:hover {
+    background: #0056b3;
+}
+
+
+
+.count {
+    font-size: 0.8em;
+    color: #555;
+    text-align: center;
+    margin-bottom: 2px;
+}
+.like-section, .dislike-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }

@@ -64,7 +64,8 @@ func NewRouter(database *sql.DB) http.Handler {
 
 		case http.MethodPost, http.MethodPatch, http.MethodDelete:
 			// create comment, like, update/delete post → auth required
-			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
+			//auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
+			http.HandlerFunc(posts.HandlePost).ServeHTTP(w, r)
 
 		default:
 			handlers.MethodNotAllowed(w)

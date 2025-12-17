@@ -35,10 +35,21 @@ async function loadPosts() {
                 <div class="body">${post.body}</div>
                 <div class="bottom">
                     <button class="load-comments" onclick="toggleComments(this, ${post.id})">Load comments</button>
+                    <div class="reactions">
+                        <div class="like-section">
+                            <span id="like-count-${post.id}" class="count">0</span><br>
+                            <button class="like-btn" onclick="toggleLike(${post.id})">Like</button>
+                        </div>
+                        <div class="dislike-section">
+                            <span id="dislike-count-${post.id}" class="count">0</span><br>
+                            <button class="dislike-btn" onclick="toggleDislike(${post.id})">Dislike</button>
+                    </div>
+                </div>
                 </div>
                 <div class="comments" id="comments-${post.id}"></div>
             `;
             output.appendChild(postDiv);
+            await loadReactionCounts(post.id);
         }
     }
 }
@@ -87,6 +98,53 @@ async function toggleComments(button, postId) {
         // Hide comments
         commentsDiv.innerHTML = '';
         button.textContent = 'Load comments';
+    }
+}
+
+async function loadReactionCounts(postId) {
+    try {
+        // Placeholder: since no GET /counts endpoint, set to 0 initially
+        // Ideally, add GET /api/v1/posts/{id}/reactions/count endpoint in backend
+        document.getElementById(`like-count-${postId}`).textContent = 0;
+        document.getElementById(`dislike-count-${postId}`).textContent = 0;
+    } catch (e) {
+        console.error('Load counts error:', e);
+    }
+}
+
+async function toggleLike(postId) {
+    try {
+        const res = await fetch(`http://localhost:8080/api/v1/posts/${postId}/like`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById(`like-count-${postId}`).textContent = data.data.likes_count;
+            document.getElementById(`dislike-count-${postId}`).textContent = data.data.dislikes_count;
+        } else {
+            console.error('Like failed:', res.status);
+        }
+    } catch (e) {
+        console.error('Like error:', e);
+    }
+}
+
+async function toggleDislike(postId) {
+    try {
+        const res = await fetch(`http://localhost:8080/api/v1/posts/${postId}/dislike`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById(`like-count-${postId}`).textContent = data.data.likes_count;
+            document.getElementById(`dislike-count-${postId}`).textContent = data.data.dislikes_count;
+        } else {
+            console.error('Dislike failed:', res.status);
+        }
+    } catch (e) {
+        console.error('Dislike error:', e);
     }
 }
 
