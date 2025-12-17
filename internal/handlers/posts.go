@@ -229,12 +229,10 @@ func (p *PostsHandler) handlePostReaction(
 	postID int64,
 	targetReaction int,
 ) {
-	//userID, ok := requireUserID(w, r)
-	//if !ok {
-	//	return
-	//}
-	userID := int64(1) // Bypassed for testing
-
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	reaction, err := repository.TogglePostReaction(
 		r.Context(),
 		p.conn,
