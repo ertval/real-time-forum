@@ -15,7 +15,7 @@ func ToggleReaction(
 	ctx context.Context,
 	db *sql.DB,
 	userID,
-	postID int64,
+	objectID int64,
 	targetReaction int,
 	targetType string,
 
@@ -28,12 +28,12 @@ func ToggleReaction(
 		return 0, fmt.Errorf("invalid target: %d", targetReaction)
 	}
 
-	current, err := getReactionValue(ctx, db, userID, postID, targetType)
+	current, err := getReactionValue(ctx, db, userID, objectID, targetType)
 	if err != nil {
 		return 0, err
 	}
 
-	newValue, err := applyReactionToggle(ctx, db, userID, postID, current, targetReaction, targetType)
+	newValue, err := applyReactionToggle(ctx, db, userID, objectID, current, targetReaction, targetType)
 	if err != nil {
 		return 0, err
 	}
