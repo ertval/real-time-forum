@@ -233,12 +233,13 @@ func (p *PostsHandler) handlePostReaction(
 	if !ok {
 		return
 	}
-	reaction, err := repository.TogglePostReaction(
+	reaction, err := repository.ToggleReaction(
 		r.Context(),
 		p.conn,
 		userID,
 		postID,
 		targetReaction,
+		"post",
 	)
 	if err != nil {
 		log.Printf("ToggleReaction failed: %v", err)
