@@ -133,14 +133,14 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 
 	case "like":
 		if r.Method == http.MethodPost {
-			p.handlePostReaction(w, r, postID, 1)
+			p.handleReaction(w, r, postID, 1, "post")
 			return
 		}
 		MethodNotAllowed(w)
 
 	case "dislike":
 		if r.Method == http.MethodPost {
-			p.handlePostReaction(w, r, postID, -1)
+			p.handleReaction(w, r, postID, -1, "post")
 			return
 		}
 		MethodNotAllowed(w)
@@ -223,11 +223,12 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	WriteNoContent(w)
 }
 
-func (p *PostsHandler) handlePostReaction(
+func (p *PostsHandler) handleReaction(
 	w http.ResponseWriter,
 	r *http.Request,
-	postID int64,
+	objectID int64,
 	targetReaction int,
+	targetType string,
 ) {
 	userID, ok := requireUserID(w, r)
 	if !ok {
@@ -237,9 +238,9 @@ func (p *PostsHandler) handlePostReaction(
 		r.Context(),
 		p.conn,
 		userID,
-		postID,
+		objectID,
 		targetReaction,
-		"post",
+		targetType,
 	)
 	if err != nil {
 		log.Printf("ToggleReaction failed: %v", err)
@@ -249,8 +250,16 @@ func (p *PostsHandler) handlePostReaction(
 		)
 		return
 	}
-
-	likesCount, dislikesCount, err := repository.CountReactionsForPost(r.Context(), p.conn, postID)
+	var likesCount, dislikesCount int
+	switch targetType {
+	case "post":
+		likesCount, dislikesCount, err = repository.CountReactionsForPost(r.Context(), p.conn, objectID)
+	case "comment":
+		likesCount, dislikesCount, err = repository.CountReactionsForComment(r.Context(), p.conn, objectID)
+	default:
+		WriteError(w, NewError("BAD_REQUEST", "invalid target type", http.StatusBadRequest))
+		return
+	}
 	if err != nil {
 		log.Printf("CountPostLikes failed: %v", err)
 		WriteError(
@@ -260,8 +269,13 @@ func (p *PostsHandler) handlePostReaction(
 		return
 	}
 
+	idKey := "post_id"
+	if targetType == "comment" {
+		idKey = "comment_id"
+	}
+
 	WriteOK(w, map[string]any{
-		"post_id":        postID,
+		idKey:            objectID,
 		"reaction":       reaction,
 		"likes_count":    likesCount,
 		"dislikes_count": dislikesCount,
