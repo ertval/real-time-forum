@@ -40,15 +40,64 @@ func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ------------------------------------------------------------
+// Internal helpers
+// ------------------------------------------------------------
+
+type postsListResult struct {
+	Posts []repository.Post
+	Total int
+	Meta  map[string]any
+}
+
+func writeHandlerError(w http.ResponseWriter, err error, fallbackMsg string) bool {
+	if err == nil {
+		return false
+	}
+
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		WriteError(w, apiErr)
+		return true
+	}
+
+	WriteError(w, NewError(
+		"INTERNAL_SERVER_ERROR",
+		fallbackMsg,
+		http.StatusInternalServerError,
+	))
+	return true
+}
+
+// ------------------------------------------------------------
+// LIST POSTS
+// ------------------------------------------------------------
+
 func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
 
-	categoryIDStr := r.URL.Query().Get("category_id")
-	if categoryIDStr != "" {
+	result, err := p.resolvePostsList(r, page, perPage)
+	if writeHandlerError(w, err, "error listing posts") {
+		return
+	}
+
+	pagination := buildPaginationInfo(page, perPage, result.Total, result.Meta)
+	WriteOK(w, result.Posts, pagination)
+}
+
+func (p *PostsHandler) resolvePostsList(
+	r *http.Request,
+	page, perPage int,
+) (postsListResult, error) {
+
+	if categoryIDStr := r.URL.Query().Get("category_id"); categoryIDStr != "" {
 		categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
 		if err != nil || categoryID <= 0 {
-			WriteError(w, NewError("BAD_REQUEST", "invalid category_id", http.StatusBadRequest))
-			return
+			return postsListResult{}, NewError(
+				"BAD_REQUEST",
+				"invalid category_id",
+				http.StatusBadRequest,
+			)
 		}
 
 		result, err := repository.ListPostsByCategory(
@@ -61,16 +110,14 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 			},
 		)
 		if err != nil {
-			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
-			return
+			return postsListResult{}, err
 		}
 
-		pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
-			"category_id": categoryID,
-		})
-
-		WriteOK(w, result.Posts, pagination)
-		return
+		return postsListResult{
+			Posts: result.Posts,
+			Total: result.Total,
+			Meta:  map[string]any{"category_id": categoryID},
+		}, nil
 	}
 
 	// default: list all posts
@@ -83,13 +130,18 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
-		return
+		return postsListResult{}, err
 	}
 
-	pagination := buildPaginationInfo(page, perPage, result.Total, nil)
-	WriteOK(w, result.Posts, pagination)
+	return postsListResult{
+		Posts: result.Posts,
+		Total: result.Total,
+	}, nil
 }
+
+// ------------------------------------------------------------
+// CREATE POST
+// ------------------------------------------------------------
 
 func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)
@@ -126,7 +178,6 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reload post to return the full persisted representation
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
 		WriteError(w, NewError(
@@ -256,6 +307,10 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	WriteNoContent(w)
 }
 
+// ============================================================
+// REACTIONS
+// ============================================================
+
 func (p *PostsHandler) handleReaction(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -267,6 +322,7 @@ func (p *PostsHandler) handleReaction(
 	if !ok {
 		return
 	}
+
 	reaction, err := repository.ToggleReaction(
 		r.Context(),
 		p.conn,
@@ -277,13 +333,12 @@ func (p *PostsHandler) handleReaction(
 	)
 	if err != nil {
 		log.Printf("ToggleReaction failed: %v", err)
-		WriteError(
-			w,
-			NewError("INTERNAL_SERVER_ERROR", "error toggling reaction", http.StatusInternalServerError),
-		)
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error toggling reaction", http.StatusInternalServerError))
 		return
 	}
+
 	var likesCount, dislikesCount int
+
 	switch targetType {
 	case ReactionTargetPost:
 		likesCount, dislikesCount, err = repository.CountReactionsForPost(r.Context(), p.conn, objectID)
@@ -293,17 +348,14 @@ func (p *PostsHandler) handleReaction(
 		WriteError(w, NewError("BAD_REQUEST", "invalid target type", http.StatusBadRequest))
 		return
 	}
+
 	if err != nil {
-		log.Printf("CountPostLikes failed: %v", err)
-		WriteError(
-			w,
-			NewError("INTERNAL_SERVER_ERROR", "error counting likes", http.StatusInternalServerError),
-		)
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error counting reactions", http.StatusInternalServerError))
 		return
 	}
 
 	idKey := "post_id"
-	if targetType == "comment" {
+	if targetType == ReactionTargetComment {
 		idKey = "comment_id"
 	}
 
@@ -336,11 +388,11 @@ func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, post
 		return
 	}
 
-	paginationInfo := buildPaginationInfo(page, perPage, listResult.Total, map[string]any{
+	pagination := buildPaginationInfo(page, perPage, listResult.Total, map[string]any{
 		"post_id": postID,
 	})
 
-	WriteOK(w, listResult.Comments, paginationInfo)
+	WriteOK(w, listResult.Comments, pagination)
 }
 
 func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, postID int64) {
@@ -375,11 +427,7 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		},
 	)
 	if err != nil {
-		WriteError(w, NewError(
-			"INTERNAL_SERVER_ERROR",
-			"error creating comment",
-			http.StatusInternalServerError,
-		))
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error creating comment", http.StatusInternalServerError))
 		return
 	}
 

@@ -16,13 +16,6 @@ type APIResponse struct {
 	Error *APIError `json:"error,omitempty"`
 }
 
-// APIError represents a standardized API error.
-type APIError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Status  int    `json:"-"` // HTTP status code (not serialized)
-}
-
 // ------------------------------------------------------------
 // SUCCESS RESPONSES
 // ------------------------------------------------------------
