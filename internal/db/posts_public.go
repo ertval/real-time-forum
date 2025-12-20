@@ -42,7 +42,6 @@ type ListPublicPostsResult struct {
 // ─────────────────────────────────────────────────────────────
 //
 
-// Main public posts query (ORDER BY is injected dynamically)
 const sqlListPublicPosts = `
 SELECT 
     p.id,
@@ -74,7 +73,6 @@ ORDER BY %s
 LIMIT ? OFFSET ?
 `
 
-// Load categories for a specific post
 const sqlSelectCategories = `
 SELECT c.name
 FROM post_categories pc
@@ -82,22 +80,37 @@ JOIN categories c ON c.id = pc.category_id
 WHERE pc.post_id = ?
 `
 
-// Count all published posts
 const sqlCountPublishedPosts = `
 SELECT COUNT(*) FROM posts WHERE status = 'published'
 `
 
 //
 // ─────────────────────────────────────────────────────────────
-//  MAIN FUNCTION: PUBLIC POSTS LIST
+//  MAIN FUNCTION
 // ─────────────────────────────────────────────────────────────
 //
 
-func ListPublicPosts(ctx context.Context, db *sql.DB, p ListPublicPostsParams) (ListPublicPostsResult, error) {
+func ListPublicPosts(
+	ctx context.Context,
+	db *sql.DB,
+	p ListPublicPostsParams,
+) (ListPublicPostsResult, error) {
+
+	// Pagination defaults (consistency with rest of DB layer)
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 20
+	}
+	if p.PerPage > 100 {
+		p.PerPage = 100
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// Sorting logic
+	// Sorting whitelist
 	order := "datetime(p.created_at) DESC"
 	switch strings.ToLower(p.SortBy) {
 	case "oldest":
@@ -114,7 +127,6 @@ func ListPublicPosts(ctx context.Context, db *sql.DB, p ListPublicPostsParams) (
 		return ListPublicPostsResult{}, fmt.Errorf("count posts: %w", err)
 	}
 
-	// Final SQL query
 	query := fmt.Sprintf(sqlListPublicPosts, order)
 
 	rows, err := db.QueryContext(ctx, query, p.PerPage, offset)
@@ -140,12 +152,19 @@ func ListPublicPosts(ctx context.Context, db *sql.DB, p ListPublicPostsParams) (
 			return ListPublicPostsResult{}, fmt.Errorf("scan post: %w", err)
 		}
 
-		// Load categories
-		if categoryIDs, err := loadCategoriesForPost(ctx, db, post.ID); err == nil {
-			post.Categories = categoryIDs
+		categories, err := loadCategoriesForPost(ctx, db, post.ID)
+		if err != nil {
+			// non-fatal: skip categories
+			post.Categories = []string{}
+		} else {
+			post.Categories = categories
 		}
 
 		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ListPublicPostsResult{}, fmt.Errorf("iterate posts: %w", err)
 	}
 
 	return ListPublicPostsResult{
