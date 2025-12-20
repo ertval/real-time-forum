@@ -20,9 +20,16 @@ type Post struct {
 	Dislikes    int     `json:"dislikes"`
 }
 
-// ------------------------------------------------------------
-// LIST POSTS
-// ------------------------------------------------------------
+type ListPostsByCategoryParams struct {
+	CategoryID int64
+	Page       int
+	PerPage    int
+}
+
+type ListPostsByCategoryResult struct {
+	Posts []Post
+	Total int
+}
 
 type ListPostsParams struct {
 	Page    int
@@ -34,16 +41,9 @@ type ListPostsResult struct {
 	Total int
 }
 
-type ListPostsByAuthorParams struct {
-	AuthorID int64
-	Page     int
-	PerPage  int
-}
-
-type ListPostsByAuthorResult struct {
-	Posts []Post
-	Total int
-}
+// ------------------------------------------------------------
+// LIST POSTS
+// ------------------------------------------------------------
 
 func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsResult, error) {
 	// Apply default pagination values if not provided
@@ -88,7 +88,7 @@ func (p *ListPostsParams) ApplyDefaults() {
 	}
 }
 
-func (p *ListPostsByAuthorParams) ApplyDefaults() {
+func (p *ListPostsByCategoryParams) ApplyDefaults() {
 	if p.Page < 1 {
 		p.Page = 1
 	}
@@ -265,9 +265,101 @@ func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	return err
 }
 
-// ------------------------------------------------------------
+func ListPostsByCategory(
+	ctx context.Context,
+	db *sql.DB,
+	params ListPostsByCategoryParams,
+) (ListPostsByCategoryResult, error) {
+
+	params.ApplyDefaults()
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	// Count total posts in category
+	var total int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT post_id)
+		FROM post_categories
+		WHERE category_id = ?
+	`, params.CategoryID).Scan(&total); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	offset := (params.Page - 1) * params.PerPage
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT p.id, p.author_id, p.title, p.body, p.created_at, p.updated_at
+		FROM posts p
+		JOIN post_categories pc ON pc.post_id = p.id
+		WHERE pc.category_id = ?
+		ORDER BY p.created_at DESC
+		LIMIT ? OFFSET ?
+	`, params.CategoryID, params.PerPage, offset)
+	if err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		if err := rows.Scan(
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Body,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
+			return ListPostsByCategoryResult{}, err
+		}
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	if err := attachPostCategories(ctx, db, posts); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+	if err := attachPostReactions(ctx, db, posts); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	return ListPostsByCategoryResult{
+		Posts: posts,
+		Total: total,
+	}, nil
+}
+
+// ============================================================
 // LIST POSTS BY AUTHOR (MY POSTS)
-// ------------------------------------------------------------
+// ============================================================
+
+type ListPostsByAuthorParams struct {
+	AuthorID int64
+	Page     int
+	PerPage  int
+}
+
+type ListPostsByAuthorResult struct {
+	Posts []Post
+	Total int
+}
+
+func (p *ListPostsByAuthorParams) ApplyDefaults() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 20
+	}
+	if p.PerPage > 100 {
+		p.PerPage = 100
+	}
+}
 
 func ListPostsByAuthor(
 	ctx context.Context,
@@ -286,7 +378,7 @@ func ListPostsByAuthor(
 		FROM posts
 		WHERE author_id = ?
 	`, params.AuthorID).Scan(&total); err != nil {
-		return ListPostsByAuthorResult{}, fmt.Errorf("count posts by author: %w", err)
+		return ListPostsByAuthorResult{}, err
 	}
 
 	offset := (params.Page - 1) * params.PerPage
@@ -299,12 +391,11 @@ func ListPostsByAuthor(
 		LIMIT ? OFFSET ?
 	`, params.AuthorID, params.PerPage, offset)
 	if err != nil {
-		return ListPostsByAuthorResult{}, fmt.Errorf("list posts by author: %w", err)
+		return ListPostsByAuthorResult{}, err
 	}
 	defer rows.Close()
 
-	posts := make([]Post, 0)
-
+	var posts []Post
 	for rows.Next() {
 		var post Post
 		if err := rows.Scan(
@@ -315,7 +406,7 @@ func ListPostsByAuthor(
 			&post.CreatedAt,
 			&post.UpdatedAt,
 		); err != nil {
-			return ListPostsByAuthorResult{}, fmt.Errorf("scan post: %w", err)
+			return ListPostsByAuthorResult{}, err
 		}
 		posts = append(posts, post)
 	}
@@ -327,7 +418,6 @@ func ListPostsByAuthor(
 	if err := attachPostCategories(ctx, db, posts); err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
-
 	if err := attachPostReactions(ctx, db, posts); err != nil {
 		return ListPostsByAuthorResult{}, err
 	}

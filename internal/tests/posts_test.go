@@ -194,3 +194,20 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 		t.Fatalf("expected 2 categories, got %d", len(categoryIDs))
 	}
 }
+
+func TestAPIPostsFilterByCategory(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	w, body := doRequest(
+		t,
+		h,
+		http.MethodGet,
+		"/api/v1/posts?category_id=1",
+		nil,
+	)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d, body=%s", w.Code, string(body))
+	}
+}
