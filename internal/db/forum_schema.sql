@@ -100,6 +100,8 @@ CREATE TABLE IF NOT EXISTS reactions (
     comment_id  INTEGER,
     value       INTEGER NOT NULL CHECK (value IN (-1, 1)), -- like/dislike
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    UNIQUE (user_id, post_id),
+    UNIQUE (user_id, comment_id),
     CHECK ((post_id IS NOT NULL) != (comment_id IS NOT NULL)), -- XOR
     FOREIGN KEY (user_id)    REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (post_id)    REFERENCES posts(id) ON DELETE CASCADE,

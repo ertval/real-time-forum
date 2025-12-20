@@ -133,7 +133,14 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 
 	case "like":
 		if r.Method == http.MethodPost {
-			p.toggleLike(w, r, postID)
+			p.handleReaction(w, r, postID, 1, "post")
+			return
+		}
+		MethodNotAllowed(w)
+
+	case "dislike":
+		if r.Method == http.MethodPost {
+			p.handleReaction(w, r, postID, -1, "post")
 			return
 		}
 		MethodNotAllowed(w)
@@ -216,37 +223,67 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	WriteNoContent(w)
 }
 
-func (p *PostsHandler) toggleLike(
+func (p *PostsHandler) handleReaction(
 	w http.ResponseWriter,
 	r *http.Request,
-	postID int64,
+	objectID int64,
+	targetReaction int,
+	targetType string,
 ) {
 	userID, ok := requireUserID(w, r)
 	if !ok {
 		return
 	}
-
-	liked, err := repository.TogglePostLike(
+	reaction, err := repository.ToggleReaction(
 		r.Context(),
 		p.conn,
 		userID,
-		postID,
+		objectID,
+		targetReaction,
+		targetType,
 	)
 	if err != nil {
-		log.Printf("TogglePostLike failed: %v", err)
+		log.Printf("ToggleReaction failed: %v", err)
 		WriteError(
 			w,
-			NewError("INTERNAL_SERVER_ERROR", "error toggling like", http.StatusInternalServerError),
+			NewError("INTERNAL_SERVER_ERROR", "error toggling reaction", http.StatusInternalServerError),
+		)
+		return
+	}
+	var likesCount, dislikesCount int
+	switch targetType {
+	case "post":
+		likesCount, dislikesCount, err = repository.CountReactionsForPost(r.Context(), p.conn, objectID)
+	case "comment":
+		likesCount, dislikesCount, err = repository.CountReactionsForComment(r.Context(), p.conn, objectID)
+	default:
+		WriteError(w, NewError("BAD_REQUEST", "invalid target type", http.StatusBadRequest))
+		return
+	}
+	if err != nil {
+		log.Printf("CountPostLikes failed: %v", err)
+		WriteError(
+			w,
+			NewError("INTERNAL_SERVER_ERROR", "error counting likes", http.StatusInternalServerError),
 		)
 		return
 	}
 
+	idKey := "post_id"
+	if targetType == "comment" {
+		idKey = "comment_id"
+	}
+
 	WriteOK(w, map[string]any{
-		"post_id": postID,
-		"liked":   liked,
+		idKey:            objectID,
+		"reaction":       reaction,
+		"likes_count":    likesCount,
+		"dislikes_count": dislikesCount,
 	}, nil)
 }
 
+// ============================================================
+// COMMENTS
 // ============================================================
 // COMMENTS
 // ============================================================
