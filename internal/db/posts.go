@@ -20,6 +20,17 @@ type Post struct {
 	Dislikes    int     `json:"dislikes"`
 }
 
+type ListPostsByCategoryParams struct {
+	CategoryID int64
+	Page       int
+	PerPage    int
+}
+
+type ListPostsByCategoryResult struct {
+	Posts []Post
+	Total int
+}
+
 // ------------------------------------------------------------
 // LIST POSTS
 // ------------------------------------------------------------
@@ -72,6 +83,18 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 }
 
 func (p *ListPostsParams) ApplyDefaults() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 20
+	}
+	if p.PerPage > 100 {
+		p.PerPage = 100
+	}
+}
+
+func (p *ListPostsByCategoryParams) ApplyDefaults() {
 	if p.Page < 1 {
 		p.Page = 1
 	}
@@ -246,4 +269,73 @@ func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	_, _ = db.ExecContext(ctx, `DELETE FROM post_categories WHERE post_id = ?`, id)
 	_, err := db.ExecContext(ctx, `DELETE FROM posts WHERE id = ?`, id)
 	return err
+}
+
+func ListPostsByCategory(
+	ctx context.Context,
+	db *sql.DB,
+	params ListPostsByCategoryParams,
+) (ListPostsByCategoryResult, error) {
+
+	params.ApplyDefaults()
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	// Count total posts in category
+	var total int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT post_id)
+		FROM post_categories
+		WHERE category_id = ?
+	`, params.CategoryID).Scan(&total); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	offset := (params.Page - 1) * params.PerPage
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT p.id, p.author_id, p.title, p.body, p.created_at, p.updated_at
+		FROM posts p
+		JOIN post_categories pc ON pc.post_id = p.id
+		WHERE pc.category_id = ?
+		ORDER BY p.created_at DESC
+		LIMIT ? OFFSET ?
+	`, params.CategoryID, params.PerPage, offset)
+	if err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		if err := rows.Scan(
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Body,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
+			return ListPostsByCategoryResult{}, err
+		}
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	if err := attachPostCategories(ctx, db, posts); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+	if err := attachPostReactions(ctx, db, posts); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	return ListPostsByCategoryResult{
+		Posts: posts,
+		Total: total,
+	}, nil
 }

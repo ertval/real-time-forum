@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	repository "forum/internal/db"
@@ -18,6 +19,11 @@ type PostsHandler struct {
 func NewPostsHandler(database *sql.DB) *PostsHandler {
 	return &PostsHandler{conn: database}
 }
+
+const (
+	ReactionTargetPost    = "post"
+	ReactionTargetComment = "comment"
+)
 
 // ============================================================
 // HandlePosts: /api/v1/posts
@@ -37,6 +43,37 @@ func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
 
+	categoryIDStr := r.URL.Query().Get("category_id")
+	if categoryIDStr != "" {
+		categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
+		if err != nil || categoryID <= 0 {
+			WriteError(w, NewError("BAD_REQUEST", "invalid category_id", http.StatusBadRequest))
+			return
+		}
+
+		result, err := repository.ListPostsByCategory(
+			r.Context(),
+			p.conn,
+			repository.ListPostsByCategoryParams{
+				CategoryID: categoryID,
+				Page:       page,
+				PerPage:    perPage,
+			},
+		)
+		if err != nil {
+			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
+			return
+		}
+
+		pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
+			"category_id": categoryID,
+		})
+
+		WriteOK(w, result.Posts, pagination)
+		return
+	}
+
+	// default: list all posts
 	result, err := repository.ListPosts(
 		r.Context(),
 		p.conn,
@@ -46,16 +83,12 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		WriteError(w, NewError(
-			"INTERNAL_SERVER_ERROR",
-			"error listing posts",
-			http.StatusInternalServerError,
-		))
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
 		return
 	}
 
-	paginationInfo := buildPaginationInfo(page, perPage, result.Total, nil)
-	WriteOK(w, result.Posts, paginationInfo)
+	pagination := buildPaginationInfo(page, perPage, result.Total, nil)
+	WriteOK(w, result.Posts, pagination)
 }
 
 func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
@@ -133,14 +166,14 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 
 	case "like":
 		if r.Method == http.MethodPost {
-			p.handleReaction(w, r, postID, 1, "post")
+			p.handleReaction(w, r, postID, 1, ReactionTargetPost)
 			return
 		}
 		MethodNotAllowed(w)
 
 	case "dislike":
 		if r.Method == http.MethodPost {
-			p.handleReaction(w, r, postID, -1, "post")
+			p.handleReaction(w, r, postID, -1, ReactionTargetPost)
 			return
 		}
 		MethodNotAllowed(w)
@@ -252,9 +285,9 @@ func (p *PostsHandler) handleReaction(
 	}
 	var likesCount, dislikesCount int
 	switch targetType {
-	case "post":
+	case ReactionTargetPost:
 		likesCount, dislikesCount, err = repository.CountReactionsForPost(r.Context(), p.conn, objectID)
-	case "comment":
+	case ReactionTargetComment:
 		likesCount, dislikesCount, err = repository.CountReactionsForComment(r.Context(), p.conn, objectID)
 	default:
 		WriteError(w, NewError("BAD_REQUEST", "invalid target type", http.StatusBadRequest))
@@ -282,8 +315,6 @@ func (p *PostsHandler) handleReaction(
 	}, nil)
 }
 
-// ============================================================
-// COMMENTS
 // ============================================================
 // COMMENTS
 // ============================================================
