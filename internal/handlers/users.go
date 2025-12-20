@@ -18,32 +18,51 @@ func NewUsersHandler(database *sql.DB) *UsersHandler {
 }
 
 // ============================================================
-// COLLECTION / SINGLE ROUTES
+// Internal helpers
 // ============================================================
 
-// HandleUser → GET /api/v1/users/{id} (auth required via router)
+func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := parseID(r.URL.Path, "/api/v1/users/")
+	if err != nil || id <= 0 {
+		WriteError(w, NewError(
+			"BAD_REQUEST",
+			"invalid user ID",
+			http.StatusBadRequest,
+		))
+		return 0, false
+	}
+	return id, true
+}
+
+// ============================================================
+// HandleUser: /api/v1/users/{id}
+// ============================================================
+
 func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		MethodNotAllowed(w)
 		return
 	}
 
-	userID, err := parseID(r.URL.Path, "/api/v1/users/")
-	if err != nil {
-		WriteError(w, NewError("BAD_REQUEST", "invalid user ID", http.StatusBadRequest))
+	userID, ok := resolveUserID(w, r)
+	if !ok {
 		return
 	}
 
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
-		WriteError(w, NewError("NOT_FOUND", "user not found", http.StatusNotFound))
+		writeHandlerError(w, err, "user not found")
 		return
 	}
 
 	WriteOK(w, user, nil)
 }
 
-// Register → POST /api/v1/users/register
+// ============================================================
+// REGISTER
+// POST /api/v1/users/register
+// ============================================================
+
 func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		MethodNotAllowed(w)
@@ -52,13 +71,21 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	var req repository.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+		WriteError(w, NewError(
+			"BAD_REQUEST",
+			"invalid json",
+			http.StatusBadRequest,
+		))
 		return
 	}
 
 	id, err := repository.CreateUser(r.Context(), u.conn, req)
 	if err != nil {
-		WriteError(w, NewError("BAD_REQUEST", err.Error(), http.StatusBadRequest))
+		WriteError(w, NewError(
+			"BAD_REQUEST",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 		return
 	}
 
@@ -69,10 +96,10 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // ============================================================
-// AUTH
+// LOGIN
+// POST /api/v1/users/login
 // ============================================================
 
-// Login → POST /api/v1/users/login
 func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		MethodNotAllowed(w)
@@ -81,13 +108,21 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	var req repository.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, NewError("BAD_REQUEST", "invalid login json", http.StatusBadRequest))
+		WriteError(w, NewError(
+			"BAD_REQUEST",
+			"invalid login json",
+			http.StatusBadRequest,
+		))
 		return
 	}
 
 	user, err := repository.LoginUser(r.Context(), u.conn, req)
 	if err != nil {
-		WriteError(w, NewError("UNAUTHORIZED", "invalid credentials", http.StatusUnauthorized))
+		WriteError(w, NewError(
+			"UNAUTHORIZED",
+			"invalid credentials",
+			http.StatusUnauthorized,
+		))
 		return
 	}
 
@@ -98,8 +133,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		r.RemoteAddr,
 		r.UserAgent(),
 	)
-	if err != nil {
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to create session", http.StatusInternalServerError))
+	if writeHandlerError(w, err, "failed to create session") {
 		return
 	}
 
@@ -111,27 +145,40 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode, // important for tests
 	})
 
-	WriteOK(w, map[string]any{"message": "Login successful"}, nil)
+	WriteOK(w, map[string]any{
+		"message": "Login successful",
+	}, nil)
 }
 
-// Me → GET /api/v1/users/me
+// ============================================================
+// ME
+// GET /api/v1/users/me
+// ============================================================
+
 func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		WriteError(w, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
+		WriteError(w, NewError(
+			"UNAUTHORIZED",
+			"login required",
+			http.StatusUnauthorized,
+		))
 		return
 	}
 
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
-	if err != nil {
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "failed to get user", http.StatusInternalServerError))
+	if writeHandlerError(w, err, "failed to load user") {
 		return
 	}
 
 	WriteOK(w, user, nil)
 }
 
-// Logout → POST /api/v1/users/logout
+// ============================================================
+// LOGOUT
+// POST /api/v1/users/logout
+// ============================================================
+
 func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		MethodNotAllowed(w)
@@ -140,11 +187,19 @@ func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
-		WriteError(w, NewError("UNAUTHORIZED", "no session", http.StatusUnauthorized))
+		WriteError(w, NewError(
+			"UNAUTHORIZED",
+			"no active session",
+			http.StatusUnauthorized,
+		))
 		return
 	}
 
-	_ = repository.InvalidateSessionByToken(r.Context(), u.conn, cookie.Value)
+	_ = repository.InvalidateSessionByToken(
+		r.Context(),
+		u.conn,
+		cookie.Value,
+	)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
@@ -155,5 +210,7 @@ func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	WriteOK(w, map[string]string{"message": "Logout successful"}, nil)
+	WriteOK(w, map[string]string{
+		"message": "logout successful",
+	}, nil)
 }

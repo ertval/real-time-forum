@@ -25,9 +25,9 @@ type Session struct {
 	IsValid   bool
 }
 
-// ---------------------------------------------------------
+// ============================================================
 // PUBLIC API
-// ---------------------------------------------------------
+// ============================================================
 
 func CreateSession(
 	ctx context.Context,
@@ -40,15 +40,33 @@ func CreateSession(
 	ctx, cancel := context.WithTimeout(ctx, sessionTimeout)
 	defer cancel()
 
-	if err := invalidateUserSessions(ctx, db, userID); err != nil {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return Session{}, err
+	}
+	defer tx.Rollback()
+
+	if err := invalidateUserSessionsTx(ctx, tx, userID); err != nil {
 		return Session{}, err
 	}
 
 	token := generateSessionToken()
 	expiresAt := time.Now().Add(sessionDuration)
 
-	id, err := insertSession(ctx, db, userID, token, expiresAt, ip, userAgent)
+	id, err := insertSessionTx(
+		ctx,
+		tx,
+		userID,
+		token,
+		expiresAt,
+		ip,
+		userAgent,
+	)
 	if err != nil {
+		return Session{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return Session{}, err
 	}
 
@@ -94,17 +112,17 @@ func InvalidateSessionByToken(
 	return nil
 }
 
-// ---------------------------------------------------------
-// HELPERS
-// ---------------------------------------------------------
+// ============================================================
+// HELPERS (TX SAFE)
+// ============================================================
 
-func invalidateUserSessions(
+func invalidateUserSessionsTx(
 	ctx context.Context,
-	db *sql.DB,
+	tx *sql.Tx,
 	userID int64,
 ) error {
 
-	if _, err := db.ExecContext(ctx,
+	if _, err := tx.ExecContext(ctx,
 		`UPDATE sessions SET is_valid = 0 WHERE user_id = ? AND is_valid = 1`,
 		userID,
 	); err != nil {
@@ -114,9 +132,9 @@ func invalidateUserSessions(
 	return nil
 }
 
-func insertSession(
+func insertSessionTx(
 	ctx context.Context,
-	db *sql.DB,
+	tx *sql.Tx,
 	userID int64,
 	token string,
 	expiresAt time.Time,
@@ -124,7 +142,7 @@ func insertSession(
 	userAgent string,
 ) (int64, error) {
 
-	result, err := db.ExecContext(ctx,
+	result, err := tx.ExecContext(ctx,
 		`INSERT INTO sessions (user_id, token, expires_at, ip, user_agent)
 		 VALUES (?, ?, ?, ?, ?)`,
 		userID,
