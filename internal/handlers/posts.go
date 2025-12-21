@@ -40,45 +40,19 @@ func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ------------------------------------------------------------
-// Internal helpers
-// ------------------------------------------------------------
-
-type postsListResult struct {
-	Posts []repository.Post
-	Total int
-	Meta  map[string]any
-}
-
-// ------------------------------------------------------------
+// ============================================================
 // LIST POSTS
-// ------------------------------------------------------------
+// ============================================================
 
 func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
 
-	result, err := p.resolvePostsList(r, page, perPage)
-	if writeHandlerError(w, err, "error listing posts") {
-		return
-	}
-
-	pagination := buildPaginationInfo(page, perPage, result.Total, result.Meta)
-	WriteOK(w, result.Posts, pagination)
-}
-
-func (p *PostsHandler) resolvePostsList(
-	r *http.Request,
-	page, perPage int,
-) (postsListResult, error) {
-
+	// Filter by category (optional)
 	if categoryIDStr := r.URL.Query().Get("category_id"); categoryIDStr != "" {
 		categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
 		if err != nil || categoryID <= 0 {
-			return postsListResult{}, NewError(
-				"BAD_REQUEST",
-				"invalid category_id",
-				http.StatusBadRequest,
-			)
+			WriteError(w, NewError("BAD_REQUEST", "invalid category_id", http.StatusBadRequest))
+			return
 		}
 
 		result, err := repository.ListPostsByCategory(
@@ -91,17 +65,19 @@ func (p *PostsHandler) resolvePostsList(
 			},
 		)
 		if err != nil {
-			return postsListResult{}, err
+			WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
+			return
 		}
 
-		return postsListResult{
-			Posts: result.Posts,
-			Total: result.Total,
-			Meta:  map[string]any{"category_id": categoryID},
-		}, nil
+		pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
+			"category_id": categoryID,
+		})
+
+		WriteOK(w, result.Posts, pagination)
+		return
 	}
 
-	// default: list all posts
+	// Default: list all posts
 	result, err := repository.ListPosts(
 		r.Context(),
 		p.conn,
@@ -111,18 +87,17 @@ func (p *PostsHandler) resolvePostsList(
 		},
 	)
 	if err != nil {
-		return postsListResult{}, err
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
+		return
 	}
 
-	return postsListResult{
-		Posts: result.Posts,
-		Total: result.Total,
-	}, nil
+	pagination := buildPaginationInfo(page, perPage, result.Total, nil)
+	WriteOK(w, result.Posts, pagination)
 }
 
-// ------------------------------------------------------------
+// ============================================================
 // CREATE POST
-// ------------------------------------------------------------
+// ============================================================
 
 func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)
@@ -161,11 +136,7 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
-		WriteError(w, NewError(
-			"INTERNAL_SERVER_ERROR",
-			"post created but failed to load",
-			http.StatusInternalServerError,
-		))
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "post created but failed to load", http.StatusInternalServerError))
 		return
 	}
 
@@ -423,17 +394,18 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 	WriteCreated(w, comment)
 }
 
+// ============================================================
+// MY POSTS
+// ============================================================
+
 func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
-	// Require authenticated user
 	userID, ok := requireUserID(w, r)
 	if !ok {
 		return
 	}
 
-	// Read pagination params
 	page, perPage := sanitizePagination(r)
 
-	// Fetch posts created by this user
 	result, err := repository.ListPostsByAuthor(
 		r.Context(),
 		p.conn,
@@ -444,19 +416,13 @@ func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		WriteError(w, NewError(
-			"INTERNAL_SERVER_ERROR",
-			"error listing user posts",
-			http.StatusInternalServerError,
-		))
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing user posts", http.StatusInternalServerError))
 		return
 	}
 
-	// Pagination metadata
-	paginationInfo := buildPaginationInfo(page, perPage, result.Total, map[string]any{
+	pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
 		"author_id": userID,
 	})
 
-	// Response
-	WriteOK(w, result.Posts, paginationInfo)
+	WriteOK(w, result.Posts, pagination)
 }
