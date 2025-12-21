@@ -34,37 +34,42 @@ type ListPostsResult struct {
 	Total int
 }
 
+type ListPostsByAuthorParams struct {
+	AuthorID int64
+	Page     int
+	PerPage  int
+}
+
+type ListPostsByAuthorResult struct {
+	Posts []Post
+	Total int
+}
+
 func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsResult, error) {
 	// Apply default pagination values if not provided
 	p.ApplyDefaults()
 
-	// Ensure the entire operation is bounded by a timeout
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// Count total number of posts (used for pagination metadata)
 	total, err := countPosts(ctx, db)
 	if err != nil {
 		return ListPostsResult{}, err
 	}
 
-	// Fetch paginated posts for the current page
 	posts, err := fetchPosts(ctx, db, p)
 	if err != nil {
 		return ListPostsResult{}, err
 	}
 
-	// Attach categories to each post (data enrichment)
 	if err := attachPostCategories(ctx, db, posts); err != nil {
 		return ListPostsResult{}, err
 	}
 
-	// Attach like/dislike counts to each post
 	if err := attachPostReactions(ctx, db, posts); err != nil {
 		return ListPostsResult{}, err
 	}
 
-	// Return posts along with total count
 	return ListPostsResult{
 		Posts: posts,
 		Total: total,
@@ -72,6 +77,18 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 }
 
 func (p *ListPostsParams) ApplyDefaults() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 20
+	}
+	if p.PerPage > 100 {
+		p.PerPage = 100
+	}
+}
+
+func (p *ListPostsByAuthorParams) ApplyDefaults() {
 	if p.Page < 1 {
 		p.Page = 1
 	}
@@ -95,7 +112,8 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 
 	err := db.QueryRowContext(ctx, `
 		SELECT id, author_id, title, body, created_at, updated_at
-		FROM posts WHERE id = ?
+		FROM posts
+		WHERE id = ?
 	`, id).Scan(
 		&post.ID,
 		&post.AuthorID,
@@ -117,7 +135,6 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	likes, dislikes, err := CountReactionsForPost(ctx, db, id)
 	if err != nil {
 		return Post{}, fmt.Errorf("get post reactions: %w", err)
-
 	}
 	post.Likes = likes
 	post.Dislikes = dislikes
@@ -246,4 +263,77 @@ func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	_, _ = db.ExecContext(ctx, `DELETE FROM post_categories WHERE post_id = ?`, id)
 	_, err := db.ExecContext(ctx, `DELETE FROM posts WHERE id = ?`, id)
 	return err
+}
+
+// ------------------------------------------------------------
+// LIST POSTS BY AUTHOR (MY POSTS)
+// ------------------------------------------------------------
+
+func ListPostsByAuthor(
+	ctx context.Context,
+	db *sql.DB,
+	params ListPostsByAuthorParams,
+) (ListPostsByAuthorResult, error) {
+
+	params.ApplyDefaults()
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	var total int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM posts
+		WHERE author_id = ?
+	`, params.AuthorID).Scan(&total); err != nil {
+		return ListPostsByAuthorResult{}, fmt.Errorf("count posts by author: %w", err)
+	}
+
+	offset := (params.Page - 1) * params.PerPage
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, author_id, title, body, created_at, updated_at
+		FROM posts
+		WHERE author_id = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`, params.AuthorID, params.PerPage, offset)
+	if err != nil {
+		return ListPostsByAuthorResult{}, fmt.Errorf("list posts by author: %w", err)
+	}
+	defer rows.Close()
+
+	posts := make([]Post, 0)
+
+	for rows.Next() {
+		var post Post
+		if err := rows.Scan(
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Body,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
+			return ListPostsByAuthorResult{}, fmt.Errorf("scan post: %w", err)
+		}
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ListPostsByAuthorResult{}, err
+	}
+
+	if err := attachPostCategories(ctx, db, posts); err != nil {
+		return ListPostsByAuthorResult{}, err
+	}
+
+	if err := attachPostReactions(ctx, db, posts); err != nil {
+		return ListPostsByAuthorResult{}, err
+	}
+
+	return ListPostsByAuthorResult{
+		Posts: posts,
+		Total: total,
+	}, nil
 }

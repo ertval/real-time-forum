@@ -39,6 +39,10 @@ func NewRouter(database *sql.DB) http.Handler {
 	// Public posts listing
 	mux.HandleFunc(apiPrefix+"/posts/public", posts.PublicList)
 
+	mux.Handle(apiPrefix+"/posts/mine",
+		auth(http.HandlerFunc(posts.ListMyPosts)),
+	)
+
 	// ---------------------------------------------------------
 	// POSTS
 	// ---------------------------------------------------------

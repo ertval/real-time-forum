@@ -356,3 +356,41 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 
 	WriteCreated(w, comment)
 }
+
+func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
+	// Require authenticated user
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	// Read pagination params
+	page, perPage := sanitizePagination(r)
+
+	// Fetch posts created by this user
+	result, err := repository.ListPostsByAuthor(
+		r.Context(),
+		p.conn,
+		repository.ListPostsByAuthorParams{
+			AuthorID: userID,
+			Page:     page,
+			PerPage:  perPage,
+		},
+	)
+	if err != nil {
+		WriteError(w, NewError(
+			"INTERNAL_SERVER_ERROR",
+			"error listing user posts",
+			http.StatusInternalServerError,
+		))
+		return
+	}
+
+	// Pagination metadata
+	paginationInfo := buildPaginationInfo(page, perPage, result.Total, map[string]any{
+		"author_id": userID,
+	})
+
+	// Response
+	WriteOK(w, result.Posts, paginationInfo)
+}
