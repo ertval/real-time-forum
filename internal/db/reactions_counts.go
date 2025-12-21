@@ -22,6 +22,9 @@ func CountReactionsForPost(
 	`, postID).Scan(&likes, &dislikes)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, 0, nil
+		}
 		return 0, 0, fmt.Errorf("count post reactions: %w", err)
 	}
 
@@ -44,6 +47,9 @@ func CountReactionsForComment(
 	`, commentID).Scan(&likes, &dislikes)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, 0, nil
+		}
 		return 0, 0, fmt.Errorf("count comment reactions: %w", err)
 	}
 

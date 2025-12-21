@@ -87,6 +87,22 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	// ---------------------------------------------------------
+	// COMMENTS
+	// ---------------------------------------------------------
+
+	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// public
+			posts.HandleComment(w, r)
+		case http.MethodPost, http.MethodPatch, http.MethodDelete:
+			// auth required
+			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
+		default:
+			handlers.MethodNotAllowed(w)
+		}
+	})
+	// ---------------------------------------------------------
 	// NOT FOUND (API ONLY)
 	// ---------------------------------------------------------
 	mux.HandleFunc("/api", notFoundJSON)
