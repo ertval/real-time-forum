@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -89,7 +90,6 @@ func CreateComment(
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// Ensure post exists (consistency with posts/categories)
 	if err := ensurePostExists(ctx, db, input.PostID); err != nil {
 		return 0, err
 	}
@@ -145,12 +145,12 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 			&comment.UpdatedAt,
 		)
 	if err != nil {
-		return Comment{}, err // ErrNoRows handled by caller
+		return Comment{}, err
 	}
 
 	if parentID.Valid {
-		id := parentID.Int64
-		comment.ParentCommentID = &id
+		pid := parentID.Int64
+		comment.ParentCommentID = &pid
 	}
 
 	likes, dislikes, err := CountReactionsForComment(ctx, db, id)
@@ -164,8 +164,53 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 }
 
 // ---------------------------------------------------------
-// HELPERS
+// UPDATE COMMENT
 // ---------------------------------------------------------
+
+type UpdateCommentInput struct {
+	Body *string
+}
+
+func UpdateComment(ctx context.Context, db *sql.DB, id int64, in UpdateCommentInput) error {
+	setParts := []string{}
+	args := []any{}
+
+	if in.Body != nil {
+		setParts = append(setParts, "body = ?")
+		args = append(args, *in.Body)
+	}
+
+	if len(setParts) == 0 {
+		return nil
+	}
+
+	setParts = append(setParts, "updated_at = datetime('now')")
+	args = append(args, id)
+
+	query := `UPDATE comments SET ` + strings.Join(setParts, ", ") + ` WHERE id = ?`
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, query, args...)
+	return err
+}
+
+// ------------------------------------------------------------
+// DELETE COMMENT
+// ------------------------------------------------------------
+
+func DeleteComment(ctx context.Context, db *sql.DB, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, `DELETE FROM comments WHERE id = ?`, id)
+	return err
+}
+
+// ------------------------------------------------------------
+// HELPERS
+// ------------------------------------------------------------
 
 func ensurePostExists(ctx context.Context, db *sql.DB, postID int64) error {
 	var exists bool
