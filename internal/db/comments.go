@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -130,7 +131,7 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 	var comment Comment
 	var parentID sql.NullInt64
 
-	err := db.QueryRowContext(ctx, query).
+	err := db.QueryRowContext(ctx, query, id).
 		Scan(
 			&comment.ID,
 			&comment.PostID,
@@ -157,4 +158,49 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 	comment.Dislikes = dislikes
 
 	return comment, nil
+}
+
+// ---------------------------------------------------------
+// PATCH COMMENT
+// ---------------------------------------------------------
+
+type UpdateCommentInput struct {
+	Body *string
+}
+
+func UpdateComment(ctx context.Context, db *sql.DB, id int64, in UpdateCommentInput) error {
+	setParts := []string{}
+	args := []any{}
+
+	if in.Body != nil {
+		setParts = append(setParts, "body = ?")
+		args = append(args, *in.Body)
+	}
+
+	if len(setParts) == 0 {
+		return nil
+	}
+
+	setParts = append(setParts, "updated_at = datetime('now')")
+	args = append(args, id)
+
+	query := `UPDATE comments SET ` + strings.Join(setParts, ", ") + ` WHERE id = ?`
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, query, args...)
+	return err
+}
+
+// ------------------------------------------------------------
+// DELETE COMMENT
+// ------------------------------------------------------------
+
+func DeleteComment(ctx context.Context, db *sql.DB, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, `DELETE FROM comments WHERE id = ?`, id)
+	return err
 }

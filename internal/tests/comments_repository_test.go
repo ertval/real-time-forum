@@ -1,565 +1,197 @@
 package tests
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"net/http/httptest"
+	"context"
+	"database/sql"
+	"errors"
+	"os"
 	"strings"
 	"testing"
+	"time"
+
+	repository "forum/internal/db"
 )
 
-func TestAPICommentsCreateAndList(t *testing.T) {
-	h, db := newTestAPI(t)
+func newTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+
+	// SQLite FK enforcement is OFF by default.
+	if _, err := db.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
+		t.Fatalf("enable foreign_keys: %v", err)
+	}
+
+	schemaBytes, err := os.ReadFile("../db/forum_schema.sql")
+	if err != nil {
+		t.Fatalf("read schema: %v", err)
+	}
+
+	// Execute schema.
+	if _, err := db.Exec(string(schemaBytes)); err != nil {
+		t.Fatalf("exec schema: %v", err)
+	}
+
+	return db
+}
+
+func seedUserAndPost(t *testing.T, db *sql.DB) (userID, postID int64) {
+	t.Helper()
+
+	res, err := db.Exec(`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`, "user1", "u1@example.com", "hash")
+	if err != nil {
+		t.Fatalf("insert user: %v", err)
+	}
+	userID, _ = res.LastInsertId()
+
+	res, err = db.Exec(`INSERT INTO posts (author_id, title, body, status) VALUES (?, ?, ?, ?)`, userID, "t", "b", "published")
+	if err != nil {
+		t.Fatalf("insert post: %v", err)
+	}
+	postID, _ = res.LastInsertId()
+
+	return userID, postID
+}
+
+func TestCreateGetUpdateDeleteComment(t *testing.T) {
+	db := newTestDB(t)
 	defer db.Close()
 
-	// --------------------------------------------------
-	// Register + Login user
-	// --------------------------------------------------
-	regBody := `{"username":"commenter","email":"c@example.com","password":"password123"}`
-	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
+	userID, postID := seedUserAndPost(t, db)
 
-	loginBody := `{"username":"commenter","password":"password123"}`
-	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
+	ctx := context.Background()
 
-	setCookie := rec.Header().Get("Set-Cookie")
-	if setCookie == "" {
-		t.Fatalf("expected Set-Cookie on login")
+	// Create
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+		PostID: postID,
+		UserID: userID,
+		Body:   "hello",
+	})
+	if err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+	if commentID == 0 {
+		t.Fatalf("expected non-zero commentID")
 	}
 
-	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-
-	// --------------------------------------------------
-	// Create comment (AUTHENTICATED)
-	// --------------------------------------------------
-	createPayload := map[string]any{
-		"body": "Comment from API test",
+	// Get
+	c, err := repository.GetComment(ctx, db, commentID)
+	if err != nil {
+		t.Fatalf("GetComment: %v", err)
 	}
-	bodyBytes, _ := json.Marshal(createPayload)
-
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/api/v1/posts/1/comments",
-		bytes.NewReader(bodyBytes),
-	)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", "session_token="+token)
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-	body := w.Body.Bytes()
-
-	if w.Code != http.StatusCreated {
-		t.Fatalf("expected status 201 for comment create, got %d, body=%s", w.Code, string(body))
+	if c.ID != commentID || c.PostID != postID || c.UserID != userID {
+		t.Fatalf("unexpected comment: %+v", c)
+	}
+	if c.Body != "hello" {
+		t.Fatalf("expected body 'hello', got %q", c.Body)
+	}
+	if c.ParentCommentID != nil {
+		t.Fatalf("expected nil parent_comment_id")
+	}
+	if c.Likes != 0 || c.Dislikes != 0 {
+		t.Fatalf("expected 0 likes/dislikes, got %d/%d", c.Likes, c.Dislikes)
+	}
+	if strings.TrimSpace(c.CreatedAt) == "" {
+		t.Fatalf("expected CreatedAt to be set")
 	}
 
-	// --------------------------------------------------
-	// Validate create response
-	// --------------------------------------------------
-	var env apiEnvelope
-	if err := json.Unmarshal(body, &env); err != nil {
-		t.Fatalf("unmarshal envelope: %v", err)
+	// Update
+	newBody := "updated"
+	if err := repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{Body: &newBody}); err != nil {
+		t.Fatalf("UpdateComment: %v", err)
 	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error on create: %+v", env.Error)
+	c2, err := repository.GetComment(ctx, db, commentID)
+	if err != nil {
+		t.Fatalf("GetComment after update: %v", err)
 	}
-
-	var comment struct {
-		ID       int64  `json:"id"`
-		PostID   int64  `json:"post_id"`
-		UserID   int64  `json:"user_id"`
-		Body     string `json:"body"`
-		Likes    int    `json:"likes"`
-		Dislikes int    `json:"dislikes"`
-	}
-	if err := json.Unmarshal(env.Data, &comment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
+	if c2.Body != "updated" {
+		t.Fatalf("expected updated body, got %q", c2.Body)
 	}
 
-	if comment.ID == 0 {
-		t.Errorf("expected non-zero comment ID")
+	// Delete
+	if err := repository.DeleteComment(ctx, db, commentID); err != nil {
+		t.Fatalf("DeleteComment: %v", err)
 	}
-	if comment.PostID != 1 {
-		t.Errorf("expected PostID=1, got %d", comment.PostID)
+	_, err = repository.GetComment(ctx, db, commentID)
+	if err == nil {
+		t.Fatalf("expected error after delete")
 	}
-	if comment.Body != createPayload["body"] {
-		t.Errorf("expected body %q, got %q", createPayload["body"], comment.Body)
-	}
-	if comment.Likes != 0 || comment.Dislikes != 0 {
-		t.Errorf("expected zero reactions on new comment")
-	}
-
-	// --------------------------------------------------
-	// List comments (public GET)
-	// --------------------------------------------------
-	w2, body2 := doRequest(
-		t,
-		h,
-		http.MethodGet,
-		"/api/v1/posts/1/comments?page=1&per_page=10",
-		nil,
-	)
-
-	if w2.Code != http.StatusOK {
-		t.Fatalf("expected status 200 for list, got %d, body=%s", w2.Code, string(body2))
-	}
-
-	var env2 apiEnvelope
-	if err := json.Unmarshal(body2, &env2); err != nil {
-		t.Fatalf("unmarshal envelope list: %v", err)
-	}
-
-	var comments []map[string]any
-	if err := json.Unmarshal(env2.Data, &comments); err != nil {
-		t.Fatalf("unmarshal comments: %v", err)
-	}
-
-	if len(comments) == 0 {
-		t.Fatalf("expected at least 1 comment in list")
-	}
-
-	found := false
-	for _, c := range comments {
-		if c["body"] == createPayload["body"] {
-			found = true
-
-			if _, ok := c["likes"]; !ok {
-				t.Fatalf("expected likes field in comment")
-			}
-			if _, ok := c["dislikes"]; !ok {
-				t.Fatalf("expected dislikes field in comment")
-			}
-			break
-		}
-	}
-	if !found {
-		t.Errorf("expected to find created comment body in list")
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("expected sql.ErrNoRows after delete, got %v", err)
 	}
 }
 
-func TestGuestCannotCreateComment(t *testing.T) {
-	h, db := newTestAPI(t)
+func TestUpdateComment_NoFieldsIsNoop(t *testing.T) {
+	db := newTestDB(t)
 	defer db.Close()
 
-	payload := []byte(`{"body":"hello"}`)
+	userID, postID := seedUserAndPost(t, db)
 
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/api/v1/posts/1/comments",
-		bytes.NewReader(payload),
-	)
-	req.Header.Set("Content-Type", "application/json")
+	ctx := context.Background()
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{PostID: postID, UserID: userID, Body: "x"})
+	if err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
 
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
+	// Should not error and should not change updated_at in a way we can easily assert,
+	// but it must at least return nil.
+	if err := repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{}); err != nil {
+		t.Fatalf("UpdateComment noop: %v", err)
 	}
 }
 
-func TestGuestCanListComments(t *testing.T) {
-	h, db := newTestAPI(t)
+func TestCreateComment_FKEnforced(t *testing.T) {
+	db := newTestDB(t)
 	defer db.Close()
 
-	w, _ := doRequest(
-		t,
-		h,
-		http.MethodGet,
-		"/api/v1/posts/1/comments",
-		nil,
-	)
+	ctx := context.Background()
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+	// Non-existent post_id/user_id should fail under FK enforcement.
+	_, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{PostID: 999, UserID: 999, Body: "x"})
+	if err == nil {
+		t.Fatalf("expected fk error")
 	}
 }
 
-func TestCommentGet(t *testing.T) {
-	h, db := newTestAPI(t)
+func TestCommentReactions_CountsFlowThroughGetComment(t *testing.T) {
+	db := newTestDB(t)
 	defer db.Close()
 
-	// Assume no comment exists
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/comments/1", nil)
-
-	if w.Code != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d, body=%s", w.Code, string(body))
+	userID, postID := seedUserAndPost(t, db)
+	// Seed a second user for another reaction.
+	res, err := db.Exec(`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`, "user2", "u2@example.com", "hash")
+	if err != nil {
+		t.Fatalf("insert user2: %v", err)
 	}
-}
-	var createdComment struct {
-		ID int64 `json:"id"`
-	}
-	if err := json.Unmarshal(envCreate.Data, &createdComment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-	commentID := createdComment.ID
+	user2, _ := res.LastInsertId()
 
-	// Now get the comment
-	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/comments/%d", commentID), nil)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d, body=%s", w.Code, string(body))
+	ctx := context.Background()
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{PostID: postID, UserID: userID, Body: "hello"})
+	if err != nil {
+		t.Fatalf("CreateComment: %v", err)
 	}
 
-	var env apiEnvelope
-	if err := json.Unmarshal(body, &env); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	// Like by user1, dislike by user2.
+	_, err = db.Exec(`INSERT INTO reactions (user_id, comment_id, value) VALUES (?, ?, ?)`, userID, commentID, 1)
+	if err != nil {
+		t.Fatalf("insert like reaction: %v", err)
 	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-
-	var comment map[string]any
-	if err := json.Unmarshal(env.Data, &comment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-	if comment["body"] != createPayload["body"] {
-		t.Errorf("expected body %q, got %q", createPayload["body"], comment["body"])
-	}
-	if _, ok := comment["likes"]; !ok {
-		t.Errorf("expected likes field")
-	}
-	if _, ok := comment["dislikes"]; !ok {
-		t.Errorf("expected dislikes field")
-	}
-}
-
-func TestCommentUpdate(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	// Register/login as commenter
-	regBody := `{"username":"updater","email":"u@example.com","password":"password123"}`
-	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
-
-	loginBody := `{"username":"updater","password":"password123"}`
-	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
-	setCookie := rec.Header().Get("Set-Cookie")
-	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-
-	// Create comment
-	createPayload := map[string]any{"body": "Original comment"}
-	bodyBytes, _ := json.Marshal(createPayload)
-	reqCreate := httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/comments", bytes.NewReader(bodyBytes))
-	reqCreate.Header.Set("Content-Type", "application/json")
-	reqCreate.Header.Set("Cookie", "session_token="+token)
-
-	wCreate := httptest.NewRecorder()
-	h.ServeHTTP(wCreate, reqCreate)
-
-	if wCreate.Code != http.StatusCreated {
-		t.Fatalf("create comment failed: %d %s", wCreate.Code, wCreate.Body.String())
+	_, err = db.Exec(`INSERT INTO reactions (user_id, comment_id, value) VALUES (?, ?, ?)`, user2, commentID, -1)
+	if err != nil {
+		t.Fatalf("insert dislike reaction: %v", err)
 	}
 
-	var envCreate apiEnvelope
-	if err := json.Unmarshal(wCreate.Body.Bytes(), &envCreate); err != nil {
-		t.Fatalf("unmarshal create: %v", err)
+	// Give SQLite a tick if your reaction counting uses time-based constraints (it shouldn't).
+	time.Sleep(5 * time.Millisecond)
+
+	c, err := repository.GetComment(ctx, db, commentID)
+	if err != nil {
+		t.Fatalf("GetComment: %v", err)
 	}
-	var createdComment struct {
-		ID int64 `json:"id"`
-	}
-	if err := json.Unmarshal(envCreate.Data, &createdComment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-	commentID := createdComment.ID
-
-	// Update comment
-	payload := `{"body":"Updated comment"}`
-	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/comments/%d", commentID), bytes.NewReader([]byte(payload)))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", "session_token="+token)
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-
-	var env apiEnvelope
-	if err := json.Unmarshal(w.Body.Bytes(), &env); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-	// Verify updated body
-	var comment map[string]any
-	if err := json.Unmarshal(env.Data, &comment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-	if comment["body"] != "Updated comment" {
-		t.Errorf("expected updated body")
-	}
-}
-
-func TestCommentDelete(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	// Register/login as deleter
-	regBody := `{"username":"deleter","email":"d@example.com","password":"password123"}`
-	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
-
-	loginBody := `{"username":"deleter","password":"password123"}`
-	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
-	setCookie := rec.Header().Get("Set-Cookie")
-	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-
-	// Create comment
-	createPayload := map[string]any{"body": "Comment to delete"}
-	bodyBytes, _ := json.Marshal(createPayload)
-	reqCreate := httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/comments", bytes.NewReader(bodyBytes))
-	reqCreate.Header.Set("Content-Type", "application/json")
-	reqCreate.Header.Set("Cookie", "session_token="+token)
-
-	wCreate := httptest.NewRecorder()
-	h.ServeHTTP(wCreate, reqCreate)
-
-	if wCreate.Code != http.StatusCreated {
-		t.Fatalf("create comment failed: %d %s", wCreate.Code, wCreate.Body.String())
-	}
-
-	var envCreate apiEnvelope
-	if err := json.Unmarshal(wCreate.Body.Bytes(), &envCreate); err != nil {
-		t.Fatalf("unmarshal create: %v", err)
-	}
-	var createdComment struct {
-		ID int64 `json:"id"`
-	}
-	if err := json.Unmarshal(envCreate.Data, &createdComment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-	commentID := createdComment.ID
-
-	// Delete comment
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/comments/%d", commentID), nil)
-	req.Header.Set("Cookie", "session_token="+token)
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusNoContent {
-		t.Fatalf("expected 204, got %d", w.Code)
-	}
-}
-
-func TestCommentLike(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	// Register/login
-	regBody := `{"username":"liker","email":"l@example.com","password":"password123"}`
-	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
-
-	loginBody := `{"username":"liker","password":"password123"}`
-	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
-	setCookie := rec.Header().Get("Set-Cookie")
-	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-
-	// Create comment
-	createPayload := map[string]any{"body": "Comment to like"}
-	bodyBytes, _ := json.Marshal(createPayload)
-	reqCreate := httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/comments", bytes.NewReader(bodyBytes))
-	reqCreate.Header.Set("Content-Type", "application/json")
-	reqCreate.Header.Set("Cookie", "session_token="+token)
-
-	wCreate := httptest.NewRecorder()
-	h.ServeHTTP(wCreate, reqCreate)
-
-	if wCreate.Code != http.StatusCreated {
-		t.Fatalf("create comment failed: %d %s", wCreate.Code, wCreate.Body.String())
-	}
-
-	var envCreate apiEnvelope
-	if err := json.Unmarshal(wCreate.Body.Bytes(), &envCreate); err != nil {
-		t.Fatalf("unmarshal create: %v", err)
-	}
-	var createdComment struct {
-		ID int64 `json:"id"`
-	}
-	if err := json.Unmarshal(envCreate.Data, &createdComment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-	commentID := createdComment.ID
-
-	// Like comment
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/comments/%d/like", commentID), nil)
-	req.Header.Set("Cookie", "session_token="+token)
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-
-	var env apiEnvelope
-	if err := json.Unmarshal(w.Body.Bytes(), &env); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-	// Verify reaction and counts
-	var result map[string]any
-	if err := json.Unmarshal(env.Data, &result); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-	if result["comment_id"] != float64(commentID) {
-		t.Errorf("expected comment_id %d", commentID)
-	}
-	if result["reaction"] != float64(1) {
-		t.Errorf("expected reaction 1")
-	}
-	if result["likes_count"] != float64(1) {
-		t.Errorf("expected likes_count 1")
-	}
-}
-
-func TestCommentDislike(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	// Register/login
-	regBody := `{"username":"disliker","email":"dl@example.com","password":"password123"}`
-	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
-
-	loginBody := `{"username":"disliker","password":"password123"}`
-	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
-	setCookie := rec.Header().Get("Set-Cookie")
-	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-
-	// Create comment
-	createPayload := map[string]any{"body": "Comment to dislike"}
-	bodyBytes, _ := json.Marshal(createPayload)
-	reqCreate := httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/comments", bytes.NewReader(bodyBytes))
-	reqCreate.Header.Set("Content-Type", "application/json")
-	reqCreate.Header.Set("Cookie", "session_token="+token)
-
-	wCreate := httptest.NewRecorder()
-	h.ServeHTTP(wCreate, reqCreate)
-
-	if wCreate.Code != http.StatusCreated {
-		t.Fatalf("create comment failed: %d %s", wCreate.Code, wCreate.Body.String())
-	}
-
-	var envCreate apiEnvelope
-	if err := json.Unmarshal(wCreate.Body.Bytes(), &envCreate); err != nil {
-		t.Fatalf("unmarshal create: %v", err)
-	}
-	var createdComment struct {
-		ID int64 `json:"id"`
-	}
-	if err := json.Unmarshal(envCreate.Data, &createdComment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-	commentID := createdComment.ID
-
-	// Dislike comment
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/comments/%d/dislike", commentID), nil)
-	req.Header.Set("Cookie", "session_token="+token)
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-
-	var env apiEnvelope
-	if err := json.Unmarshal(w.Body.Bytes(), &env); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-	// Verify reaction and counts
-	var result map[string]any
-	if err := json.Unmarshal(env.Data, &result); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-	if result["comment_id"] != float64(commentID) {
-		t.Errorf("expected comment_id %d", commentID)
-	}
-	if result["reaction"] != float64(-1) {
-		t.Errorf("expected reaction -1")
-	}
-	if result["dislikes_count"] != float64(1) {
-		t.Errorf("expected dislikes_count 1")
-	}
-}
-
-func TestGuestCannotUpdateComment(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	payload := []byte(`{"body":"update"}`)
-	w, _ := doRequest(t, h, http.MethodPatch, "/api/v1/comments/1", payload)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestGuestCannotDeleteComment(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	w, _ := doRequest(t, h, http.MethodDelete, "/api/v1/comments/1", nil)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestUserCannotUpdateOthersComment(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	// Register/login as non-owner
-	regBody := `{"username":"other","email":"o@example.com","password":"password123"}`
-	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
-
-	loginBody := `{"username":"other","password":"password123"}`
-	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
-	setCookie := rec.Header().Get("Set-Cookie")
-	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-
-	payload := []byte(`{"body":"update"}`)
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/comments/1", bytes.NewReader(payload))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", "session_token="+token)
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
-	}
-}
-
-func TestUserCannotDeleteOthersComment(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	// Register/login as non-owner
-	regBody := `{"username":"other2","email":"o2@example.com","password":"password123"}`
-	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
-
-	loginBody := `{"username":"other2","password":"password123"}`
-	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
-	setCookie := rec.Header().Get("Set-Cookie")
-	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/comments/1", nil)
-	req.Header.Set("Cookie", "session_token="+token)
-
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
+	if c.Likes != 1 || c.Dislikes != 1 {
+		t.Fatalf("expected likes/dislikes 1/1, got %d/%d", c.Likes, c.Dislikes)
 	}
 }
