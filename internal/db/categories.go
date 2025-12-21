@@ -17,6 +17,10 @@ type Category struct {
 
 const categoryTimeout = 2 * time.Second
 
+// ------------------------------------------------------------
+// LIST
+// ------------------------------------------------------------
+
 func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
@@ -48,6 +52,10 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	return categories, nil
 }
 
+// ------------------------------------------------------------
+// GET
+// ------------------------------------------------------------
+
 func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
@@ -66,6 +74,10 @@ func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 
 	return category, nil
 }
+
+// ------------------------------------------------------------
+// CREATE
+// ------------------------------------------------------------
 
 func CreateCategory(ctx context.Context, db *sql.DB, name, slug string) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -87,34 +99,50 @@ func CreateCategory(ctx context.Context, db *sql.DB, name, slug string) (int64, 
 	return id, nil
 }
 
+// ------------------------------------------------------------
+// UPDATE
+// ------------------------------------------------------------
+
 func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		UPDATE categories
 		SET name = ?
 		WHERE id = ?
 	`, name, id)
-
 	if err != nil {
 		return fmt.Errorf("update category name: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err == nil && rows == 0 {
+		return sql.ErrNoRows
 	}
 
 	return nil
 }
 
+// ------------------------------------------------------------
+// DELETE
+// ------------------------------------------------------------
+
 func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		DELETE FROM categories
 		WHERE id = ?
 	`, id)
-
 	if err != nil {
 		return fmt.Errorf("delete category: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err == nil && rows == 0 {
+		return sql.ErrNoRows
 	}
 
 	return nil

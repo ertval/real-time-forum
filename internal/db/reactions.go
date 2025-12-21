@@ -9,8 +9,8 @@ import (
 
 const reactionTimeout = 2 * time.Second
 
-// TogglePostLike toggles a user's reaction on a post.
-// Target == 1 (like) or -1 (dislike)
+// ToggleReaction toggles a user's reaction on a post or comment.
+// targetReaction = 1 (like) or -1 (dislike)
 func ToggleReaction(
 	ctx context.Context,
 	db *sql.DB,
@@ -18,84 +18,93 @@ func ToggleReaction(
 	objectID int64,
 	targetReaction int,
 	targetType string,
-
 ) (int, error) {
+
+	if targetReaction != 1 && targetReaction != -1 {
+		return 0, fmt.Errorf("invalid target reaction: %d", targetReaction)
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, reactionTimeout)
 	defer cancel()
 
-	if targetReaction != 1 && targetReaction != -1 {
-		return 0, fmt.Errorf("invalid target: %d", targetReaction)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
 	}
+	defer tx.Rollback()
 
-	current, err := getReactionValue(ctx, db, userID, objectID, targetType)
+	current, err := getReactionValueTx(ctx, tx, userID, objectID, targetType)
 	if err != nil {
 		return 0, err
 	}
 
-	newValue, err := applyReactionToggle(ctx, db, userID, objectID, current, targetReaction, targetType)
+	newValue, err := applyReactionToggleTx(
+		ctx,
+		tx,
+		userID,
+		objectID,
+		current,
+		targetReaction,
+		targetType,
+	)
 	if err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
 
 	return newValue, nil
 }
 
-// ---------------------------------------------------------
-// HELPERS
-// ---------------------------------------------------------
+// ============================================================
+// HELPERS (TX SAFE)
+// ============================================================
 
-// targetType is an indicator showing if object is "post" or "comment"
-func getReactionValue(
+func getReactionValueTx(
 	ctx context.Context,
-	db *sql.DB,
+	tx *sql.Tx,
 	userID,
 	objectID int64,
 	targetType string,
 ) (int, error) {
 
 	var value int
+	var err error
+
 	switch targetType {
 	case "post":
-		err := db.QueryRowContext(
+		err = tx.QueryRowContext(
 			ctx,
 			`SELECT value FROM reactions WHERE user_id = ? AND post_id = ?`,
 			userID, objectID,
 		).Scan(&value)
 
-		if err == sql.ErrNoRows {
-			return 0, nil
-		}
-		if err != nil {
-			return 0, fmt.Errorf("select reaction: %w", err)
-		}
 	case "comment":
-		err := db.QueryRowContext(
+		err = tx.QueryRowContext(
 			ctx,
 			`SELECT value FROM reactions WHERE user_id = ? AND comment_id = ?`,
 			userID, objectID,
 		).Scan(&value)
 
-		if err == sql.ErrNoRows {
-			return 0, nil
-		}
-		if err != nil {
-			return 0, fmt.Errorf("select reaction: %w", err)
-		}
 	default:
 		return 0, fmt.Errorf("invalid target type: %s", targetType)
-
 	}
+
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("select reaction: %w", err)
+	}
+
 	return value, nil
 }
 
-// applyReactionToggle toggles like/dislike on a users post or comment.
-// Target = 1 (like) or -1 (dislike)
-// If current value = target, it deletes reaction (untoggle).
-// targetType can be "post" or "comment"
-func applyReactionToggle(
+func applyReactionToggleTx(
 	ctx context.Context,
-	db *sql.DB,
+	tx *sql.Tx,
 	userID,
 	objectID int64,
 	current,
@@ -104,14 +113,13 @@ func applyReactionToggle(
 ) (int, error) {
 
 	var idColumn string
-
 	switch targetType {
 	case "post":
 		idColumn = "post_id"
 	case "comment":
 		idColumn = "comment_id"
 	default:
-		return 0, fmt.Errorf("invalid targetType: %s", targetType)
+		return 0, fmt.Errorf("invalid target type: %s", targetType)
 	}
 
 	if current == targetReaction {
@@ -120,8 +128,7 @@ func applyReactionToggle(
 			idColumn,
 		)
 
-		_, err := db.ExecContext(ctx, query, userID, objectID)
-		if err != nil {
+		if _, err := tx.ExecContext(ctx, query, userID, objectID); err != nil {
 			return 0, fmt.Errorf("delete reaction: %w", err)
 		}
 		return 0, nil
@@ -134,14 +141,13 @@ func applyReactionToggle(
 		DO UPDATE SET value = excluded.value
 	`, idColumn, idColumn)
 
-	_, err := db.ExecContext(
+	if _, err := tx.ExecContext(
 		ctx,
 		query,
 		userID,
 		objectID,
 		targetReaction,
-	)
-	if err != nil {
+	); err != nil {
 		return 0, fmt.Errorf("upsert reaction: %w", err)
 	}
 

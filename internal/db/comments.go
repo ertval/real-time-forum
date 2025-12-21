@@ -60,7 +60,6 @@ func ListCommentsByPost(
 		return ListCommentsResult{}, err
 	}
 
-	// Attach reactions AFTER fetching comments
 	if err := attachCommentReactions(ctx, db, comments); err != nil {
 		return ListCommentsResult{}, err
 	}
@@ -90,6 +89,10 @@ func CreateComment(
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
+
+	if err := ensurePostExists(ctx, db, input.PostID); err != nil {
+		return 0, err
+	}
 
 	const query = `
 		INSERT INTO comments (post_id, user_id, parent_comment_id, body, created_at, updated_at)
@@ -146,8 +149,8 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 	}
 
 	if parentID.Valid {
-		id := parentID.Int64
-		comment.ParentCommentID = &id
+		pid := parentID.Int64
+		comment.ParentCommentID = &pid
 	}
 
 	likes, dislikes, err := CountReactionsForComment(ctx, db, id)
@@ -161,7 +164,7 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 }
 
 // ---------------------------------------------------------
-// PATCH COMMENT
+// UPDATE COMMENT
 // ---------------------------------------------------------
 
 type UpdateCommentInput struct {
@@ -203,4 +206,25 @@ func DeleteComment(ctx context.Context, db *sql.DB, id int64) error {
 
 	_, err := db.ExecContext(ctx, `DELETE FROM comments WHERE id = ?`, id)
 	return err
+}
+
+// ------------------------------------------------------------
+// HELPERS
+// ------------------------------------------------------------
+
+func ensurePostExists(ctx context.Context, db *sql.DB, postID int64) error {
+	var exists bool
+	if err := db.QueryRowContext(
+		ctx,
+		`SELECT EXISTS(SELECT 1 FROM posts WHERE id = ?)`,
+		postID,
+	).Scan(&exists); err != nil {
+		return fmt.Errorf("check post exists: %w", err)
+	}
+
+	if !exists {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }
