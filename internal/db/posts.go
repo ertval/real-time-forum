@@ -12,6 +12,10 @@ import (
 // MODELS
 // ============================================================
 
+// ============================================================
+// MODELS
+// ============================================================
+
 type Post struct {
 	ID          int64   `json:"id"`
 	AuthorID    int64   `json:"author_id"`
@@ -25,7 +29,9 @@ type Post struct {
 }
 
 // ============================================================
+// ============================================================
 // LIST POSTS
+// ============================================================
 // ============================================================
 
 type ListPostsParams struct {
@@ -36,6 +42,18 @@ type ListPostsParams struct {
 type ListPostsResult struct {
 	Posts []Post
 	Total int
+}
+
+func (p *ListPostsParams) ApplyDefaults() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 20
+	}
+	if p.PerPage > 100 {
+		p.PerPage = 100
+	}
 }
 
 func (p *ListPostsParams) ApplyDefaults() {
@@ -81,7 +99,9 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 }
 
 // ============================================================
+// ============================================================
 // GET POST
+// ============================================================
 // ============================================================
 
 func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
@@ -109,9 +129,11 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	}
 
 	categories, err := getCategoryIDsByPostID(ctx, db, id)
+	categories, err := getCategoryIDsByPostID(ctx, db, id)
 	if err != nil {
 		return Post{}, err
 	}
+	post.CategoryIDs = categories
 	post.CategoryIDs = categories
 
 	likes, dislikes, err := CountReactionsForPost(ctx, db, id)
@@ -124,6 +146,9 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	return post, nil
 }
 
+// ============================================================
+// CREATE POST (TRANSACTIONAL)
+// ============================================================
 // ============================================================
 // CREATE POST (TRANSACTIONAL)
 // ============================================================
@@ -146,9 +171,17 @@ func CreatePostWithCategories(
 	defer tx.Rollback()
 
 	if err := validateCategoriesTx(ctx, tx, categoryIDs); err != nil {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	if err := validateCategoriesTx(ctx, tx, categoryIDs); err != nil {
 		return 0, err
 	}
 
+	res, err := tx.ExecContext(ctx, `
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO posts (author_id, title, body, created_at, updated_at)
 		VALUES (?, ?, ?, datetime('now'), datetime('now'))
@@ -158,10 +191,16 @@ func CreatePostWithCategories(
 	}
 
 	postID, err := res.LastInsertId()
+	postID, err := res.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
 
+	if err := insertPostCategoriesTx(ctx, tx, postID, categoryIDs); err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
 	if err := insertPostCategoriesTx(ctx, tx, postID, categoryIDs); err != nil {
 		return 0, err
 	}
@@ -174,7 +213,9 @@ func CreatePostWithCategories(
 }
 
 // ============================================================
+// ============================================================
 // UPDATE POST
+// ============================================================
 // ============================================================
 
 type UpdatePostInput struct {
@@ -211,7 +252,22 @@ func UpdatePost(ctx context.Context, db *sql.DB, id int64, in UpdatePostInput) e
 	if err != nil {
 		return err
 	}
+	res, err := db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
 
+	rows, err := res.RowsAffected()
+	if err == nil && rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// ============================================================
+// DELETE POST (TRANSACTIONAL)
+// ============================================================
 	rows, err := res.RowsAffected()
 	if err == nil && rows == 0 {
 		return sql.ErrNoRows
@@ -228,6 +284,173 @@ func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM post_categories WHERE post_id = ?`, id,
+	); err != nil {
+		return err
+	}
+
+	res, err := tx.ExecContext(ctx,
+		`DELETE FROM posts WHERE id = ?`, id,
+	)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err == nil && rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return tx.Commit()
+}
+
+// ============================================================
+// LIST POSTS BY CATEGORY
+// ============================================================
+
+type ListPostsByCategoryParams struct {
+	CategoryID int64
+	Page       int
+	PerPage    int
+}
+
+type ListPostsByCategoryResult struct {
+	Posts []Post
+	Total int
+}
+
+func (p *ListPostsByCategoryParams) ApplyDefaults() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 20
+	}
+	if p.PerPage > 100 {
+		p.PerPage = 100
+	}
+}
+
+func ListPostsByCategory(
+	ctx context.Context,
+	db *sql.DB,
+	p ListPostsByCategoryParams,
+) (ListPostsByCategoryResult, error) {
+
+	p.ApplyDefaults()
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	var total int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT post_id)
+		FROM post_categories
+		WHERE category_id = ?
+	`, p.CategoryID).Scan(&total); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	offset := (p.Page - 1) * p.PerPage
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT p.id, p.author_id, p.title, p.body, p.created_at, p.updated_at
+		FROM posts p
+		JOIN post_categories pc ON pc.post_id = p.id
+		WHERE pc.category_id = ?
+		ORDER BY p.created_at DESC
+		LIMIT ? OFFSET ?
+	`, p.CategoryID, p.PerPage, offset)
+	if err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+	defer rows.Close()
+
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		if err := rows.Scan(
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Body,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
+			return ListPostsByCategoryResult{}, err
+		}
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	if err := attachPostCategories(ctx, db, posts); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+	if err := attachPostReactions(ctx, db, posts); err != nil {
+		return ListPostsByCategoryResult{}, err
+	}
+
+	return ListPostsByCategoryResult{
+		Posts: posts,
+		Total: total,
+	}, nil
+}
+
+// ============================================================
+// HELPERS (TX-SAFE)
+// ============================================================
+
+func validateCategoriesTx(ctx context.Context, tx *sql.Tx, categoryIDs []int64) error {
+	if len(categoryIDs) == 0 {
+		return nil
+	}
+
+	placeholders := strings.TrimRight(strings.Repeat("?,", len(categoryIDs)), ",")
+	query := `SELECT COUNT(*) FROM categories WHERE id IN (` + placeholders + `)`
+
+	args := make([]any, len(categoryIDs))
+	for i, id := range categoryIDs {
+		args[i] = id
+	}
+
+	var count int
+	if err := tx.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+		return err
+	}
+
+	if count != len(categoryIDs) {
+		return fmt.Errorf("one or more categories do not exist")
+	}
+
+	return nil
+}
+
+func insertPostCategoriesTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	postID int64,
+	categoryIDs []int64,
+) error {
+
+	for _, cid := range categoryIDs {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)`,
+			postID, cid,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
