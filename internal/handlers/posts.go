@@ -282,12 +282,6 @@ func (p *PostsHandler) handleReaction(
 	}, nil)
 }
 
-// ============================================================
-// COMMENTS
-// ============================================================
-// COMMENTS
-// ============================================================
-
 func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, postID int64) {
 	page, perPage := sanitizePagination(r)
 
