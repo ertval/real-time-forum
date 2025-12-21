@@ -43,6 +43,10 @@ func NewRouter(database *sql.DB) http.Handler {
 		auth(http.HandlerFunc(posts.ListMyPosts)),
 	)
 
+	mux.Handle(apiPrefix+"/posts/liked",
+		auth(http.HandlerFunc(posts.ListLikedPosts)),
+	)
+
 	// ---------------------------------------------------------
 	// POSTS
 	// ---------------------------------------------------------

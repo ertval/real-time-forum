@@ -426,3 +426,32 @@ func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
 
 	WriteOK(w, result.Posts, pagination)
 }
+
+func (p *PostsHandler) ListLikedPosts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	page, perPage := sanitizePagination(r)
+
+	result, err := repository.ListPostsLikedByUser(
+		r.Context(),
+		p.conn,
+		repository.ListPostsLikedByUserParams{
+			UserID:  userID,
+			Page:    page,
+			PerPage: perPage,
+		},
+	)
+	if err != nil {
+		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error listing liked posts", http.StatusInternalServerError))
+		return
+	}
+
+	pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
+		"user_id": userID,
+	})
+
+	WriteOK(w, result.Posts, pagination)
+}

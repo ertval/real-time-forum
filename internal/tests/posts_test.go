@@ -211,3 +211,150 @@ func TestAPIPostsFilterByCategory(t *testing.T) {
 		t.Fatalf("expected 200, got %d, body=%s", w.Code, string(body))
 	}
 }
+
+// ------------------------------------------------------------
+// LIST LIKED POSTS (AUTH REQUIRED)
+// ------------------------------------------------------------
+
+func TestAPILikedPosts_RequiresAuth(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	w, _ := doRequest(t, h, http.MethodGet, "/api/v1/posts/liked", nil)
+
+	if w.Code != http.StatusUnauthorized && w.Code != http.StatusForbidden {
+		t.Fatalf("expected 401 or 403, got %d", w.Code)
+	}
+}
+
+func TestAPILikedPosts_ReturnsOnlyLikedPosts(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	// login as seed user
+	loginBody := `{"username":"testuser","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login failed: %d", rec.Code)
+	}
+
+	token := strings.Split(strings.Split(rec.Header().Get("Set-Cookie"), ";")[0], "=")[1]
+
+	// like post id=1
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("like failed: %d", rec.Code)
+	}
+
+	// list liked posts
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var env apiEnvelope
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
+		t.Fatalf("unmarshal env: %v", err)
+	}
+
+	var posts []map[string]any
+	if err := json.Unmarshal(env.Data, &posts); err != nil {
+		t.Fatalf("unmarshal posts: %v", err)
+	}
+
+	if len(posts) != 1 {
+		t.Fatalf("expected 1 liked post, got %d", len(posts))
+	}
+
+	if int64(posts[0]["id"].(float64)) != 1 {
+		t.Fatalf("expected post id=1")
+	}
+}
+
+func TestAPILikedPosts_UnlikeRemovesPost(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	loginBody := `{"username":"testuser","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	token := strings.Split(strings.Split(rec.Header().Get("Set-Cookie"), ";")[0], "=")[1]
+
+	// like
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	// unlike
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	// list liked posts
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	var env apiEnvelope
+	json.Unmarshal(rec.Body.Bytes(), &env)
+
+	var posts []any
+	json.Unmarshal(env.Data, &posts)
+
+	if len(posts) != 0 {
+		t.Fatalf("expected 0 liked posts, got %d", len(posts))
+	}
+}
+
+func TestAPILikedPosts_DislikeDoesNotCount(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	loginBody := `{"username":"testuser","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	token := strings.Split(strings.Split(rec.Header().Get("Set-Cookie"), ";")[0], "=")[1]
+
+	// dislike post
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/dislike", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	// list liked posts
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	var env apiEnvelope
+	json.Unmarshal(rec.Body.Bytes(), &env)
+
+	var posts []any
+	json.Unmarshal(env.Data, &posts)
+
+	if len(posts) != 0 {
+		t.Fatalf("disliked post must not appear in liked posts")
+	}
+}
