@@ -8,7 +8,7 @@ import (
 
 func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 	p.publicListPosts(w, r)
@@ -28,7 +28,7 @@ func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"INTERNAL_SERVER_ERROR",
 			"failed to list posts",
 			http.StatusInternalServerError,
