@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -41,6 +42,7 @@ func Auth(database *sql.DB) func(http.Handler) http.Handler {
 
 			session, err := db.GetSessionByToken(r.Context(), database, token)
 			if err != nil {
+				log.Printf("failed to get session by token: %v", err)
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
