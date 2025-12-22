@@ -226,3 +226,29 @@ func (c *CategoriesHandler) deleteCategory(w http.ResponseWriter, r *http.Reques
 
 	WriteNoContent(w)
 }
+
+// ============================================================
+// LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
+// GET /api/v1/categories/view
+// ============================================================
+
+func (c *CategoriesHandler) ListCategoriesWithPosts(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	if r.Method != http.MethodGet {
+		MethodNotAllowed(w)
+		return
+	}
+
+	result, err := repository.ListCategoriesWithPosts(
+		r.Context(),
+		c.conn,
+	)
+	if err != nil {
+		writeHandlerError(w, err, "failed to list categories with posts")
+		return
+	}
+
+	WriteOK(w, result, nil)
+}
