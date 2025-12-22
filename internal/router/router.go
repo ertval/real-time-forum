@@ -36,6 +36,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/categories", categories.HandleCategories)
 	mux.HandleFunc(apiPrefix+"/categories/", categories.HandleCategory)
 
+	mux.HandleFunc(apiPrefix+"/categories/view", categories.ListCategoriesWithPosts)
+
 	// Public posts listing
 	mux.HandleFunc(apiPrefix+"/posts/public", posts.PublicList)
 

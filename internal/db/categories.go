@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// ============================================================
+// MODELS
+// ============================================================
+
 // Category represents a forum category.
 type Category struct {
 	ID        int64  `json:"id"`
@@ -15,11 +19,19 @@ type Category struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// CategoryWithPosts represents a subforum view.
+type CategoryWithPosts struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Slug  string `json:"slug"`
+	Posts []Post `json:"posts"`
+}
+
 const categoryTimeout = 2 * time.Second
 
-// ------------------------------------------------------------
-// LIST
-// ------------------------------------------------------------
+// ============================================================
+// LIST CATEGORIES
+// ============================================================
 
 func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -52,9 +64,9 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	return categories, nil
 }
 
-// ------------------------------------------------------------
-// GET
-// ------------------------------------------------------------
+// ============================================================
+// GET CATEGORY
+// ============================================================
 
 func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -66,24 +78,29 @@ func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 		SELECT id, name, slug, created_at
 		FROM categories
 		WHERE id = ?
-	`, id).Scan(&category.ID, &category.Name, &category.Slug, &category.CreatedAt)
+	`, id).Scan(
+		&category.ID,
+		&category.Name,
+		&category.Slug,
+		&category.CreatedAt,
+	)
 
 	if err != nil {
-		return Category{}, err // ErrNoRows handled by caller
+		return Category{}, err // sql.ErrNoRows handled by caller
 	}
 
 	return category, nil
 }
 
-// ------------------------------------------------------------
-// CREATE
-// ------------------------------------------------------------
+// ============================================================
+// CREATE CATEGORY
+// ============================================================
 
 func CreateCategory(ctx context.Context, db *sql.DB, name, slug string) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
-	result, err := db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		INSERT INTO categories (name, slug, created_at)
 		VALUES (?, ?, datetime('now'))
 	`, name, slug)
@@ -91,17 +108,17 @@ func CreateCategory(ctx context.Context, db *sql.DB, name, slug string) (int64, 
 		return 0, fmt.Errorf("create category: %w", err)
 	}
 
-	id, err := result.LastInsertId()
+	id, err := res.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("get last insert id: %w", err)
+		return 0, fmt.Errorf("last insert id: %w", err)
 	}
 
 	return id, nil
 }
 
-// ------------------------------------------------------------
-// UPDATE
-// ------------------------------------------------------------
+// ============================================================
+// UPDATE CATEGORY
+// ============================================================
 
 func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -113,7 +130,7 @@ func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) 
 		WHERE id = ?
 	`, name, id)
 	if err != nil {
-		return fmt.Errorf("update category name: %w", err)
+		return fmt.Errorf("update category: %w", err)
 	}
 
 	rows, err := res.RowsAffected()
@@ -124,9 +141,9 @@ func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) 
 	return nil
 }
 
-// ------------------------------------------------------------
-// DELETE
-// ------------------------------------------------------------
+// ============================================================
+// DELETE CATEGORY
+// ============================================================
 
 func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -146,4 +163,85 @@ func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
 	}
 
 	return nil
+}
+
+// ============================================================
+// LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
+// ============================================================
+
+func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPosts, error) {
+	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
+	defer cancel()
+
+	// Load categories
+	categories, err := ListCategories(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]CategoryWithPosts, 0, len(categories))
+	index := make(map[int64]*CategoryWithPosts)
+
+	for _, c := range categories {
+		cp := CategoryWithPosts{
+			ID:    c.ID,
+			Name:  c.Name,
+			Slug:  c.Slug,
+			Posts: []Post{},
+		}
+		result = append(result, cp)
+		index[c.ID] = &result[len(result)-1]
+	}
+
+	// Load posts per category
+	rows, err := db.QueryContext(ctx, `
+		SELECT
+			c.id,
+			p.id, p.author_id, p.title, p.body, p.created_at, p.updated_at
+		FROM categories c
+		JOIN post_categories pc ON pc.category_id = c.id
+		JOIN posts p ON p.id = pc.post_id
+		ORDER BY c.name ASC, p.created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			categoryID int64
+			post       Post
+		)
+
+		if err := rows.Scan(
+			&categoryID,
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Body,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		index[categoryID].Posts = append(index[categoryID].Posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Attach metadata
+	for i := range result {
+		if err := attachPostCategories(ctx, db, result[i].Posts); err != nil {
+			return nil, err
+		}
+		if err := attachPostReactions(ctx, db, result[i].Posts); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
 }
