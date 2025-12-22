@@ -118,6 +118,9 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
 
+	// Serve custom http error assets
+	mux.Handle("/errors/", http.StripPrefix("/errors/", http.FileServer(http.Dir("./web/errors/"))))
+
 	// ---------------------------------------------------------
 	// GLOBAL MIDDLEWARE
 	// ---------------------------------------------------------

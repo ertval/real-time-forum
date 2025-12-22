@@ -6,20 +6,9 @@ import (
 )
 
 func main() {
-	fs := http.FileServer(http.Dir("./web"))
 	mux := http.NewServeMux()
-	mux.Handle("/", fs)
-	mux.HandleFunc("/404", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/errors/404.html")
-	})
+	mux.Handle("/", CustomFileServer{http.Dir("./web")})
 
-	mux.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/errors/400.html")
-	})
-
-	mux.HandleFunc("/500", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/errors/500.html")
-	})
 	log.Println("Frontend running at http://localhost:3000")
 	http.ListenAndServe(":3000", mux)
 }
