@@ -40,7 +40,7 @@ func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 
 func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
@@ -65,7 +65,7 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
@@ -181,7 +181,7 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
