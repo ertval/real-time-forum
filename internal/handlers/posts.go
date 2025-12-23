@@ -65,6 +65,7 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 			},
 		)
 		if err != nil {
+			log.Printf("failed to list posts by category: %v", err)
 			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
 			return
 		}
@@ -87,6 +88,7 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
+		log.Printf("failed to list posts: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing posts", http.StatusInternalServerError))
 		return
 	}
@@ -130,12 +132,14 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		req.CategoryIDs,
 	)
 	if err != nil {
+		log.Printf("failed to create post: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
 		return
 	}
 
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
+		log.Printf("failed to load post after creation: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "post created but failed to load", http.StatusInternalServerError))
 		return
 	}
@@ -203,6 +207,7 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID int64) {
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
+		log.Printf("failed to load post: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, r)
 			return
@@ -239,6 +244,7 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 		postID,
 		repository.UpdatePostInput{Title: req.Title, Body: req.Body},
 	); err != nil {
+		log.Printf("failed to update post: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
 		return
 	}
@@ -252,6 +258,7 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	}
 
 	if err := repository.DeletePost(r.Context(), p.conn, postID); err != nil {
+		log.Printf("failed to delete post: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error deleting post", http.StatusInternalServerError))
 		return
 	}
@@ -302,6 +309,7 @@ func (p *PostsHandler) handleReaction(
 	}
 
 	if err != nil {
+		log.Printf("failed to count reactions: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error counting reactions", http.StatusInternalServerError))
 		return
 	}
@@ -336,6 +344,7 @@ func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, post
 		},
 	)
 	if err != nil {
+		log.Printf("failed to list comments: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing comments", http.StatusInternalServerError))
 		return
 	}
@@ -379,6 +388,7 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		},
 	)
 	if err != nil {
+		log.Printf("failed to create comment: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error creating comment", http.StatusInternalServerError))
 		return
 	}
@@ -416,6 +426,7 @@ func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
+		log.Printf("failed to list posts by author: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing user posts", http.StatusInternalServerError))
 		return
 	}
@@ -445,6 +456,7 @@ func (p *PostsHandler) ListLikedPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
+		log.Printf("failed to list liked posts: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing liked posts", http.StatusInternalServerError))
 		return
 	}

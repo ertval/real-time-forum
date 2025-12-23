@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	repository "forum/internal/db"
@@ -28,6 +29,7 @@ func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
+		log.Printf("failed to list public posts: %v", err)
 		WriteError(w, r, NewError(
 			"INTERNAL_SERVER_ERROR",
 			"failed to list posts",

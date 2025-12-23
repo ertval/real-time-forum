@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -56,7 +57,9 @@ func resolveCategoryID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 
 func (c *CategoriesHandler) listCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := repository.ListCategories(r.Context(), c.conn)
-	if writeHandlerError(w, r, err, "could not list categories") {
+	if err != nil {
+		log.Printf("failed to list categories: %v", err)
+		writeHandlerError(w, r, err, "failed to list categories")
 		return
 	}
 
@@ -92,6 +95,7 @@ func (c *CategoriesHandler) createCategory(w http.ResponseWriter, r *http.Reques
 		slug,
 	)
 	if err != nil {
+		log.Printf("failed to create category: %v", err)
 		if isUniqueConstraint(err) {
 			WriteError(w, r, NewError(
 				"CONFLICT",
@@ -142,6 +146,7 @@ func (c *CategoriesHandler) HandleCategory(w http.ResponseWriter, r *http.Reques
 func (c *CategoriesHandler) getCategory(w http.ResponseWriter, r *http.Request, id int64) {
 	category, err := repository.GetCategory(r.Context(), c.conn, id)
 	if err != nil {
+		log.Printf("failed to load category: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, r)
 			return
@@ -187,7 +192,7 @@ func (c *CategoriesHandler) updateCategory(w http.ResponseWriter, r *http.Reques
 		id,
 		*req.Name,
 	); err != nil {
-
+		log.Printf("failed to update category: %v", err)
 		if isUniqueConstraint(err) {
 			WriteError(w, r, NewError(
 				"CONFLICT",
@@ -202,7 +207,9 @@ func (c *CategoriesHandler) updateCategory(w http.ResponseWriter, r *http.Reques
 	}
 
 	category, err := repository.GetCategory(r.Context(), c.conn, id)
-	if writeHandlerError(w, r, err, "category updated but failed to load") {
+	if err != nil {
+		log.Printf("failed to load updated category: %v", err)
+		writeHandlerError(w,r, err, "category updated but failed to load")
 		return
 	}
 
@@ -215,6 +222,7 @@ func (c *CategoriesHandler) updateCategory(w http.ResponseWriter, r *http.Reques
 
 func (c *CategoriesHandler) deleteCategory(w http.ResponseWriter, r *http.Request, id int64) {
 	if err := repository.DeleteCategory(r.Context(), c.conn, id); err != nil {
+		log.Printf("failed to delete category: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, r)
 			return
@@ -247,6 +255,7 @@ func (c *CategoriesHandler) ListCategoriesWithPosts(
 	)
 	if err != nil {
 		writeHandlerError(w, r, err, "failed to list categories with posts")
+		log.Printf("failed to list categories with posts: %v", err)
 		return
 	}
 

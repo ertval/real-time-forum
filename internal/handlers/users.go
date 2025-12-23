@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	repository "forum/internal/db"
@@ -51,6 +52,7 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
+		log.Printf("failed to load user: %v", err)
 		writeHandlerError(w, r, err, "user not found")
 		return
 	}
@@ -81,6 +83,7 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	id, err := repository.CreateUser(r.Context(), u.conn, req)
 	if err != nil {
+		log.Printf("failed to create user: %v", err)
 		WriteError(w, r, NewError(
 			"BAD_REQUEST",
 			err.Error(),
@@ -118,6 +121,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repository.LoginUser(r.Context(), u.conn, req)
 	if err != nil {
+		log.Printf("failed to login user: %v", err)
 		WriteError(w, r, NewError(
 			"UNAUTHORIZED",
 			"invalid credentials",
@@ -167,7 +171,9 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
-	if writeHandlerError(w, r, err, "failed to load user") {
+	if err != nil {
+		log.Printf("failed to load authenticated user: %v", err)
+		writeHandlerError(w, r, err, "failed to load user")
 		return
 	}
 
@@ -195,11 +201,13 @@ func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = repository.InvalidateSessionByToken(
+	if err := repository.InvalidateSessionByToken(
 		r.Context(),
 		u.conn,
 		cookie.Value,
-	)
+	); err != nil {
+		log.Printf("failed to invalidate session on logout: %v", err)
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
