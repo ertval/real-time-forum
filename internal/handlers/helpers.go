@@ -72,7 +72,7 @@ func parseID(path, prefix string) (int64, error) {
 func requireUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		WriteError(w, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
+		WriteError(w, r, NewError("UNAUTHORIZED", "login required", http.StatusUnauthorized))
 		return 0, false
 	}
 	return userID, true
@@ -82,12 +82,12 @@ func requireUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 // RESPONSE HELPERS
 // ------------------------------------------------------------
 
-func MethodNotAllowed(w http.ResponseWriter) {
-	WriteError(w, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
+func MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
+	WriteError(w, r, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
 }
 
-func notFound(w http.ResponseWriter) {
-	WriteError(w, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
+func notFound(w http.ResponseWriter, r *http.Request) {
+	WriteError(w, r, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 }
 
 // ------------------------------------------------------------

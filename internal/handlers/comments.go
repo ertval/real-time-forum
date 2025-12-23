@@ -31,24 +31,24 @@ func (p *PostsHandler) HandleComment(w http.ResponseWriter, r *http.Request) {
 		case http.MethodDelete:
 			p.deleteComment(w, r, commentID)
 		default:
-			MethodNotAllowed(w)
+			MethodNotAllowed(w, r)
 		}
 	case "like":
 		if r.Method == http.MethodPost {
 			p.handleReaction(w, r, commentID, 1, "comment")
 			return
 		}
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 
 	case "dislike":
 		if r.Method == http.MethodPost {
 			p.handleReaction(w, r, commentID, -1, "comment")
 			return
 		}
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 
 	default:
-		notFound(w)
+		notFound(w, r)
 	}
 }
 
@@ -57,10 +57,10 @@ func (p *PostsHandler) getComment(w http.ResponseWriter, r *http.Request, commen
 	if err != nil {
 		log.Printf("failed to load comment: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
-			notFound(w)
+			notFound(w, r)
 			return
 		}
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error loading comment", http.StatusInternalServerError))
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading comment", http.StatusInternalServerError))
 		return
 	}
 	WriteOK(w, comment, nil)
@@ -78,15 +78,15 @@ func (p *PostsHandler) updateComment(w http.ResponseWriter, r *http.Request, com
 	if err != nil {
 		log.Printf("failed to load comment for update: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
-			notFound(w)
+			notFound(w, r)
 			return
 		}
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error loading comment", http.StatusInternalServerError))
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading comment", http.StatusInternalServerError))
 		return
 	}
 
 	if comment.UserID != userID {
-		WriteError(w, NewError("FORBIDDEN", "you are not allowed to update this comment", http.StatusForbidden))
+		WriteError(w, r, NewError("FORBIDDEN", "you are not allowed to update this comment", http.StatusForbidden))
 		return
 	}
 
@@ -95,12 +95,12 @@ func (p *PostsHandler) updateComment(w http.ResponseWriter, r *http.Request, com
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
 		return
 	}
 
 	if req.Body == nil || strings.TrimSpace(*req.Body) == "" {
-		WriteError(w, NewError("BAD_REQUEST", "body required and cannot be empty", http.StatusBadRequest))
+		WriteError(w, r, NewError("BAD_REQUEST", "body required and cannot be empty", http.StatusBadRequest))
 		return
 	}
 
@@ -111,14 +111,14 @@ func (p *PostsHandler) updateComment(w http.ResponseWriter, r *http.Request, com
 		repository.UpdateCommentInput{Body: req.Body},
 	); err != nil {
 		log.Printf("failed to update comment: %v", err)
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error updating comment", http.StatusInternalServerError))
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating comment", http.StatusInternalServerError))
 		return
 	}
 
 	updatedComment, err := repository.GetComment(r.Context(), p.conn, commentID)
 	if err != nil {
 		log.Printf("failed to load updated comment: %v", err)
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "comment updated but failed to load", http.StatusInternalServerError))
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "comment updated but failed to load", http.StatusInternalServerError))
 	}
 	WriteOK(w, updatedComment, nil)
 }
@@ -134,20 +134,20 @@ func (p *PostsHandler) deleteComment(w http.ResponseWriter, r *http.Request, com
 	if err != nil {
 		log.Printf("failed to load comment for deletion: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
-			notFound(w)
+			notFound(w, r)
 			return
 		}
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error loading comment", http.StatusInternalServerError))
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading comment", http.StatusInternalServerError))
 		return
 	}
 	if comment.UserID != userID {
-		WriteError(w, NewError("FORBIDDEN", "you are not allowed to delete this comment", http.StatusForbidden))
+		WriteError(w, r, NewError("FORBIDDEN", "you are not allowed to delete this comment", http.StatusForbidden))
 		return
 	}
 
 	if err := repository.DeleteComment(r.Context(), p.conn, commentID); err != nil {
 		log.Printf("failed to delete comment: %v", err)
-		WriteError(w, NewError("INTERNAL_SERVER_ERROR", "error deleting comment", http.StatusInternalServerError))
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error deleting comment", http.StatusInternalServerError))
 		return
 	}
 	WriteNoContent(w)

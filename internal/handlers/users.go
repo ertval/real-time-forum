@@ -25,7 +25,7 @@ func NewUsersHandler(database *sql.DB) *UsersHandler {
 func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := parseID(r.URL.Path, "/api/v1/users/")
 	if err != nil || id <= 0 {
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"BAD_REQUEST",
 			"invalid user ID",
 			http.StatusBadRequest,
@@ -41,7 +41,7 @@ func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 
 func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
 		log.Printf("failed to load user: %v", err)
-		writeHandlerError(w, err, "user not found")
+		writeHandlerError(w, r, err, "user not found")
 		return
 	}
 
@@ -67,13 +67,13 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
 	var req repository.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"BAD_REQUEST",
 			"invalid json",
 			http.StatusBadRequest,
@@ -84,7 +84,7 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	id, err := repository.CreateUser(r.Context(), u.conn, req)
 	if err != nil {
 		log.Printf("failed to create user: %v", err)
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"BAD_REQUEST",
 			err.Error(),
 			http.StatusBadRequest,
@@ -105,13 +105,13 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
 	var req repository.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"BAD_REQUEST",
 			"invalid login json",
 			http.StatusBadRequest,
@@ -122,7 +122,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	user, err := repository.LoginUser(r.Context(), u.conn, req)
 	if err != nil {
 		log.Printf("failed to login user: %v", err)
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"UNAUTHORIZED",
 			"invalid credentials",
 			http.StatusUnauthorized,
@@ -137,7 +137,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		r.RemoteAddr,
 		r.UserAgent(),
 	)
-	if writeHandlerError(w, err, "failed to create session") {
+	if writeHandlerError(w, r, err, "failed to create session") {
 		return
 	}
 
@@ -162,7 +162,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"UNAUTHORIZED",
 			"login required",
 			http.StatusUnauthorized,
@@ -173,7 +173,7 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
 		log.Printf("failed to load authenticated user: %v", err)
-		writeHandlerError(w, err, "failed to load user")
+		writeHandlerError(w, r, err, "failed to load user")
 		return
 	}
 
@@ -187,13 +187,13 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		MethodNotAllowed(w)
+		MethodNotAllowed(w, r)
 		return
 	}
 
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
-		WriteError(w, NewError(
+		WriteError(w, r, NewError(
 			"UNAUTHORIZED",
 			"no active session",
 			http.StatusUnauthorized,

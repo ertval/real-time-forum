@@ -61,7 +61,7 @@ func NewRouter(database *sql.DB) http.Handler {
 		case http.MethodPost:
 			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 		default:
-			handlers.MethodNotAllowed(w)
+			handlers.MethodNotAllowed(w, r)
 		}
 	})
 
@@ -76,7 +76,7 @@ func NewRouter(database *sql.DB) http.Handler {
 			// create comment, like, update/delete post → auth required
 			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
 		default:
-			handlers.MethodNotAllowed(w)
+			handlers.MethodNotAllowed(w, r)
 		}
 	})
 
@@ -109,7 +109,7 @@ func NewRouter(database *sql.DB) http.Handler {
 			// auth required
 			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
 		default:
-			handlers.MethodNotAllowed(w)
+			handlers.MethodNotAllowed(w, r)
 		}
 	})
 	// ---------------------------------------------------------
@@ -117,6 +117,9 @@ func NewRouter(database *sql.DB) http.Handler {
 	// ---------------------------------------------------------
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
+
+	// Serve custom http error assets
+	mux.Handle("/errors/", http.StripPrefix("/errors/", http.FileServer(http.Dir("./web/errors/"))))
 
 	// ---------------------------------------------------------
 	// GLOBAL MIDDLEWARE
@@ -127,6 +130,7 @@ func NewRouter(database *sql.DB) http.Handler {
 func notFoundJSON(w http.ResponseWriter, r *http.Request) {
 	handlers.WriteError(
 		w,
+		r,
 		handlers.NewError("NOT_FOUND", "route not found", http.StatusNotFound),
 	)
 }

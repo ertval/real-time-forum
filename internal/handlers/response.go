@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"html/template"
 	"net/http"
+	"strings"
 )
 
 // ------------------------------------------------------------
@@ -44,10 +47,23 @@ func WriteNoContent(w http.ResponseWriter) {
 // ERROR RESPONSES
 // ------------------------------------------------------------
 
-func WriteError(w http.ResponseWriter, err *APIError) {
-	writeJSON(w, err.Status, &APIResponse{
-		Error: err,
-	})
+func WriteError(w http.ResponseWriter, r *http.Request, err *APIError) {
+	if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		tmplPath := fmt.Sprintf("./web/errors/%d.html", err.Status)
+		tmpl, tmplErr := template.ParseFiles(tmplPath)
+		if tmplErr != nil {
+			http.Error(w, err.Message, err.Status)
+			return
+		}
+		w.WriteHeader(err.Status)
+		w.Header().Set("Content-Type", "text/html")
+		tmpl.Execute(w, err)
+	} else {
+		//Fallback to json
+		writeJSON(w, err.Status, &APIResponse{
+			Error: err,
+		})
+	}
 }
 
 func NewError(code, message string, status int) *APIError {
