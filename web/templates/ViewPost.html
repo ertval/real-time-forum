@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Post</title>
+</head>
+
+<body>
+<main>
+  <article aria-label="Post">
+    <header>
+      <div>
+        <h1>Post title goes here</h1>
+        <p>
+          <span>Author: username_here</span>
+        </p>
+      </div>
+
+      <div>
+        <time datetime="2025-12-24T12:34:00Z">2025-12-24 12:34</time>
+      </div>
+    </header>
+
+    <section aria-label="Post body">
+      <p>Post body goes here.</p>
+    </section>
+
+    <section aria-label="Post actions">
+      <div>
+        <div>
+          <span id="like-count">0</span>
+          <button type="button">Like</button>
+        </div>
+
+        <div>
+          <span id="dislike-count">0</span>
+          <button type="button">Dislike</button>
+        </div>
+      </div>
+
+      <div>
+        <button type="button">Comments</button>
+      </div>
+    </section>
+
+    <section aria-label="Comments">
+      <h2>Comments</h2>
+
+      <div id="comments">
+        <!-- Comment item -->
+        <article aria-label="Comment">
+          <header>
+            <div>
+              <strong>comment_author</strong>
+            </div>
+            <div>
+              <time datetime="2025-12-24T12:40:00Z">2025-12-24 12:40</time>
+            </div>
+          </header>
+
+          <p>Comment text goes here.</p>
+        </article>
+
+        <hr />
+
+        <!-- Comment item -->
+        <article aria-label="Comment">
+          <header>
+            <div>
+              <strong>comment_author_2</strong>
+            </div>
+            <div>
+              <time datetime="2025-12-24T12:45:00Z">2025-12-24 12:45</time>
+            </div>
+          </header>
+
+          <p>Another comment text goes here.</p>
+        </article>
+      </div>
+    </section>
+  </article>
+</main>
+</body>
+</html>
