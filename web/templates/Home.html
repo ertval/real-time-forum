@@ -4,132 +4,127 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Forum Home</title>
+  <!-- Global styles -->
+  <link rel="stylesheet" href="/css/base.css" />
+
+  <!-- Page-specific styles -->
+  <link rel="stylesheet" href="/css/home.css" />
 </head>
 
 <body>
-<main>
-  <h1>Forum</h1>
+<main class="container">
+  <header class="page-header">
+    <h1 class="page-title">Forum</h1>
+
+    <div class="page-actions">
+      <a class="btn" href="/createpost">Create post</a>
+    </div>
+  </header>
 
   <!-- POST LIST -->
-  <section aria-label="Posts">
-
+  <section aria-label="Posts" class="posts">
     <!-- SINGLE POST -->
-    <article aria-label="Post">
-      <header>
-        <div>
-          <h2>Post title goes here</h2>
-          <p>Author: username_here</p>
+    <article aria-label="Post" class="post card card-pad">
+      <header class="post-header">
+        <div class="post-meta">
+          <h2 class="post-title">Post title goes here</h2>
+          <p class="post-author muted">Author: username_here</p>
         </div>
 
-        <div>
-          <time datetime="2025-12-24T12:30:00Z">
-            2025-12-24 12:30
-          </time>
-        </div>
+        <time class="post-time muted" datetime="2025-12-24T12:30:00Z">
+          2025-12-24 12:30
+        </time>
       </header>
 
-      <section aria-label="Post body">
+      <section aria-label="Post body" class="post-body">
         <p>
           This is the post body text. It can be empty or long.
         </p>
       </section>
 
-      <section aria-label="Post actions">
-        <div>
-          <span>0</span>
-          <button type="button">Like</button>
+      <section aria-label="Post actions" class="post-actions">
+        <div class="reaction">
+          <span class="count">0</span>
+          <button class="btn btn-ghost" type="button">Like</button>
         </div>
 
-        <div>
-          <span>0</span>
-          <button type="button">Dislike</button>
+        <div class="reaction">
+          <span class="count">0</span>
+          <button class="btn btn-ghost" type="button">Dislike</button>
         </div>
 
-        <div>
-          <button type="button">Load comments</button>
+        <div class="action-right">
+          <button class="btn btn-secondary" type="button">Load comments</button>
         </div>
       </section>
 
       <!-- COMMENTS -->
-      <section aria-label="Comments">
-        <h3>Comments</h3>
+      <section aria-label="Comments" class="comments">
+        <h3 class="comments-title">Comments</h3>
 
-        <article aria-label="Comment">
-          <header>
+        <article aria-label="Comment" class="comment">
+          <header class="comment-header">
             <strong>comment_author</strong>
-            <time datetime="2025-12-24T12:40:00Z">
-              2025-12-24 12:40
-            </time>
+            <time class="muted" datetime="2025-12-24T12:40:00Z">2025-12-24 12:40</time>
           </header>
-          <p>First comment text.</p>
+          <p class="comment-text">First comment text.</p>
         </article>
 
-        <article aria-label="Comment">
-          <header>
+        <article aria-label="Comment" class="comment">
+          <header class="comment-header">
             <strong>comment_author_2</strong>
-            <time datetime="2025-12-24T12:45:00Z">
-              2025-12-24 12:45
-            </time>
+            <time class="muted" datetime="2025-12-24T12:45:00Z">2025-12-24 12:45</time>
           </header>
-          <p>Second comment text.</p>
+          <p class="comment-text">Second comment text.</p>
         </article>
       </section>
     </article>
-
-    <hr />
 
     <!-- SECOND POST (example) -->
-    <article aria-label="Post">
-      <header>
-        <div>
-          <h2>Another post title</h2>
-          <p>Author: another_user</p>
+    <article aria-label="Post" class="post card card-pad">
+      <header class="post-header">
+        <div class="post-meta">
+          <h2 class="post-title">Another post title</h2>
+          <p class="post-author muted">Author: another_user</p>
         </div>
 
-        <div>
-          <time datetime="2025-12-23T18:10:00Z">
-            2025-12-23 18:10
-          </time>
-        </div>
+        <time class="post-time muted" datetime="2025-12-23T18:10:00Z">
+          2025-12-23 18:10
+        </time>
       </header>
 
-      <section>
-        <p>
-          Another post body example.
-        </p>
+      <section class="post-body">
+        <p>Another post body example.</p>
       </section>
 
-      <section>
-        <div>
-          <span>3</span>
-          <button type="button">Like</button>
+      <section class="post-actions">
+        <div class="reaction">
+          <span class="count">3</span>
+          <button class="btn btn-ghost" type="button">Like</button>
         </div>
 
-        <div>
-          <span>1</span>
-          <button type="button">Dislike</button>
+        <div class="reaction">
+          <span class="count">1</span>
+          <button class="btn btn-ghost" type="button">Dislike</button>
         </div>
 
-        <div>
-          <button type="button">Load comments</button>
+        <div class="action-right">
+          <button class="btn btn-secondary" type="button">Load comments</button>
         </div>
       </section>
 
-      <section aria-label="Comments">
-        <h3>Comments</h3>
+      <section aria-label="Comments" class="comments">
+        <h3 class="comments-title">Comments</h3>
 
-        <article>
-          <header>
+        <article class="comment">
+          <header class="comment-header">
             <strong>user123</strong>
-            <time datetime="2025-12-23T18:30:00Z">
-              2025-12-23 18:30
-            </time>
+            <time class="muted" datetime="2025-12-23T18:30:00Z">2025-12-23 18:30</time>
           </header>
-          <p>Nice post.</p>
+          <p class="comment-text">Nice post.</p>
         </article>
       </section>
     </article>
-
   </section>
 </main>
 </body>
