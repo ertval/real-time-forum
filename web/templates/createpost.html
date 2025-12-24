@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create Post</title>
+
+    <link rel="stylesheet" href="/css/base.css" />
+</head>
+
+<body>
+<main class="center-page">
+    <section class="card card-pad" aria-labelledby="create-post-title" style="width: 100%; max-width: 720px;">
+        <h1 id = "create-post-title" style="text-align:center; margin-bottom: 18px;">Create post</h1>
+
+        <form action="/posts" method="post" novalidate>
+            <div class="field">
+                <label for="title" class="field-label">Title</label>
+                <input
+                    id="title"
+                    class="input"
+                    type="text"
+                    name="title"
+                    placeholder="Title"
+                    maxlength="300"
+                    required
+                    />
+                </div>
+
+            <div class="field">
+                <label for="body" class="field-label">Body</label>
+                <textarea
+                      id="body"
+                      class="input"
+                      name="body"
+                      placeholder="Body text (optional)"
+                      rows="8"
+              ></textarea>
+            </div>
+
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+                <button class="btn btn-secondary" type="submit" name="action" value="draft">
+                    Save Draft
+                </button>
+
+                <button class="btn btn-primary" type="submit" name="action" value="publish">
+                    Post
+                </button>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>
