@@ -1,11 +1,4 @@
-.page-header{
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:16px;
-    margin-bottom:18px;
-}
-.page-title{ margin:0; }
+
 .posts{
     display:flex;
     flex-direction:column;
@@ -22,6 +15,7 @@
     margin:0;
     font-size:20px;
     line-height:1.2;
+    overflow-wrap: anywhere;
 }
 .post-author{ margin:6px 0 0; }
 
@@ -63,7 +57,7 @@
     border:1px solid var(--border);
     border-radius:10px;
     padding:12px 12px;
-    margin-bottom:10px;
+    margin-bottom:12px;
 }
 .comment-header{
     display:flex;

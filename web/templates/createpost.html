@@ -6,12 +6,13 @@
     <title>Create Post</title>
 
     <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/create-post.css" />
 </head>
 
-<body>
+<body class="create-post">
 <main class="center-page">
-    <section class="card card-pad" aria-labelledby="create-post-title" style="width: 100%; max-width: 720px;">
-        <h1 id = "create-post-title" style="text-align:center; margin-bottom: 18px;">Create post</h1>
+    <section class="card card-pad create-post-card" aria-labelledby="create-post-title">
+        <h1 id = "create-post-title" class="create-post-title">Create post</h1>
 
         <form action="/posts" method="post" novalidate>
             <div class="field">
@@ -38,7 +39,7 @@
               ></textarea>
             </div>
 
-            <div style="display:flex; gap:12px; justify-content:flex-end;">
+            <div class="create-post-actions">
                 <button class="btn btn-secondary" type="submit" name="action" value="draft">
                     Save Draft
                 </button>
