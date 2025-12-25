@@ -8,13 +8,13 @@ APP_NAME        = forum
 BACKEND_BIN     = forum-backend
 FRONTEND_BIN    = forum-frontend
 
-# Entry points
-BACKEND_MAIN    = ./cmd/backend/main.go
-FRONTEND_MAIN   = ./cmd/frontend/main.go
+# Packages
+BACKEND_PKG     = ./cmd/backend
+FRONTEND_PKG    = ./cmd/frontend
 
 # Legacy compatibility
 BINARY_NAME     = $(BACKEND_BIN)
-MAIN_FILE       = $(BACKEND_MAIN)
+MAIN_FILE       = $(BACKEND_PKG)
 
 DB_FILE         = internal/db/forum.db
 PORT            = 8080
@@ -32,30 +32,30 @@ all: run-backend
 
 build-backend:
 	@echo "🔧 Building backend..."
-	@go build -o $(BACKEND_BIN) $(BACKEND_MAIN)
+	@go build -o $(BACKEND_BIN) $(BACKEND_PKG)
 	@echo "✅ Backend build complete: ./$(BACKEND_BIN)"
 
 build-frontend:
 	@echo "🔧 Building frontend..."
-	@go build -o $(FRONTEND_BIN) $(FRONTEND_MAIN)
+	@go build -o $(FRONTEND_BIN) $(FRONTEND_PKG)
 	@echo "✅ Frontend build complete: ./$(FRONTEND_BIN)"
 
 build-all: build-backend build-frontend
 
 run-backend:
 	@echo "🚀 Starting backend server..."
-	@go run $(BACKEND_MAIN)
+	@go run $(BACKEND_PKG)
 
 run-frontend:
 	@echo "🚀 Starting frontend server on http://localhost:3000 ..."
-	@go run $(FRONTEND_MAIN) &
+	@go run $(FRONTEND_PKG) &
 	@sleep 1
 	@$(MAKE) open-browser
 
 run-all:
 	@echo "🔥 Starting backend & frontend servers..."
-	@go run $(BACKEND_MAIN) &
-	@go run $(FRONTEND_MAIN) &
+	@go run $(BACKEND_PKG) &
+	@go run $(FRONTEND_PKG) &
 	@sleep 1
 	@$(MAKE) open-browser
 
@@ -67,11 +67,11 @@ run: run-backend
 
 stop-backend:
 	@echo "🛑 Stopping backend..."
-	@pkill -f "$(BACKEND_MAIN)" 2>/dev/null || echo "Backend not running."
+	@pkill -f "$(BACKEND_PKG)" 2>/dev/null || echo "Backend not running."
 
 stop-frontend:
 	@echo "🛑 Stopping frontend..."
-	@pkill -f "$(FRONTEND_MAIN)" 2>/dev/null || echo "Frontend not running."
+	@pkill -f "$(FRONTEND_PKG)" 2>/dev/null || echo "Frontend not running."
 
 stop-all: stop-backend stop-frontend
 
