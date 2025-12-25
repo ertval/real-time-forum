@@ -3,5 +3,12 @@ set -e
 
 echo "🚀 Starting Forum Project (backend + frontend)..."
 
-# Run both servers using the Makefile target
-make run-all
+make run-backend &
+BACKEND_PID=$!
+
+make run-frontend &
+FRONTEND_PID=$!
+
+trap "echo '🛑 Stopping servers...'; kill $BACKEND_PID $FRONTEND_PID" INT TERM
+
+wait
