@@ -67,6 +67,25 @@ a:hover { text-decoration: underline; }
     padding: 40px 16px;
 }
 
+/* ---------- Page header ---------- */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.page-title {
+    margin: 0;
+}
+
+.page-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
 /* ---------- Surfaces / cards ---------- */
 .card {
     background: var(--surface);
@@ -130,14 +149,27 @@ select:focus {
 
 /* ---------- Buttons ---------- */
 .btn {
-    height: 40px;                 /* matches your current buttons  [oai_citation:1‡styles.css](sediment://file_00000000e2e4720a92b9894ded1a4f28) */
-    padding: 0 15px;              /* matches your current buttons  [oai_citation:2‡styles.css](sediment://file_00000000e2e4720a92b9894ded1a4f28) */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    height: 40px;
+    padding: 0 15px;
+
     border: none;
     border-radius: 8px;
     cursor: pointer;
+
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
+    line-height: 1;
+
+    text-decoration: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+
     transition: background-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
 }
 

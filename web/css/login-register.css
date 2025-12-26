@@ -1,0 +1,88 @@
+
+.login .login-card {
+    width: 100%;
+    max-width: 460px;
+}
+
+.login .login-title {
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.login .login-subtitle {
+    text-align: center;
+    margin-bottom: 22px;
+}
+
+/* Password field with icon */
+.login .password-field {
+    position: relative;
+}
+
+.login .password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    padding: 0;
+}
+
+/* Remember / forgot row */
+.login .login-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+/* Footer */
+.login .login-footer {
+    text-align: center;
+    margin-top: 18px;
+}
+
+/* ---------- Auth shared layout ---------- */
+
+.auth .auth-card {
+    width: 100%;
+    max-width: 460px;
+}
+
+.auth .auth-title {
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.auth .auth-subtitle {
+    text-align: center;
+    margin-bottom: 22px;
+}
+
+.auth .auth-footer {
+    text-align: center;
+    margin-top: 18px;
+}
+
+/* ---------- Password field (shared) ---------- */
+
+.auth .password-field {
+    position: relative;
+}
+
+.auth .password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    padding: 0;
+}

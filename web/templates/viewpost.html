@@ -6,63 +6,63 @@
   <title>Post</title>
 
   <link rel="stylesheet" href="/css/base.css" />
-  <link rel="stylesheet" href="/css/viewpost.css" />
+  <link rel="stylesheet" href="/css/view-post.css" />
 </head>
 
-<body>
+<body class="view-post">
 <main class="container">
-  <article aria-label="Post" class="card card-pad" style="max-width: 900px; margin: 0 auto;">
-    <header class="post-header" style="display:flex; justify-content:space-between; gap:16px; margin-bottom:12px;">
-      <div>
-        <h1 style="margin:0 0 6px;">Post title goes here</h1>
-        <p class="muted" style="margin:0;">Author: username_here</p>
+  <article aria-label="Post" class="card card-pad viewpost-card">
+    <header class="viewpost-header">
+      <div class="viewpost-meta">
+        <h1 class="viewpost-title">Post title goes here</h1>
+        <p class="muted viewpost-author">Author: username_here</p>
       </div>
 
-      <time class="muted" datetime="2025-12-24T12:34:00Z">2025-12-24 12:34</time>
+      <time class="muted viewpost-time" datetime="2025-12-24T12:34:00Z">2025-12-24 12:34</time>
     </header>
 
-    <section aria-label="Post body" style="margin-top: 12px;">
-      <p style="margin:0;">Post body goes here.</p>
+    <section aria-label="Post body" class="viewpost-body">
+      <p class="viewpost-body-text">Post body goes here.</p>
     </section>
 
-    <section aria-label="Post actions" style="display:flex; align-items:center; gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
-      <div style="display:flex; gap:12px; align-items:center;">
-        <div class="reaction" style="display:inline-flex; align-items:center; gap:10px;">
-          <span id="like-count" style="min-width:20px; text-align:center; font-weight:600;">0</span>
+    <section aria-label="Post actions" class="viewpost-actions">
+      <div class="viewpost-reactions">
+        <div class="reaction">
+          <span id="like-count" class="reaction-count">0</span>
           <button class="btn btn-ghost" type="button">Like</button>
         </div>
 
-        <div class="reaction" style="display:inline-flex; align-items:center; gap:10px;">
-          <span id="dislike-count" style="min-width:20px; text-align:center; font-weight:600;">0</span>
+        <div class="reaction">
+          <span id="dislike-count" class="reaction-count">0</span>
           <button class="btn btn-ghost" type="button">Dislike</button>
         </div>
       </div>
 
-      <div style="margin-left:auto;">
+      <div class="viewpost-actions-right">
         <button class="btn btn-secondary" type="button">Comments</button>
       </div>
     </section>
 
-    <section aria-label="Comments" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
-      <h2 style="margin:0 0 12px; font-size:18px;">Comments</h2>
+    <section aria-label="Comments" class="viewpost-comments">
+      <h2 class="viewpost-comments-title">Comments</h2>
 
-      <div id="comments">
-        <article aria-label="Comment" style="background:var(--surface-muted); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px;">
-          <header style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;">
+      <div id="comments" class="comments">
+        <article aria-label="Comment" class="comment-card">
+          <header class="comment-card-header">
             <strong>comment_author</strong>
             <time class="muted" datetime="2025-12-24T12:40:00Z">2025-12-24 12:40</time>
           </header>
 
-          <p style="margin:0;">Comment text goes here.</p>
+          <p class="comment-card-text">Comment text goes here.</p>
         </article>
 
-        <article aria-label="Comment" style="background:var(--surface-muted); border:1px solid var(--border); border-radius:10px; padding:12px;">
-          <header style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;">
+        <article aria-label="Comment" class="comment-card">
+          <header class="comment-card-header">
             <strong>comment_author_2</strong>
             <time class="muted" datetime="2025-12-24T12:45:00Z">2025-12-24 12:45</time>
           </header>
 
-          <p style="margin:0;">Another comment text goes here.</p>
+          <p class="comment-card-text">Another comment text goes here.</p>
         </article>
       </div>
     </section>
