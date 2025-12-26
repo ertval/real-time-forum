@@ -1,18 +1,38 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type CustomFileServer struct {
-	root http.FileSystem
+	handler  http.Handler
+	notFound string
 }
 
-// serves u
-func (c CustomFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f, err := c.root.Open(r.URL.Path)
-	if err != nil {
-		http.ServeFile(w, r, "./web/errors/404.html") // Or absolute path
-		return
+func NewCustomFileServer(fs http.FileSystem, notFoundPage string) http.Handler {
+	return &CustomFileServer{
+		handler:  http.FileServer(fs),
+		notFound: notFoundPage,
 	}
-	defer f.Close()
-	http.FileServer(c.root).ServeHTTP(w, r)
+}
+
+func (c *CustomFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Try serving the file
+	rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+	c.handler.ServeHTTP(rec, r)
+
+	// If file not found, serve custom 404 page
+	if rec.status == http.StatusNotFound {
+		http.ServeFile(w, r, c.notFound)
+	}
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
 }

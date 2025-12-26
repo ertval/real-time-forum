@@ -8,36 +8,36 @@ import (
 func main() {
 	mux := http.NewServeMux()
 
-	// Static assets only
-	mux.Handle("/css/",
-		http.StripPrefix("/css/",
-			http.FileServer(http.Dir("./web/css")),
+	// ---------------------------------------------------------
+	// Static assets (/static/*)
+	// ---------------------------------------------------------
+	mux.Handle(
+		"/static/",
+		http.StripPrefix(
+			"/static/",
+			http.FileServer(http.Dir("./web/static")),
 		),
 	)
 
-	// Pages
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/index.html")
-	})
+	// ---------------------------------------------------------
+	// Pages (HTML templates)
+	// ---------------------------------------------------------
 
-	mux.HandleFunc("/createpost", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/templates/CreatePost.html")
-	})
-	mux.HandleFunc("/forgotpassword", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/templates/ForgotPassword.html")
-	})
-	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/templates/Login.html")
-	})
-	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/templates/Register.html")
-	})
-	mux.HandleFunc("/viewpost", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/templates/ViewPost.html")
-	})
-	mux.HandleFunc("/home", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/templates/Home.html")
-	})
+	mux.HandleFunc("/", serveTemplate("./web/templates/home.html"))
+
+	mux.HandleFunc("/home", serveTemplate("./web/templates/home.html"))
+	mux.HandleFunc("/create-post", serveTemplate("./web/templates/create-post.html"))
+	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgotpassword.html"))
+	mux.HandleFunc("/login", serveTemplate("./web/templates/login.html"))
+	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
+	mux.HandleFunc("/view-post", serveTemplate("./web/templates/view-post.html"))
+
 	log.Println("Frontend running at http://localhost:3000")
-	http.ListenAndServe(":3000", mux)
+	log.Fatal(http.ListenAndServe(":3000", mux))
+}
+
+func serveTemplate(path string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, path)
+	}
 }

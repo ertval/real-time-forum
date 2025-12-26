@@ -8,8 +8,10 @@ import (
 	"forum/internal/middleware"
 )
 
-const apiPrefix = "/api/v1"
-const frontendOrigin = "http://localhost:3000"
+const (
+	apiPrefix      = "/api/v1"
+	frontendOrigin = "http://localhost:3000"
+)
 
 func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
@@ -30,30 +32,23 @@ func NewRouter(database *sql.DB) http.Handler {
 	// ---------------------------------------------------------
 	// PUBLIC ROUTES (NO AUTH)
 	// ---------------------------------------------------------
+
+	// Healthcheck
 	mux.HandleFunc(apiPrefix+"/health", health.Health)
 
 	// Categories (read-only)
 	mux.HandleFunc(apiPrefix+"/categories", categories.HandleCategories)
 	mux.HandleFunc(apiPrefix+"/categories/", categories.HandleCategory)
-
 	mux.HandleFunc(apiPrefix+"/categories/view", categories.ListCategoriesWithPosts)
 
-	// Public posts listing
+	// Public posts
 	mux.HandleFunc(apiPrefix+"/posts/public", posts.PublicList)
-
-	mux.Handle(apiPrefix+"/posts/mine",
-		auth(http.HandlerFunc(posts.ListMyPosts)),
-	)
-
-	mux.Handle(apiPrefix+"/posts/liked",
-		auth(http.HandlerFunc(posts.ListLikedPosts)),
-	)
 
 	// ---------------------------------------------------------
 	// POSTS
 	// ---------------------------------------------------------
 
-	// /posts → GET public, POST requires auth
+	// /posts → GET (public), POST (auth required)
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -65,34 +60,50 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
-	// /posts/{id}, /posts/{id}/comments, /posts/{id}/like /posts/{id}/dislike
+	// /posts/{id}, /posts/{id}/comments, likes, updates
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			// View post OR list comments → public
 			posts.HandlePost(w, r)
-
 		case http.MethodPost, http.MethodPatch, http.MethodDelete:
-			// create comment, like, update/delete post → auth required
 			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
 		default:
 			handlers.MethodNotAllowed(w, r)
 		}
 	})
 
+	// My posts (auth)
+	mux.Handle(
+		apiPrefix+"/posts/mine",
+		auth(http.HandlerFunc(posts.ListMyPosts)),
+	)
+
+	// Liked posts (auth)
+	mux.Handle(
+		apiPrefix+"/posts/liked",
+		auth(http.HandlerFunc(posts.ListLikedPosts)),
+	)
+
 	// ---------------------------------------------------------
 	// USERS
 	// ---------------------------------------------------------
+
+	// Auth endpoints
 	mux.HandleFunc(apiPrefix+"/users/register", users.Register)
 	mux.HandleFunc(apiPrefix+"/users/login", users.Login)
 
-	mux.Handle(apiPrefix+"/users/logout",
+	mux.Handle(
+		apiPrefix+"/users/logout",
 		auth(http.HandlerFunc(users.Logout)),
 	)
-	mux.Handle(apiPrefix+"/users/me",
+
+	mux.Handle(
+		apiPrefix+"/users/me",
 		auth(http.HandlerFunc(users.Me)),
 	)
-	mux.Handle(apiPrefix+"/users/",
+
+	mux.Handle(
+		apiPrefix+"/users/",
 		auth(http.HandlerFunc(users.HandleUser)),
 	)
 
@@ -103,23 +114,30 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			// public
 			posts.HandleComment(w, r)
 		case http.MethodPost, http.MethodPatch, http.MethodDelete:
-			// auth required
 			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
 		default:
 			handlers.MethodNotAllowed(w, r)
 		}
 	})
+
 	// ---------------------------------------------------------
-	// NOT FOUND (API ONLY)
+	// API NOT FOUND (JSON ONLY)
 	// ---------------------------------------------------------
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
 
-	// Serve custom http error assets
-	mux.Handle("/errors/", http.StripPrefix("/errors/", http.FileServer(http.Dir("./web/errors/"))))
+	// ---------------------------------------------------------
+	// STATIC ERROR PAGES (FRONTEND)
+	// ---------------------------------------------------------
+	mux.Handle(
+		"/errors/",
+		http.StripPrefix(
+			"/errors/",
+			http.FileServer(http.Dir("./web/errors")),
+		),
+	)
 
 	// ---------------------------------------------------------
 	// GLOBAL MIDDLEWARE
