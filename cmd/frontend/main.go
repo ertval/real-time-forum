@@ -27,7 +27,7 @@ func main() {
 
 	mux.HandleFunc("/home", serveTemplate("./web/templates/home.html"))
 	mux.HandleFunc("/create-post", serveTemplate("./web/templates/create-post.html"))
-	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgotpassword.html"))
+	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgot-password.html"))
 	mux.HandleFunc("/login", serveTemplate("./web/templates/login.html"))
 	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
 	mux.HandleFunc("/view-post", serveTemplate("./web/templates/view-post.html"))
