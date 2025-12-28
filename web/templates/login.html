@@ -7,9 +7,9 @@
 
     <link rel="stylesheet" href="/static/css/base.css" />
     <link rel="stylesheet" href="/static/css/login-register.css" />
+    <script src="/static/js/Login.js" defer></script>
 
 </head>
-
 <body class="login">
 <main class="center-page">
     <section
@@ -24,16 +24,16 @@
         Enter your credentials to continue
     </p>
 
-        <form action="/login" method="post" novalidate>
+        <form action="/api/v1/users/login" method="post" novalidate>
             <div class="field">
-                <label for="email" class="field-label">Email</label>
+                <label for="email" class="field-label">Email or username</label>
                 <input
                     id="email"
                     class="input"
-                    type="email"
-                    name="email"
-                    autocomplete="email"
-                    placeholder="Email"
+                    type="text"
+                    name="identifier"
+                    autocomplete="username"
+                    placeholder="Email or username"
                     required
                 />
             </div>
@@ -75,6 +75,8 @@
                     </svg>
                 </button>
             </div>
+
+            <div id="login-error" class="login-error" role="alert"></div>
 
             <div class="login-row">
                 <label class="checkbox">
