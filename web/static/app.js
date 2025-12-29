@@ -13,9 +13,9 @@ async function getUsername(userId) {
 }
 
 async function loadPosts() {
-    const res = await fetch("http://localhost:8080/api/v1/posts");
+    const res = await fetch("http://localhost:8080/api/v1/posts/public");
     const data = await res.json();
-    const output = document.getElementById("output");
+    const output = document.getElementById("posts-output");
     output.innerHTML = '';
     if (data.data && Array.isArray(data.data)) {
         for (const post of data.data) {
@@ -148,3 +148,67 @@ async function toggleDislike(postId) {
     }
 }
 
+// --------------------------------------------------
+// Create Post
+// --------------------------------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("create-post-form");
+    if (!form) return; // not on create-post page
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const title = formData.get("title")?.trim();
+        const body = formData.get("body")?.trim();
+        const action = e.submitter?.value; // draft | publish
+
+        if (!title) {
+            alert("Title is required");
+            return;
+        }
+
+        const payload = {
+            title,
+            body,
+            status: action === "publish" ? "published" : "draft",
+        };
+
+        try {
+            const res = await fetch("http://localhost:8080/api/v1/posts", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                body: JSON.stringify(payload),
+            });
+
+            if (res.status === 401) {
+                alert("You must be logged in to create a post.");
+                window.location.href = "/login";
+                return;
+            }
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error?.message || "Failed to create post");
+                return;
+            }
+
+            // Success
+            if (payload.status === "draft") {
+                alert("Draft saved successfully");
+            } else {
+                alert("Post published successfully");
+                window.location.href = "/home";
+            }
+
+        } catch (err) {
+            console.error("Create post error:", err);
+            alert("Unexpected error while creating post");
+        }
+    });
+});
