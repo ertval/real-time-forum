@@ -14,14 +14,22 @@
     margin-bottom: 22px;
 }
 
+.login .password-input-wrap {
+    position: relative;
+}
+
 /* Password field with icon */
 .login .password-field {
     position: relative;
 }
 
+.login .password-input-wrap .input {
+    padding-right: 40px;
+}
+
 .login .password-toggle {
     position: absolute;
-    right: 10px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
 

@@ -132,6 +132,8 @@ func validateCreateUser(req CreateUserRequest) error {
 		return fmt.Errorf("password must be at least %d characters long", minPasswordLength)
 	case !strings.Contains(req.Email, "@"):
 		return fmt.Errorf("invalid email address")
+	case strings.Contains(req.Username, "@"):
+		return fmt.Errorf("username can't contain '@'")
 	}
 	return nil
 }

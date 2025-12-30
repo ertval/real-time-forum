@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 )
 
 func main() {
@@ -18,6 +20,19 @@ func main() {
 			http.FileServer(http.Dir("./web/static")),
 		),
 	)
+
+	// ---- API proxy to backend (8080) ----
+	backendURL, err := url.Parse("http://localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+	apiProxy := httputil.NewSingleHostReverseProxy(backendURL)
+
+	mux.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// preserve host headers appropriately (optional; usually fine either way)
+		r.Host = backendURL.Host
+		apiProxy.ServeHTTP(w, r)
+	}))
 
 	// ---------------------------------------------------------
 	// Pages (HTML templates)
