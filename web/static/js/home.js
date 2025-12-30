@@ -62,55 +62,118 @@ function renderPostCard(post) {
   article.className = "post card card-pad";
   article.setAttribute("aria-labelledby", `post-${post.id}-title`);
 
-  const created = formatCreatedAt(post.created_at);
-  const categories = Array.isArray(post.categories) ? post.categories : [];
+  // -----------------------
+  // Header
+  // -----------------------
+  const header = document.createElement("header");
+  header.className = "post-header";
 
-  const categoriesHtml =
-    categories.length > 0
-      ? `<p class="muted post-categories">${escapeHtml(categories.join(", "))}</p>`
-      : "";
+  const meta = document.createElement("div");
+  meta.className = "post-meta";
 
-  article.innerHTML = `
-    <header class="post-header">
-      <div class="post-meta">
-        <h3 id="post-${post.id}-title" class="post-title">
-          ${escapeHtml(post.title ?? "")}
-        </h3>
-        <p class="post-author muted">
-          Author: ${escapeHtml(post.author ?? "")}
-        </p>
-        ${categoriesHtml}
-      </div>
+  const title = document.createElement("h3");
+  title.id = `post-${post.id}-title`;
+  title.className = "post-title";
+  title.textContent = post.title ?? "";
 
-      <time class="post-time muted" datetime="${escapeAttr(post.created_at ?? "")}">
-        ${escapeHtml(created)}
-      </time>
-    </header>
+  const author = document.createElement("p");
+  author.className = "post-author muted";
+  author.textContent = `Author: ${post.author ?? ""}`;
 
-    <section class="post-body" aria-label="Post body">
-      <p>${escapeHtml(post.body ?? "")}</p>
-    </section>
+  meta.appendChild(title);
+  meta.appendChild(author);
 
-    <section class="post-actions" aria-label="Post actions">
-      <div class="reaction">
-        <span class="count">${Number(post.likes ?? 0)}</span>
-        <button class="btn btn-ghost" type="button" disabled>Like</button>
-      </div>
+  // Categories (separate responsibility)
+  renderCategories(meta, post.categories);
 
-      <div class="reaction">
-        <span class="count">${Number(post.dislikes ?? 0)}</span>
-        <button class="btn btn-ghost" type="button" disabled>Dislike</button>
-      </div>
+  const time = document.createElement("time");
+  time.className = "post-time muted";
+  time.dateTime = post.created_at ?? "";
+  time.textContent = formatCreatedAt(post.created_at);
 
-      <div class="action-right">
-        <button class="btn btn-secondary" type="button" disabled>
-          Load comments
-        </button>
-      </div>
-    </section>
-  `;
+  header.appendChild(meta);
+  header.appendChild(time);
+
+  // -----------------------
+  // Body
+  // -----------------------
+  const body = document.createElement("section");
+  body.className = "post-body";
+  body.setAttribute("aria-label", "Post body");
+
+  const bodyText = document.createElement("p");
+  bodyText.textContent = post.body ?? "";
+
+  body.appendChild(bodyText);
+
+  // -----------------------
+  // Actions
+  // -----------------------
+  const actions = document.createElement("section");
+  actions.className = "post-actions";
+  actions.setAttribute("aria-label", "Post actions");
+
+  actions.appendChild(createReaction("Like", post.likes));
+  actions.appendChild(createReaction("Dislike", post.dislikes));
+
+  const right = document.createElement("div");
+  right.className = "action-right";
+
+  const commentsBtn = document.createElement("button");
+  commentsBtn.className = "btn btn-secondary";
+  commentsBtn.type = "button";
+  commentsBtn.disabled = true;
+  commentsBtn.textContent = "Load comments";
+
+  right.appendChild(commentsBtn);
+  actions.appendChild(right);
+
+  // -----------------------
+  // Assemble
+  // -----------------------
+  article.appendChild(header);
+  article.appendChild(body);
+  article.appendChild(actions);
 
   return article;
+}
+
+// --------------------------------------------------
+// CATEGORIES 
+// --------------------------------------------------
+
+function renderCategories(container, categories) {
+  if (!Array.isArray(categories) || categories.length === 0) return;
+
+  const p = document.createElement("p");
+  p.className = "muted post-categories";
+  p.textContent = categories.join(", ");
+
+  container.appendChild(p);
+}
+
+// --------------------------------------------------
+// REACTIONS
+// --------------------------------------------------
+
+function createReaction(label, count) {
+  const wrap = document.createElement("div");
+  wrap.className = "reaction";
+
+  const span = document.createElement("span");
+  span.className = "count";
+  span.textContent = Number(count ?? 0);
+
+  const btn = document.createElement("button");
+  btn.className = "btn btn-ghost";
+  btn.type = "button";
+  btn.disabled = true;
+  btn.textContent = label;
+
+  wrap.appendChild(span);
+  wrap.appendChild(btn);
+
+  return wrap;
 }
 
 // --------------------------------------------------
@@ -149,17 +212,4 @@ async function loadGreeting() {
 function formatCreatedAt(iso) {
   if (!iso) return "";
   return String(iso).replace("T", " ").replace("Z", "").slice(0, 16);
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeAttr(s) {
-  return escapeHtml(s);
 }

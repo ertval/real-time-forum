@@ -15,7 +15,9 @@
       <header class="page-header">
         <div class="page-title-wrap">
           <h1 id="forum-title" class="page-title">Forum</h1>
-          <p id="greeting" class="muted">Hello, Guest</p>
+          <p id="greeting" class="muted" aria-live="polite">
+            Hello, Guest
+          </p>
         </div>
 
         <div class="page-actions">
@@ -30,7 +32,10 @@
         <div id="posts-output" class="posts-output"></div>
 
         <!-- Empty state -->
-        <p id="posts-empty" class="muted" hidden>No posts yet.</p>
+        <p id="posts-empty" class="muted" hidden role="status">
+          No posts yet.
+        </p>
+
       </section>
     </main>
 
