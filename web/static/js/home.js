@@ -1,21 +1,27 @@
 // web/static/js/home.js
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = "/api/v1";
 
 document.addEventListener("DOMContentLoaded", () => {
   const output = document.getElementById("posts-output");
   const empty = document.getElementById("posts-empty");
 
-  if (!output) return;
+  if (output) {
+    loadPublicPosts(output, empty);
+  }
 
-  loadPublicPosts(output, empty);
+  loadGreeting();
 });
+
+// --------------------------------------------------
+// POSTS
+// --------------------------------------------------
 
 async function loadPublicPosts(output, emptyEl) {
   try {
     const res = await fetch(`${API_BASE}/posts/public`, {
       method: "GET",
-      credentials: "include", // safe even if not needed
+      credentials: "include",
       headers: { "Accept": "application/json" },
     });
 
@@ -27,7 +33,6 @@ async function loadPublicPosts(output, emptyEl) {
       return;
     }
 
-    // Your API shape: { data: [...], meta: {...} } OR { data: null, meta: {...} }
     const posts = Array.isArray(payload?.data) ? payload.data : [];
 
     if (posts.length === 0) {
@@ -36,8 +41,8 @@ async function loadPublicPosts(output, emptyEl) {
     }
 
     if (emptyEl) emptyEl.hidden = true;
-
     output.innerHTML = "";
+
     for (const post of posts) {
       output.appendChild(renderPostCard(post));
     }
@@ -53,14 +58,13 @@ function showEmpty(output, emptyEl) {
 }
 
 function renderPostCard(post) {
-  // PublicPost fields from backend: id, title, body, author, categories[], likes, dislikes, created_at
   const article = document.createElement("article");
   article.className = "post card card-pad";
   article.setAttribute("aria-labelledby", `post-${post.id}-title`);
 
   const created = formatCreatedAt(post.created_at);
-
   const categories = Array.isArray(post.categories) ? post.categories : [];
+
   const categoriesHtml =
     categories.length > 0
       ? `<p class="muted post-categories">${escapeHtml(categories.join(", "))}</p>`
@@ -69,8 +73,12 @@ function renderPostCard(post) {
   article.innerHTML = `
     <header class="post-header">
       <div class="post-meta">
-        <h3 id="post-${post.id}-title" class="post-title">${escapeHtml(post.title ?? "")}</h3>
-        <p class="post-author muted">Author: ${escapeHtml(post.author ?? "")}</p>
+        <h3 id="post-${post.id}-title" class="post-title">
+          ${escapeHtml(post.title ?? "")}
+        </h3>
+        <p class="post-author muted">
+          Author: ${escapeHtml(post.author ?? "")}
+        </p>
         ${categoriesHtml}
       </div>
 
@@ -95,7 +103,9 @@ function renderPostCard(post) {
       </div>
 
       <div class="action-right">
-        <button class="btn btn-secondary" type="button" disabled>Load comments</button>
+        <button class="btn btn-secondary" type="button" disabled>
+          Load comments
+        </button>
       </div>
     </section>
   `;
@@ -103,13 +113,44 @@ function renderPostCard(post) {
   return article;
 }
 
+// --------------------------------------------------
+// GREETING
+// --------------------------------------------------
+
+async function loadGreeting() {
+  const greetingEl = document.getElementById("greeting");
+  if (!greetingEl) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/users/me`, {
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      greetingEl.textContent = "Hello, Guest";
+      return;
+    }
+
+    const payload = await res.json();
+    const username = payload?.data?.username;
+
+    greetingEl.textContent = username
+      ? `Hello, ${username}`
+      : "Hello, Guest";
+  } catch {
+    greetingEl.textContent = "Hello, Guest";
+  }
+}
+
+// --------------------------------------------------
+// HELPERS
+// --------------------------------------------------
+
 function formatCreatedAt(iso) {
   if (!iso) return "";
-  // handles: 2025-12-30T10:20:30Z or "2025-12-30 10:20"
   return String(iso).replace("T", " ").replace("Z", "").slice(0, 16);
 }
 
-// Minimal escaping to prevent HTML injection
 function escapeHtml(s) {
   return String(s)
     .replaceAll("&", "&amp;")
