@@ -172,8 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const payload = {
             title,
             body,
-            status: action === "publish" ? "published" : "draft",
+            action: action === "publish" ? "publish" : "draft",
         };
+
 
         try {
             const res = await fetch("http://localhost:8080/api/v1/posts", {

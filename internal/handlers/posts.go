@@ -110,6 +110,7 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Title       string  `json:"title"`
 		Body        string  `json:"body"`
+		Status      string  `json:"status"`
 		CategoryIDs []int64 `json:"category_ids"`
 	}
 
@@ -118,9 +119,14 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Body) == "" {
-		WriteError(w, r, NewError("BAD_REQUEST", "title and body required", http.StatusBadRequest))
+	if strings.TrimSpace(req.Title) == "" {
+		WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
 		return
+	}
+
+	status := "draft"
+	if strings.ToLower(req.Status) == "publish" {
+		status = "published"
 	}
 
 	postID, err := repository.CreatePostWithCategories(
@@ -129,8 +135,10 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		userID,
 		req.Title,
 		req.Body,
+		status,
 		req.CategoryIDs,
 	)
+
 	if err != nil {
 		log.Printf("failed to create post: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
