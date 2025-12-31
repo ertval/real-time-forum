@@ -1,72 +1,41 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Post</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>View Post</title>
 
-  <link rel="stylesheet" href="/static/css/base.css" />
-  <link rel="stylesheet" href="/static/css/view-post.css" />
-</head>
+    <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/view-post.css" />
+  </head>
 
-<body class="view-post">
-<main class="container">
-  <article aria-label="Post" class="card card-pad viewpost-card">
-    <header class="viewpost-header">
-      <div class="viewpost-meta">
-        <h1 class="viewpost-title">Post title goes here</h1>
-        <p class="muted viewpost-author">Author: username_here</p>
-      </div>
+  <body class="view-post">
+    <main class="container" aria-labelledby="forum-title">
 
-      <time class="muted viewpost-time" datetime="2025-12-24T12:34:00Z">2025-12-24 12:34</time>
-    </header>
+      <!-- common header (loaded via JS) -->
+      <div id="header"></div>
 
-    <section aria-label="Post body" class="viewpost-body">
-      <p class="viewpost-body-text">Post body goes here.</p>
-    </section>
+      <article
+        aria-label="Post"
+        class="card card-pad viewpost-card"
+      >
+      </article>
 
-    <section aria-label="Post actions" class="viewpost-actions">
-      <div class="viewpost-reactions">
-        <div class="reaction">
-          <span id="like-count" class="reaction-count">0</span>
-          <button class="btn btn-ghost" type="button">Like</button>
-        </div>
+    </main>
 
-        <div class="reaction">
-          <span id="dislike-count" class="reaction-count">0</span>
-          <button class="btn btn-ghost" type="button">Dislike</button>
-        </div>
-      </div>
+    <!-- Load header partial -->
+    <script>
+      fetch("/static/partials/header.html")
+        .then(res => res.text())
+        .then(html => {
+          document.getElementById("header").innerHTML = html;
+        });
+    </script>
 
-      <div class="viewpost-actions-right">
-        <button class="btn btn-secondary" type="button">Comments</button>
-      </div>
-    </section>
+    <!-- common layout JS  -->
+    <script src="/static/js/layout.js" defer></script>
 
-    <section aria-label="Comments" class="viewpost-comments">
-      <h2 class="viewpost-comments-title">Comments</h2>
-
-      <div id="comments" class="comments">
-        <article aria-label="Comment" class="comment-card">
-          <header class="comment-card-header">
-            <strong>comment_author</strong>
-            <time class="muted" datetime="2025-12-24T12:40:00Z">2025-12-24 12:40</time>
-          </header>
-
-          <p class="comment-card-text">Comment text goes here.</p>
-        </article>
-
-        <article aria-label="Comment" class="comment-card">
-          <header class="comment-card-header">
-            <strong>comment_author_2</strong>
-            <time class="muted" datetime="2025-12-24T12:45:00Z">2025-12-24 12:45</time>
-          </header>
-
-          <p class="comment-card-text">Another comment text goes here.</p>
-        </article>
-      </div>
-    </section>
-  </article>
-</main>
-</body>
+    <!-- page-specific -->
+    <script src="/static/js/view-post.js" defer></script>
+  </body>
 </html>

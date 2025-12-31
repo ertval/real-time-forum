@@ -66,3 +66,13 @@
     margin-bottom:6px;
 }
 .comment-text{ margin:0; }
+
+.forum-logo {
+    padding: 4px 10px;
+    border-radius: 8px;
+    transition: background-color 120ms ease;
+}
+
+.forum-logo:hover {
+    background-color: rgba(15, 23, 42, 0.04);
+}

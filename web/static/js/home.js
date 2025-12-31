@@ -1,8 +1,9 @@
 // web/static/js/home.js
 
-const API_BASE = "/api/v1";
-
 document.addEventListener("DOMContentLoaded", () => {
+  // --------------------------------------------------
+  // Load posts
+  // --------------------------------------------------
   const output = document.getElementById("posts-output");
   const empty = document.getElementById("posts-empty");
 
@@ -10,8 +11,25 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPublicPosts(output, empty);
   }
 
-  loadGreeting();
+  // --------------------------------------------------
+  // Greeting 
+  // --------------------------------------------------
+  waitForGreetingAndLoad();
 });
+
+// --------------------------------------------------
+// WAIT FOR HEADER 
+// --------------------------------------------------
+
+function waitForGreetingAndLoad() {
+  const interval = setInterval(() => {
+    const greetingEl = document.getElementById("greeting");
+    if (greetingEl) {
+      clearInterval(interval);
+      loadGreeting(greetingEl);
+    }
+  }, 50);
+}
 
 // --------------------------------------------------
 // POSTS
@@ -19,10 +37,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadPublicPosts(output, emptyEl) {
   try {
-    const res = await fetch(`${API_BASE}/posts`, { // `${API_BASE}/posts/public ???
+    const res = await fetch(`${API_BASE}/posts`, {
       method: "GET",
       credentials: "include",
-      headers: { "Accept": "application/json" },
+      headers: { Accept: "application/json" },
     });
 
     const payload = await res.json().catch(() => null);
@@ -57,10 +75,20 @@ function showEmpty(output, emptyEl) {
   if (emptyEl) emptyEl.hidden = false;
 }
 
+// --------------------------------------------------
+// POST CARD
+// --------------------------------------------------
+
 function renderPostCard(post) {
   const article = document.createElement("article");
   article.className = "post card card-pad";
   article.setAttribute("aria-labelledby", `post-${post.id}-title`);
+
+  // Click → view-post/{id}
+  article.style.cursor = "pointer";
+  article.addEventListener("click", () => {
+    window.location.href = `/view-post/${post.id}`;
+  });
 
   // -----------------------
   // Header
@@ -83,7 +111,6 @@ function renderPostCard(post) {
   meta.appendChild(title);
   meta.appendChild(author);
 
-  // Categories (separate responsibility)
   renderCategories(meta, post.categories);
 
   const time = document.createElement("time");
@@ -139,7 +166,7 @@ function renderPostCard(post) {
 }
 
 // --------------------------------------------------
-// CATEGORIES 
+// CATEGORIES
 // --------------------------------------------------
 
 function renderCategories(container, categories) {
@@ -177,50 +204,35 @@ function createReaction(label, count) {
 }
 
 // --------------------------------------------------
-// GREETING
+// GREETING 
 // --------------------------------------------------
 
-async function loadGreeting() {
-  const greetingEl = document.getElementById("greeting");
-  if (!greetingEl) return;
-
+async function loadGreeting(greetingEl) {
   try {
     const res = await fetch(`${API_BASE}/users/me`, {
       credentials: "include",
     });
 
-    if (!res.ok) {
-      greetingEl.textContent = "Hello, Guest";
-      return;
+    if (res.ok) {
+      const payload = await res.json();
+      const username = payload?.data?.username;
+
+      greetingEl.textContent = username
+        ? `Hello, ${username}`
+        : "Hello";
+    } else {
+      greetingEl.textContent = "Hello";
     }
-
-    const payload = await res.json();
-    const username = payload?.data?.username;
-
-    greetingEl.textContent = username
-      ? `Hello, ${username}`
-      : "Hello, Guest";
   } catch {
-    greetingEl.textContent = "Hello, Guest";
+    greetingEl.textContent = "Hello";
   }
+
+  greetingEl.hidden = false;
 }
 
 // --------------------------------------------------
 // HELPERS
 // --------------------------------------------------
-
-function formatCreatedAt(iso) {
-  if (!iso) return "";
-
-  const d = new Date(iso); // ISO UTC → Date
-  return d.toLocaleString(undefined, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatCreatedAt(iso) {
   if (!iso) return "";
@@ -236,7 +248,7 @@ function formatCreatedAt(iso) {
 
   const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12;
-  hours = hours === 0 ? 12 : hours; // 12 AM / 12 PM
+  hours = hours === 0 ? 12 : hours;
   hours = String(hours).padStart(2, "0");
 
   return `${year}-${month}-${day}, ${hours}:${minutes} ${ampm}`;
