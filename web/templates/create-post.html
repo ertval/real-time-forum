@@ -14,7 +14,7 @@
     <section class="card card-pad create-post-card" aria-labelledby="create-post-title">
         <h1 id = "create-post-title" class="create-post-title">Create post</h1>
 
-        <form action="/posts" method="post" novalidate>
+        <form id="create-post-form" novalidate>
             <div class="field">
                 <label for="title" class="field-label">Title</label>
                 <input
@@ -48,8 +48,16 @@
                     Post
                 </button>
             </div>
+
+            <div class="create-post-back">
+                <a href="/home" class="btn btn-ghost">
+                    ← Back to home
+                </a>
+            </div>
+
         </form>
     </section>
 </main>
+<script src="/static/app.js" defer></script>
 </body>
 </html>

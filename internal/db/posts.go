@@ -126,7 +126,7 @@ func CreatePostWithCategories(
 	ctx context.Context,
 	db *sql.DB,
 	authorID int64,
-	title, body string,
+	title, body, status string,
 	categoryIDs []int64,
 ) (int64, error) {
 
@@ -144,9 +144,10 @@ func CreatePostWithCategories(
 	}
 
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO posts (author_id, title, body, created_at, updated_at)
-		VALUES (?, ?, ?, datetime('now'), datetime('now'))
-	`, authorID, title, body)
+		INSERT INTO posts (author_id, title, body, status)
+		VALUES (?, ?, ?, ?)
+		`, authorID, title, body, status)
+
 	if err != nil {
 		return 0, err
 	}

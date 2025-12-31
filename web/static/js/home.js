@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadPublicPosts(output, emptyEl) {
   try {
-    const res = await fetch(`${API_BASE}/posts/public`, {
+    const res = await fetch(`${API_BASE}/posts`, { // `${API_BASE}/posts/public ???
       method: "GET",
       credentials: "include",
       headers: { "Accept": "application/json" },
@@ -211,5 +211,33 @@ async function loadGreeting() {
 
 function formatCreatedAt(iso) {
   if (!iso) return "";
-  return String(iso).replace("T", " ").replace("Z", "").slice(0, 16);
+
+  const d = new Date(iso); // ISO UTC → Date
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatCreatedAt(iso) {
+  if (!iso) return "";
+
+  const d = new Date(iso);
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours === 0 ? 12 : hours; // 12 AM / 12 PM
+  hours = String(hours).padStart(2, "0");
+
+  return `${year}-${month}-${day}, ${hours}:${minutes} ${ampm}`;
 }
