@@ -7,6 +7,7 @@
 
     <link rel="stylesheet" href="/static/css/base.css" />
     <link rel="stylesheet" href="/static/css/home.css" />
+    <script src="/static/js/logout.js" defer></script>
   </head>
 
   <body class="home">
@@ -21,6 +22,16 @@
         </div>
 
         <div class="page-actions">
+          <button
+                  id = "logout-btn"
+                  class="btn btn-secondary"
+                  data-logout-button
+                  data-logout-url="/api/v1/users/logout"
+                  type="button"
+          >
+            Logout
+          </button>
+
           <a class="btn btn-primary" href="/create-post">Create post</a>
         </div>
       </header>

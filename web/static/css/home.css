@@ -1,4 +1,10 @@
 
+.page-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .posts{
     display:flex;
     flex-direction:column;
@@ -66,3 +72,7 @@
     margin-bottom:6px;
 }
 .comment-text{ margin:0; }
+
+#logout-btn {
+    display: none;
+}

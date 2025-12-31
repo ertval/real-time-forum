@@ -182,45 +182,39 @@ function createReaction(label, count) {
 
 async function loadGreeting() {
   const greetingEl = document.getElementById("greeting");
+  const logoutBtn = document.getElementById("logout-btn");
+
   if (!greetingEl) return;
 
   try {
     const res = await fetch(`${API_BASE}/users/me`, {
+      method: "GET",
       credentials: "include",
+      headers: { "Accept": "application/json" },
     });
 
     if (!res.ok) {
       greetingEl.textContent = "Hello, Guest";
+      if (logoutBtn) logoutBtn.style.display = "none";
       return;
     }
 
-    const payload = await res.json();
+    const payload = await res.json().catch(() => null);
     const username = payload?.data?.username;
 
     greetingEl.textContent = username
       ? `Hello, ${username}`
       : "Hello, Guest";
+      if (logoutBtn) logoutBtn.style.display = username ? "inline-flex" : "none";
   } catch {
     greetingEl.textContent = "Hello, Guest";
+    if (logoutBtn) logoutBtn.style.display = "none";
   }
 }
 
 // --------------------------------------------------
 // HELPERS
 // --------------------------------------------------
-
-function formatCreatedAt(iso) {
-  if (!iso) return "";
-
-  const d = new Date(iso); // ISO UTC → Date
-  return d.toLocaleString(undefined, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatCreatedAt(iso) {
   if (!iso) return "";
