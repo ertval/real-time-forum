@@ -1,4 +1,3 @@
-// web/static/js/login.js
 (() => {
     const form = document.querySelector('form');
     const identifierEl = document.getElementById('email');
@@ -68,5 +67,9 @@
         const show = passwordEl.type === 'password';
         passwordEl.type = show ? 'text' : 'password';
         toggleBtn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+
+    document.getElementById('guest-login')?.addEventListener('click', () => {
+        window.location.assign('/');
     });
 })();
