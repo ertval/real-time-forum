@@ -69,7 +69,7 @@
         toggleBtn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
     });
 
-    document.getElementById('guest-login')?.addEventListener('click', () => {
+    document.getElementById('guest-login-btn')?.addEventListener('click', () => {
         window.location.assign('/');
     });
 })();
