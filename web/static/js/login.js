@@ -55,7 +55,7 @@
                 return;
             }
 
-            window.location.assign('/home');
+            window.location.assign('/');
         } catch {
             showError('Network error. Please try again.');
         } finally {
