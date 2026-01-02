@@ -139,7 +139,7 @@ function renderPostCard(post) {
 }
 
 // --------------------------------------------------
-// CATEGORIES 
+// CATEGORIES
 // --------------------------------------------------
 
 function renderCategories(container, categories) {
@@ -182,6 +182,7 @@ function createReaction(label, count) {
 
 async function loadGreeting() {
   const greetingEl = document.getElementById("greeting");
+  const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
 
   if (!greetingEl) return;
@@ -193,21 +194,26 @@ async function loadGreeting() {
       headers: { "Accept": "application/json" },
     });
 
+    //case guest
     if (!res.ok) {
       greetingEl.textContent = "Hello, Guest";
+      if (loginBtn) loginBtn.style.display = "inline-flex";
       if (logoutBtn) logoutBtn.style.display = "none";
       return;
     }
-
+    //case logged in
     const payload = await res.json().catch(() => null);
     const username = payload?.data?.username;
 
     greetingEl.textContent = username
       ? `Hello, ${username}`
-      : "Hello, Guest";
-      if (logoutBtn) logoutBtn.style.display = username ? "inline-flex" : "none";
+      : "Hello";
+    if (loginBtn) loginBtn.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = username ? "inline-flex" : "none";
   } catch {
+
     greetingEl.textContent = "Hello, Guest";
+    if (loginBtn) loginBtn.style.display = "inline-flex";
     if (logoutBtn) logoutBtn.style.display = "none";
   }
 }

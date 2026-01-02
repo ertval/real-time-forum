@@ -73,6 +73,7 @@
 }
 .comment-text{ margin:0; }
 
+#login-btn,
 #logout-btn {
     display: none;
 }
