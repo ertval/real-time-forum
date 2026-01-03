@@ -204,27 +204,48 @@ function createReaction(label, count) {
 }
 
 // --------------------------------------------------
-// GREETING 
+// GREETING
 // --------------------------------------------------
 
-async function loadGreeting(greetingEl) {
+async function loadGreeting() {
+  const greetingEl = document.getElementById("greeting");
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  if (!greetingEl) return;
+
   try {
     const res = await fetch(`${API_BASE}/users/me`, {
+      method: "GET",
       credentials: "include",
+      headers: { "Accept": "application/json" },
     });
 
-    if (res.ok) {
-      const payload = await res.json();
-      const username = payload?.data?.username;
-
-      greetingEl.textContent = username
-        ? `Hello, ${username}`
-        : "Hello";
-    } else {
-      greetingEl.textContent = "Hello";
+    // Guest (not logged in)
+    if (!res.ok) {
+      greetingEl.textContent = "Hello, Guest";
+      if (loginBtn) loginBtn.style.display = "inline-flex";
+      if (logoutBtn) logoutBtn.style.display = "none";
+      greetingEl.hidden = false;
+      return;
     }
+
+    // Logged in
+    const payload = await res.json().catch(() => null);
+    const username = payload?.data?.username;
+
+    greetingEl.textContent = username
+      ? `Hello, ${username}`
+      : "Hello";
+
+    if (loginBtn) loginBtn.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "inline-flex";
+
   } catch {
-    greetingEl.textContent = "Hello";
+    // Network / unexpected error → treat as guest
+    greetingEl.textContent = "Hello, Guest";
+    if (loginBtn) loginBtn.style.display = "inline-flex";
+    if (logoutBtn) logoutBtn.style.display = "none";
   }
 
   greetingEl.hidden = false;

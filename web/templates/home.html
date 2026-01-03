@@ -7,6 +7,9 @@
 
     <link rel="stylesheet" href="/static/css/base.css" />
     <link rel="stylesheet" href="/static/css/home.css" />
+
+    <!-- logout logic -->
+    <script src="/static/js/logout.js" defer></script>
   </head>
 
   <body class="home">
@@ -34,13 +37,14 @@
         .then(res => res.text())
         .then(html => {
           document.getElementById("header").innerHTML = html;
-        });
+        })
+        .catch(err => console.error("Failed to load header:", err));
     </script>
 
-    <!-- common layout JS (Forum click + greeting) -->
+    <!-- common layout JS (greeting, auth buttons) -->
     <script src="/static/js/layout.js" defer></script>
 
-    <!-- page-specific -->
+    <!-- page-specific JS -->
     <script src="/static/js/home.js" defer></script>
   </body>
 </html>

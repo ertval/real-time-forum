@@ -1,20 +1,30 @@
 <header class="page-header">
   <div class="page-title-wrap">
-    <h1 class="page-title">
-      <a href="/home" id="forum-title" class="forum-logo-link forum-logo">
-        Forum
-      </a>
-    </h1>
-
-    <p
-      id="greeting"
-      class="muted"
-      aria-live="polite"
-      hidden
-    ></p>
+    <h1 id="forum-title" class="page-title">Forum</h1>
+    <p id="greeting" class="muted" aria-live="polite">
+      Hello, Guest
+    </p>
   </div>
 
   <div class="page-actions">
+    <a
+      id="login-btn"
+      class="btn btn-secondary"
+      href="/login"
+    >
+      Login
+    </a>
+
+    <button
+      id="logout-btn"
+      class="btn btn-secondary"
+      data-logout-button
+      data-logout-url="/api/v1/users/logout"
+      type="button"
+    >
+      Logout
+    </button>
+
     <a class="btn btn-primary" href="/create-post">
       Create post
     </a>
