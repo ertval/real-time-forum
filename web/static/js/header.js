@@ -1,5 +1,6 @@
 // web/static/js/header.js
 
+
 /**
  * Entry point
  * Called AFTER header.html is injected into DOM
@@ -7,11 +8,12 @@
 initHeader();
 
 async function initHeader() {
+  setupForumLogo();
+
   const greetingEl = document.getElementById("greeting");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
 
-  // Safety check
   if (!greetingEl || !loginBtn || !logoutBtn) {
     console.warn("Header elements not found");
     return;
@@ -19,6 +21,20 @@ async function initHeader() {
 
   await loadGreeting(greetingEl, loginBtn, logoutBtn);
   bindLogout(logoutBtn);
+}
+
+// --------------------------------------------------
+// FORUM LOGO → /home
+// --------------------------------------------------
+
+function setupForumLogo() {
+  const forumTitle = document.getElementById("forum-title");
+  if (!forumTitle) return;
+
+  forumTitle.style.cursor = "pointer";
+  forumTitle.addEventListener("click", () => {
+    window.location.assign("/home");
+  });
 }
 
 // --------------------------------------------------
@@ -53,7 +69,7 @@ async function loadGreeting(greetingEl, loginBtn, logoutBtn) {
     greetingEl.hidden = false;
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-flex";
-  } catch (err) {
+  } catch {
     greetingEl.textContent = "Hello, Guest";
     greetingEl.hidden = false;
 
@@ -67,7 +83,8 @@ async function loadGreeting(greetingEl, loginBtn, logoutBtn) {
 // --------------------------------------------------
 
 function bindLogout(logoutBtn) {
-  logoutBtn.addEventListener("click", async () => {
+  logoutBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
     logoutBtn.disabled = true;
 
     try {
@@ -77,7 +94,6 @@ function bindLogout(logoutBtn) {
         headers: { Accept: "application/json" },
       });
 
-      // Always redirect – even if cookie already expired
       window.location.assign("/login");
     } catch (err) {
       console.error("Logout failed:", err);

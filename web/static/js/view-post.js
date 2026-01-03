@@ -61,7 +61,3 @@ function renderPost(post) {
     post.dislikes ?? 0;
 }
 
-function formatCreatedAt(iso) {
-  if (!iso) return "";
-  return iso.slice(0, 10); // YYYY-MM-DD
-}

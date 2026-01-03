@@ -9,8 +9,12 @@
     <link rel="stylesheet" href="/static/css/header.css" />
     <link rel="stylesheet" href="/static/css/home.css" />
 
-    <!-- logout logic -->
-    <script src="/static/js/logout.js" defer></script>
+    <!-- Global helpers FIRST -->
+    <script src="/static/js/helper.js" defer></script>
+    <script src="/static/js/header.js" defer></script>
+
+    <!-- Page logic -->
+    <script src="/static/js/home.js" defer></script>
   </head>
 
   <body class="home">
@@ -22,17 +26,15 @@
       <section class="posts" aria-labelledby="posts-title">
         <h2 id="posts-title" class="sr-only">Posts</h2>
 
-        <!-- JS renders here -->
         <div id="posts-output" class="posts-output"></div>
 
-        <!-- Empty state -->
         <p id="posts-empty" class="muted" hidden role="status">
           No posts yet.
         </p>
       </section>
     </main>
 
-    <!-- Load header partial -->
+    <!-- Load header partial + header.js -->
     <script>
       fetch("/static/partials/header.html")
         .then(res => res.text())
@@ -41,16 +43,9 @@
 
           const script = document.createElement("script");
           script.src = "/static/js/header.js";
-          script.defer = true;
+          script.onload = () => initHeader();
           document.body.appendChild(script);
         });
     </script>
-
-
-    <!-- common layout JS (greeting, auth buttons) -->
-    <script src="/static/js/layout.js" defer></script>
-
-    <!-- page-specific JS -->
-    <script src="/static/js/home.js" defer></script>
   </body>
 </html>

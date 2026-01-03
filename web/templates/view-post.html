@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="/static/css/base.css" />
     <link rel="stylesheet" href="/static/css/header.css" />
     <link rel="stylesheet" href="/static/css/view-post.css" />
+  
+    <script src="/static/js/helper.js" defer></script>
+    <script src="/static/js/header.js" defer></script>
+    <script src="/static/js/view-post.js" defer></script>
   </head>
 
   <body class="view-post">
@@ -18,6 +22,7 @@
 
       <article class="card card-pad viewpost-card">
 
+        <!-- ================= HEADER ================= -->
         <header class="viewpost-header">
           <div class="viewpost-meta">
             <h1 class="viewpost-title"></h1>
@@ -27,27 +32,44 @@
           <time class="muted viewpost-time"></time>
         </header>
 
+        <!-- ================= BODY ================= -->
         <section class="viewpost-body">
           <p class="viewpost-body-text"></p>
         </section>
 
+        <!-- ================= ACTIONS ================= -->
         <section class="viewpost-actions">
           <div class="viewpost-reactions">
+
             <div class="reaction">
               <span id="like-count" class="reaction-count">0</span>
-              <button class="btn btn-ghost" disabled>Like</button>
+              <button
+                class="btn btn-ghost"
+                type="button"
+                data-like
+              >
+                Like
+              </button>
             </div>
 
             <div class="reaction">
               <span id="dislike-count" class="reaction-count">0</span>
-              <button class="btn btn-ghost" disabled>Dislike</button>
+              <button
+                class="btn btn-ghost"
+                type="button"
+                data-dislike
+              >
+                Dislike
+              </button>
             </div>
+
           </div>
         </section>
 
       </article>
     </main>
 
+    <!-- load header partial -->
     <script>
       fetch("/static/partials/header.html")
         .then(res => res.text())
@@ -55,13 +77,11 @@
           document.getElementById("header").innerHTML = html;
 
           const script = document.createElement("script");
-          script.src = "/static/js/header.js";
+          script.src = "/web/static/js/header.js";
           script.defer = true;
           document.body.appendChild(script);
         });
     </script>
 
-    <script src="/static/js/layout.js" defer></script>
-    <script src="/static/js/view-post.js" defer></script>
   </body>
 </html>
