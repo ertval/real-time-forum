@@ -90,4 +90,7 @@
             submitBtn.disabled = false;
         }
     });
+    document.getElementById('guest-login-btn')?.addEventListener('click', () => {
+        window.location.assign('/');
+    });
 })();
