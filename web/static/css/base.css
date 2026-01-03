@@ -51,7 +51,6 @@ a {
     color: var(--primary);
     text-decoration: none;
 }
-a:hover { text-decoration: underline; }
 
 /* ---------- Layout helpers ---------- */
 .container {
@@ -65,25 +64,6 @@ a:hover { text-decoration: underline; }
     display: grid;
     place-items: center;
     padding: 40px 16px;
-}
-
-/* ---------- Page header ---------- */
-.page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.page-title {
-    margin: 0;
-}
-
-.page-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
 }
 
 /* ---------- Surfaces / cards ---------- */

@@ -6,43 +6,18 @@
     <title>Forum Home</title>
 
     <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/header.css" />
     <link rel="stylesheet" href="/static/css/home.css" />
+
+    <!-- logout logic -->
     <script src="/static/js/logout.js" defer></script>
   </head>
 
   <body class="home">
     <main class="container" aria-labelledby="forum-title">
 
-      <header class="page-header">
-        <div class="page-title-wrap">
-          <h1 id="forum-title" class="page-title">Forum</h1>
-          <p id="greeting" class="muted" aria-live="polite">
-            Hello, Guest
-          </p>
-        </div>
-
-        <div class="page-actions">
-          <a
-                  id="login-btn"
-                  class="btn btn-secondary"
-                  href="/login"
-          >
-            Login
-          </a>
-
-          <button
-                  id = "logout-btn"
-                  class="btn btn-secondary"
-                  data-logout-button
-                  data-logout-url="/api/v1/users/logout"
-                  type="button"
-          >
-            Logout
-          </button>
-
-          <a class="btn btn-primary" href="/create-post">Create post</a>
-        </div>
-      </header>
+      <!-- COMMON HEADER (loaded via JS) -->
+      <div id="header"></div>
 
       <section class="posts" aria-labelledby="posts-title">
         <h2 id="posts-title" class="sr-only">Posts</h2>
@@ -54,10 +29,28 @@
         <p id="posts-empty" class="muted" hidden role="status">
           No posts yet.
         </p>
-
       </section>
     </main>
 
+    <!-- Load header partial -->
+    <script>
+      fetch("/static/partials/header.html")
+        .then(res => res.text())
+        .then(html => {
+          document.getElementById("header").innerHTML = html;
+
+          const script = document.createElement("script");
+          script.src = "/static/js/header.js";
+          script.defer = true;
+          document.body.appendChild(script);
+        });
+    </script>
+
+
+    <!-- common layout JS (greeting, auth buttons) -->
+    <script src="/static/js/layout.js" defer></script>
+
+    <!-- page-specific JS -->
     <script src="/static/js/home.js" defer></script>
   </body>
 </html>
