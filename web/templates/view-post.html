@@ -6,36 +6,62 @@
     <title>View Post</title>
 
     <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/header.css" />
     <link rel="stylesheet" href="/static/css/view-post.css" />
   </head>
 
   <body class="view-post">
-    <main class="container" aria-labelledby="forum-title">
+    <main class="container">
 
-      <!-- common header (loaded via JS) -->
+      <!-- common header -->
       <div id="header"></div>
 
-      <article
-        aria-label="Post"
-        class="card card-pad viewpost-card"
-      >
-      </article>
+      <article class="card card-pad viewpost-card">
 
+        <header class="viewpost-header">
+          <div class="viewpost-meta">
+            <h1 class="viewpost-title"></h1>
+            <p class="muted viewpost-author"></p>
+          </div>
+
+          <time class="muted viewpost-time"></time>
+        </header>
+
+        <section class="viewpost-body">
+          <p class="viewpost-body-text"></p>
+        </section>
+
+        <section class="viewpost-actions">
+          <div class="viewpost-reactions">
+            <div class="reaction">
+              <span id="like-count" class="reaction-count">0</span>
+              <button class="btn btn-ghost" disabled>Like</button>
+            </div>
+
+            <div class="reaction">
+              <span id="dislike-count" class="reaction-count">0</span>
+              <button class="btn btn-ghost" disabled>Dislike</button>
+            </div>
+          </div>
+        </section>
+
+      </article>
     </main>
 
-    <!-- Load header partial -->
     <script>
       fetch("/static/partials/header.html")
         .then(res => res.text())
         .then(html => {
           document.getElementById("header").innerHTML = html;
+
+          const script = document.createElement("script");
+          script.src = "/static/js/header.js";
+          script.defer = true;
+          document.body.appendChild(script);
         });
     </script>
 
-    <!-- common layout JS  -->
     <script src="/static/js/layout.js" defer></script>
-
-    <!-- page-specific -->
     <script src="/static/js/view-post.js" defer></script>
   </body>
 </html>

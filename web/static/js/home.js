@@ -1,35 +1,13 @@
 // web/static/js/home.js
 
 document.addEventListener("DOMContentLoaded", () => {
-  // --------------------------------------------------
-  // Load posts
-  // --------------------------------------------------
   const output = document.getElementById("posts-output");
   const empty = document.getElementById("posts-empty");
 
   if (output) {
     loadPublicPosts(output, empty);
   }
-
-  // --------------------------------------------------
-  // Greeting 
-  // --------------------------------------------------
-  waitForGreetingAndLoad();
 });
-
-// --------------------------------------------------
-// WAIT FOR HEADER 
-// --------------------------------------------------
-
-function waitForGreetingAndLoad() {
-  const interval = setInterval(() => {
-    const greetingEl = document.getElementById("greeting");
-    if (greetingEl) {
-      clearInterval(interval);
-      loadGreeting(greetingEl);
-    }
-  }, 50);
-}
 
 // --------------------------------------------------
 // POSTS
@@ -84,7 +62,7 @@ function renderPostCard(post) {
   article.className = "post card card-pad";
   article.setAttribute("aria-labelledby", `post-${post.id}-title`);
 
-  // Click → view-post/{id}
+  // Click → /view-post/{id}
   article.style.cursor = "pointer";
   article.addEventListener("click", () => {
     window.location.href = `/view-post/${post.id}`;
@@ -106,7 +84,9 @@ function renderPostCard(post) {
 
   const author = document.createElement("p");
   author.className = "post-author muted";
-  author.textContent = `Author: ${post.author ?? ""}`;
+  author.textContent = post.author
+    ? `Author: ${post.author}`
+    : `Author ID: ${post.author_id}`;
 
   meta.appendChild(title);
   meta.appendChild(author);
@@ -180,7 +160,7 @@ function renderCategories(container, categories) {
 }
 
 // --------------------------------------------------
-// REACTIONS
+// REACTIONS (display only for now)
 // --------------------------------------------------
 
 function createReaction(label, count) {
@@ -204,73 +184,10 @@ function createReaction(label, count) {
 }
 
 // --------------------------------------------------
-// GREETING
-// --------------------------------------------------
-
-async function loadGreeting() {
-  const greetingEl = document.getElementById("greeting");
-  const loginBtn = document.getElementById("login-btn");
-  const logoutBtn = document.getElementById("logout-btn");
-
-  if (!greetingEl) return;
-
-  try {
-    const res = await fetch(`${API_BASE}/users/me`, {
-      method: "GET",
-      credentials: "include",
-      headers: { "Accept": "application/json" },
-    });
-
-    // Guest (not logged in)
-    if (!res.ok) {
-      greetingEl.textContent = "Hello, Guest";
-      if (loginBtn) loginBtn.style.display = "inline-flex";
-      if (logoutBtn) logoutBtn.style.display = "none";
-      greetingEl.hidden = false;
-      return;
-    }
-
-    // Logged in
-    const payload = await res.json().catch(() => null);
-    const username = payload?.data?.username;
-
-    greetingEl.textContent = username
-      ? `Hello, ${username}`
-      : "Hello";
-
-    if (loginBtn) loginBtn.style.display = "none";
-    if (logoutBtn) logoutBtn.style.display = "inline-flex";
-
-  } catch {
-    // Network / unexpected error → treat as guest
-    greetingEl.textContent = "Hello, Guest";
-    if (loginBtn) loginBtn.style.display = "inline-flex";
-    if (logoutBtn) logoutBtn.style.display = "none";
-  }
-
-  greetingEl.hidden = false;
-}
-
-// --------------------------------------------------
 // HELPERS
 // --------------------------------------------------
 
 function formatCreatedAt(iso) {
   if (!iso) return "";
-
-  const d = new Date(iso);
-
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-
-  let hours = d.getHours();
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12;
-  hours = hours === 0 ? 12 : hours;
-  hours = String(hours).padStart(2, "0");
-
-  return `${year}-${month}-${day}, ${hours}:${minutes} ${ampm}`;
+  return iso.slice(0, 10); // YYYY-MM-DD
 }

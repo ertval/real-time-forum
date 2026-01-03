@@ -45,7 +45,7 @@ func main() {
 	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgot-password.html"))
 	mux.HandleFunc("/login", serveTemplate("./web/templates/login.html"))
 	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
-	mux.HandleFunc("/view-post", serveTemplate("./web/templates/view-post.html"))
+	mux.Handle("/view-post/", serveTemplate("./web/templates/view-post.html"))
 
 	log.Println("Frontend running at http://localhost:3000")
 	log.Fatal(http.ListenAndServe(":3000", mux))
