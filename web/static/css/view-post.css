@@ -96,3 +96,21 @@
 .view-post .comment-card:last-child {
     margin-bottom: 0;
 }
+
+.viewpost-comments {
+  margin-top: 24px;
+}
+
+.comment {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment:last-child {
+  border-bottom: none;
+}
+
+.comment small {
+  display: block;
+  margin-top: 4px;
+}

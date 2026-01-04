@@ -16,45 +16,34 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadPublicPosts(output, emptyEl) {
   try {
     const res = await fetch(`${API_BASE}/posts`, {
-      method: "GET",
       credentials: "include",
       headers: { Accept: "application/json" },
     });
 
-    const payload = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      console.error("Failed to load posts:", res.status, payload);
+    const payload = await res.json();
+    if (!res.ok || !payload?.data?.length) {
       showEmpty(output, emptyEl);
       return;
     }
 
-    const posts = Array.isArray(payload?.data) ? payload.data : [];
-
-    if (posts.length === 0) {
-      showEmpty(output, emptyEl);
-      return;
-    }
-
-    if (emptyEl) emptyEl.hidden = true;
+    emptyEl.hidden = true;
     output.innerHTML = "";
 
-    for (const post of posts) {
-      output.appendChild(renderPostCard(post));
+    for (const post of payload.data) {
+      const card = renderPostCard(post);
+      output.appendChild(card);
+
+      await loadPostCommentsPreview(post.id, card);
     }
-
-    // 🔥 enable reactions AFTER render
-    bindReactions(output);
-
   } catch (err) {
-    console.error("Error loading posts:", err);
+    console.error(err);
     showEmpty(output, emptyEl);
   }
 }
 
 function showEmpty(output, emptyEl) {
   output.innerHTML = "";
-  if (emptyEl) emptyEl.hidden = false;
+  emptyEl.hidden = false;
 }
 
 // --------------------------------------------------
@@ -65,189 +54,243 @@ function renderPostCard(post) {
   const article = document.createElement("article");
   article.className = "post card card-pad";
   article.dataset.postId = post.id;
-  article.setAttribute("aria-labelledby", `post-${post.id}-title`);
 
-  // Click → /view-post/{id}
-  article.style.cursor = "pointer";
- 
-  article.addEventListener("click", (e) => {
-    if (e.target.closest(".post-actions")) {
-      return;
-    }
+  article.innerHTML = `
+    <header class="post-header clickable">
+      <div>
+        <h3 class="post-title">${post.title}</h3>
+        <p class="muted">Author ID: ${post.author_id}</p>
+      </div>
+      <time class="muted">${formatCreatedAt(post.created_at)}</time>
+    </header>
 
-    window.location.href = `/view-post/${post.id}`;
+    <section class="post-body clickable">
+      <p>${post.body}</p>
+    </section>
+
+    <section class="post-actions">
+      ${reactionTemplate(post)}
+    </section>
+
+    <section class="post-comments" data-comments></section>
+  `;
+
+  // navigation ONLY from header & body
+  article.querySelectorAll(".clickable").forEach(el => {
+    el.addEventListener("click", () => {
+      window.location.href = `/view-post/${post.id}`;
+    });
   });
 
-
-  // -----------------------
-  // Header
-  // -----------------------
-  const header = document.createElement("header");
-  header.className = "post-header";
-
-  const meta = document.createElement("div");
-  meta.className = "post-meta";
-
-  const title = document.createElement("h3");
-  title.id = `post-${post.id}-title`;
-  title.className = "post-title";
-  title.textContent = post.title ?? "";
-
-  const author = document.createElement("p");
-  author.className = "post-author muted";
-  author.textContent = post.author
-    ? `Author: ${post.author}`
-    : `Author ID: ${post.author_id}`;
-
-  meta.appendChild(title);
-  meta.appendChild(author);
-
-  renderCategories(meta, post.categories);
-
-  const time = document.createElement("time");
-  time.className = "post-time muted";
-  time.dateTime = post.created_at ?? "";
-  time.textContent = formatCreatedAt(post.created_at);
-
-  header.appendChild(meta);
-  header.appendChild(time);
-
-  // -----------------------
-  // Body
-  // -----------------------
-  const body = document.createElement("section");
-  body.className = "post-body";
-  body.setAttribute("aria-label", "Post body");
-
-  const bodyText = document.createElement("p");
-  bodyText.textContent = post.body ?? "";
-
-  body.appendChild(bodyText);
-
-  // -----------------------
-  // Actions
-  // -----------------------
-  const actions = document.createElement("section");
-  actions.className = "post-actions";
-  actions.setAttribute("aria-label", "Post actions");
-
-  actions.appendChild(createReaction("Like", post.likes, post.id));
-  actions.appendChild(createReaction("Dislike", post.dislikes, post.id));
-
-  const right = document.createElement("div");
-  right.className = "action-right";
-
-  const commentsBtn = document.createElement("button");
-  commentsBtn.className = "btn btn-secondary";
-  commentsBtn.type = "button";
-  commentsBtn.disabled = true;
-  commentsBtn.textContent = "Load comments";
-
-  right.appendChild(commentsBtn);
-  actions.appendChild(right);
-
-  // -----------------------
-  // Assemble
-  // -----------------------
-  article.appendChild(header);
-  article.appendChild(body);
-  article.appendChild(actions);
+  // ABSOLUTE STOP on interactive areas
+  article
+    .querySelectorAll(
+      ".post-actions, .post-comments, button, textarea, form"
+    )
+    .forEach(el => {
+      el.addEventListener("click", e => e.stopPropagation());
+    });
 
   return article;
 }
 
 // --------------------------------------------------
-// CATEGORIES
+// COMMENTS PREVIEW (LAST 3)
 // --------------------------------------------------
 
-function renderCategories(container, categories) {
-  if (!Array.isArray(categories) || categories.length === 0) return;
+async function loadPostCommentsPreview(postId, article) {
+  const container = article.querySelector("[data-comments]");
+  if (!container) return;
 
-  const p = document.createElement("p");
-  p.className = "muted post-categories";
-  p.textContent = categories.join(", ");
+  try {
+    const res = await fetch(
+      `${API_BASE}/posts/${postId}/comments`,
+      { headers: { Accept: "application/json" } }
+    );
 
-  container.appendChild(p);
-}
+    if (!res.ok) return;
 
-// --------------------------------------------------
-// REACTIONS (UI)
-// --------------------------------------------------
+    const payload = await res.json();
+    const comments = payload?.data ?? [];
 
-function createReaction(label, count, postId) {
-  const wrap = document.createElement("div");
-  wrap.className = "reaction";
+    if (!comments.length) {
+      await maybeRenderCommentForm(container, postId);
+      return;
+    }
 
-  const span = document.createElement("span");
-  span.className = `count ${label === "Like" ? "like-count" : "dislike-count"}`;
-  span.textContent = Number(count ?? 0);
+    const list = document.createElement("div");
+    list.className = "comments comments-scroll"; // ⬅ scroll box
 
-  const btn = document.createElement("button");
-  btn.className = "btn btn-ghost";
-  btn.type = "button";
-  btn.textContent = label;
+    comments.forEach(c => {
+      const item = document.createElement("div");
+      item.className = "comment";
 
-  if (label === "Like") {
-    btn.dataset.like = postId;
-  } else {
-    btn.dataset.dislike = postId;
+      const username =
+        c.username ||
+        c.author ||
+        (c.user_id ? `User ${c.user_id}` : "User");
+
+      item.innerHTML = `
+        <div class="comment-meta muted">
+          <strong>${username}</strong> • ${formatCreatedAt(c.created_at)}
+        </div>
+        <div class="comment-body">
+          ${c.body}
+        </div>
+      `;
+
+      list.appendChild(item); 
+    });
+
+    container.appendChild(list);
+
+    list.scrollTop = list.scrollHeight;
+
+    await maybeRenderCommentForm(container, postId);
+
+  } catch (err) {
+    console.error(err);
   }
+}
 
-  wrap.appendChild(span);
-  wrap.appendChild(btn);
 
-  return wrap;
+
+// --------------------------------------------------
+// COMMENT FORM
+// --------------------------------------------------
+
+async function maybeRenderCommentForm(container, postId) {
+  try {
+    const res = await fetch(`${API_BASE}/users/me`, {
+      credentials: "include",
+    });
+
+    if (!res.ok) return;
+
+    const form = document.createElement("form");
+    form.className = "comment-form";
+
+    form.innerHTML = `
+      <textarea
+        placeholder="Write a comment..."
+        required
+      ></textarea>
+      <button class="btn btn-primary" type="submit">
+        Comment
+      </button>
+    `;
+
+    // 🛑 STOP EVERYTHING
+    ["click", "mousedown", "keydown", "submit"].forEach(evt => {
+      form.addEventListener(evt, e => {
+        e.stopPropagation();
+        if (evt === "submit") e.preventDefault();
+      });
+    });
+
+    form.addEventListener("submit", async () => {
+      const textarea = form.querySelector("textarea");
+      const body = textarea.value.trim();
+      if (!body) return;
+
+      const res = await fetch(
+        `${API_BASE}/posts/${postId}/comments`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ body }),
+        }
+      );
+
+      if (res.ok) {
+        location.reload();
+      }
+    });
+
+    container.appendChild(form);
+  } catch {}
 }
 
 // --------------------------------------------------
-// REACTIONS (LOGIC)
+// REACTIONS (display only for now)
 // --------------------------------------------------
 
-function bindReactions(container) {
-  container.addEventListener("click", async (e) => {
-    const likeBtn = e.target.closest("[data-like]");
-    const dislikeBtn = e.target.closest("[data-dislike]");
+function reactionTemplate(post) {
+  return `
+    <div class="reaction">
+      <span data-like-count>${post.likes ?? 0}</span>
+      <button
+        class="btn btn-ghost"
+        type="button"
+        data-reaction="like"
+        data-post-id="${post.id}"
+      >
+        Like
+      </button>
+    </div>
 
-    if (!likeBtn && !dislikeBtn) return;
+    <div class="reaction">
+      <span data-dislike-count>${post.dislikes ?? 0}</span>
+      <button
+        class="btn btn-ghost"
+        type="button"
+        data-reaction="dislike"
+        data-post-id="${post.id}"
+      >
+        Dislike
+      </button>
+    </div>
+  `;
+}
 
-    e.stopPropagation();
+// --------------------------------------------------
+// REACTIONS (LOGIC) – FIXED
+// --------------------------------------------------
 
-    const postId = likeBtn
-      ? likeBtn.dataset.like
-      : dislikeBtn.dataset.dislike;
+document.addEventListener(
+  "click",
+  async (e) => {
+    const btn = e.target.closest("[data-reaction]");
+    if (!btn) return;
 
-    const type = likeBtn ? "like" : "dislike";
+    e.preventDefault();
+
+    const postId = btn.dataset.postId;
+    const type = btn.dataset.reaction;
 
     try {
-      const res = await fetch(`/api/v1/posts/${postId}/${type}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
+      const res = await fetch(
+        `${API_BASE}/posts/${postId}/${type}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        }
+      );
 
       if (!res.ok) {
         alert("You must be logged in to react");
         return;
       }
 
-      const payload = await res.json();
-      const data = payload.data;
+      const { data } = await res.json();
 
-      const postEl = container.querySelector(
-        `[data-post-id="${postId}"]`
+      const article = document.querySelector(
+        `article[data-post-id="${postId}"]`
       );
 
-      if (!postEl) return;
-
-      postEl.querySelector(".like-count").textContent =
+      article.querySelector("[data-like-count]").textContent =
         data.likes_count;
-
-      postEl.querySelector(".dislike-count").textContent =
+      article.querySelector("[data-dislike-count]").textContent =
         data.dislikes_count;
 
     } catch (err) {
-      console.error("Reaction failed:", err);
+      console.error(err);
     }
-  });
-}
-
+  },
+  true 
+);

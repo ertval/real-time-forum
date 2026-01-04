@@ -201,7 +201,7 @@ func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPos
 		FROM categories c
 		JOIN post_categories pc ON pc.category_id = c.id
 		JOIN posts p ON p.id = pc.post_id
-		ORDER BY c.name ASC, p.created_at DESC
+		ORDER BY c.name ASC, p.created_at ASC
 	`)
 	if err != nil {
 		return nil, err

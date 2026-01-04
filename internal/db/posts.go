@@ -304,7 +304,7 @@ func ListPostsByCategory(
 		FROM posts p
 		JOIN post_categories pc ON pc.post_id = p.id
 		WHERE pc.category_id = ?
-		ORDER BY p.created_at DESC
+		ORDER BY p.created_at ASC
 		LIMIT ? OFFSET ?
 	`, p.CategoryID, p.PerPage, offset)
 	if err != nil {
@@ -391,7 +391,7 @@ func ListPostsByAuthor(
 		SELECT id, author_id, title, body, created_at, updated_at
 		FROM posts
 		WHERE author_id = ?
-		ORDER BY created_at DESC
+		ORDER BY created_at ASC
 		LIMIT ? OFFSET ?
 	`, p.AuthorID, p.PerPage, offset)
 	if err != nil {
@@ -506,7 +506,7 @@ func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUs
 		JOIN reactions r ON r.post_id = p.id
 		WHERE r.user_id = ?
 		  AND r.value = 1
-		ORDER BY r.created_at DESC
+		ORDER BY r.created_at ASC
 		LIMIT ? OFFSET ?
 	`, p.UserID, p.PerPage, offset)
 	if err != nil {

@@ -20,7 +20,7 @@ func fetchPosts(ctx context.Context, db *sql.DB, p ListPostsParams) ([]Post, err
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, author_id, title, body, created_at, updated_at
 		FROM posts
-		ORDER BY created_at DESC
+		ORDER BY created_at ASC
 		LIMIT ? OFFSET ?
 	`, p.PerPage, offset)
 	if err != nil {

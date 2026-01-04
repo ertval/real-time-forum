@@ -412,6 +412,24 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 	WriteCreated(w, comment)
 }
 
+// GET /api/v1/posts/{id}/comments
+func (p *PostsHandler) ListPostComments(w http.ResponseWriter, r *http.Request) {
+	postID, ok := getPostIDFromURL(w, r)
+	if !ok {
+		return
+	}
+	p.listComments(w, r, postID)
+}
+
+// POST /api/v1/posts/{id}/comments
+func (p *PostsHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
+	postID, ok := getPostIDFromURL(w, r)
+	if !ok {
+		return
+	}
+	p.createComment(w, r, postID)
+}
+
 // ============================================================
 // MY POSTS
 // ============================================================

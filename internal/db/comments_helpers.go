@@ -51,10 +51,19 @@ func fetchCommentsByPost(
 	offset := (params.Page - 1) * params.PerPage
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, post_id, user_id, parent_comment_id, body, created_at, updated_at
-		FROM comments
-		WHERE post_id = ?
-		ORDER BY created_at ASC
+		SELECT
+			c.id,
+			c.post_id,
+			c.user_id,
+			u.username,
+			c.parent_comment_id,
+			c.body,
+			c.created_at,
+			c.updated_at
+		FROM comments c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.post_id = ?
+		ORDER BY c.created_at ASC
 		LIMIT ? OFFSET ?
 	`, params.PostID, params.PerPage, offset)
 	if err != nil {
@@ -72,6 +81,7 @@ func fetchCommentsByPost(
 			&comment.ID,
 			&comment.PostID,
 			&comment.UserID,
+			&comment.Username,
 			&parentID,
 			&comment.Body,
 			&comment.CreatedAt,

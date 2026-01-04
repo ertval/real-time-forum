@@ -114,7 +114,7 @@ func ListPublicPosts(
 	order := "datetime(p.created_at) DESC"
 	switch strings.ToLower(p.SortBy) {
 	case "oldest":
-		order = "datetime(p.created_at) ASC"
+		order = "datetime(p.created_at) DESC"
 	case "top":
 		order = "likes DESC"
 	}
