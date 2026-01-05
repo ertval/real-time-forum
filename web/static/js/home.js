@@ -42,6 +42,10 @@ async function loadPublicPosts(output, emptyEl) {
     for (const post of posts) {
       output.appendChild(renderPostCard(post));
     }
+
+    // 🔥 enable reactions AFTER render
+    bindReactions(output);
+
   } catch (err) {
     console.error("Error loading posts:", err);
     showEmpty(output, emptyEl);
@@ -60,13 +64,20 @@ function showEmpty(output, emptyEl) {
 function renderPostCard(post) {
   const article = document.createElement("article");
   article.className = "post card card-pad";
+  article.dataset.postId = post.id;
   article.setAttribute("aria-labelledby", `post-${post.id}-title`);
 
   // Click → /view-post/{id}
   article.style.cursor = "pointer";
-  article.addEventListener("click", () => {
+ 
+  article.addEventListener("click", (e) => {
+    if (e.target.closest(".post-actions")) {
+      return;
+    }
+
     window.location.href = `/view-post/${post.id}`;
   });
+
 
   // -----------------------
   // Header
@@ -120,8 +131,8 @@ function renderPostCard(post) {
   actions.className = "post-actions";
   actions.setAttribute("aria-label", "Post actions");
 
-  actions.appendChild(createReaction("Like", post.likes));
-  actions.appendChild(createReaction("Dislike", post.dislikes));
+  actions.appendChild(createReaction("Like", post.likes, post.id));
+  actions.appendChild(createReaction("Dislike", post.dislikes, post.id));
 
   const right = document.createElement("div");
   right.className = "action-right";
@@ -160,22 +171,27 @@ function renderCategories(container, categories) {
 }
 
 // --------------------------------------------------
-// REACTIONS (display only for now)
+// REACTIONS (UI)
 // --------------------------------------------------
 
-function createReaction(label, count) {
+function createReaction(label, count, postId) {
   const wrap = document.createElement("div");
   wrap.className = "reaction";
 
   const span = document.createElement("span");
-  span.className = "count";
+  span.className = `count ${label === "Like" ? "like-count" : "dislike-count"}`;
   span.textContent = Number(count ?? 0);
 
   const btn = document.createElement("button");
   btn.className = "btn btn-ghost";
   btn.type = "button";
-  btn.disabled = true;
   btn.textContent = label;
+
+  if (label === "Like") {
+    btn.dataset.like = postId;
+  } else {
+    btn.dataset.dislike = postId;
+  }
 
   wrap.appendChild(span);
   wrap.appendChild(btn);
@@ -184,10 +200,54 @@ function createReaction(label, count) {
 }
 
 // --------------------------------------------------
-// HELPERS
+// REACTIONS (LOGIC)
 // --------------------------------------------------
 
-function formatCreatedAt(iso) {
-  if (!iso) return "";
-  return iso.slice(0, 10); // YYYY-MM-DD
+function bindReactions(container) {
+  container.addEventListener("click", async (e) => {
+    const likeBtn = e.target.closest("[data-like]");
+    const dislikeBtn = e.target.closest("[data-dislike]");
+
+    if (!likeBtn && !dislikeBtn) return;
+
+    e.stopPropagation();
+
+    const postId = likeBtn
+      ? likeBtn.dataset.like
+      : dislikeBtn.dataset.dislike;
+
+    const type = likeBtn ? "like" : "dislike";
+
+    try {
+      const res = await fetch(`/api/v1/posts/${postId}/${type}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+
+      if (!res.ok) {
+        alert("You must be logged in to react");
+        return;
+      }
+
+      const payload = await res.json();
+      const data = payload.data;
+
+      const postEl = container.querySelector(
+        `[data-post-id="${postId}"]`
+      );
+
+      if (!postEl) return;
+
+      postEl.querySelector(".like-count").textContent =
+        data.likes_count;
+
+      postEl.querySelector(".dislike-count").textContent =
+        data.dislikes_count;
+
+    } catch (err) {
+      console.error("Reaction failed:", err);
+    }
+  });
 }
+
