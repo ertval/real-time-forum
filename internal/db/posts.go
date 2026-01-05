@@ -15,6 +15,7 @@ import (
 type Post struct {
 	ID          int64   `json:"id"`
 	AuthorID    int64   `json:"author_id"`
+	Author      string  `json:"author"`
 	Title       string  `json:"title"`
 	Body        string  `json:"body"`
 	CreatedAt   string  `json:"created_at"`
@@ -87,12 +88,21 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	var post Post
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, author_id, title, body, created_at, updated_at
-		FROM posts
-		WHERE id = ?
+	SELECT
+		p.id,
+		p.author_id,
+		u.username,
+		p.title,
+		p.body,
+		p.created_at,
+		p.updated_at
+	FROM posts p
+	JOIN users u ON u.id = p.author_id
+	WHERE p.id = ?
 	`, id).Scan(
 		&post.ID,
 		&post.AuthorID,
+		&post.Author,
 		&post.Title,
 		&post.Body,
 		&post.CreatedAt,
@@ -300,8 +310,16 @@ func ListPostsByCategory(
 	offset := (p.Page - 1) * p.PerPage
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT p.id, p.author_id, p.title, p.body, p.created_at, p.updated_at
+		SELECT
+			p.id,
+			p.author_id,
+			u.username,
+			p.title,
+			p.body,
+			p.created_at,
+			p.updated_at
 		FROM posts p
+		JOIN users u ON u.id = p.author_id
 		JOIN post_categories pc ON pc.post_id = p.id
 		WHERE pc.category_id = ?
 		ORDER BY p.created_at ASC
@@ -318,6 +336,7 @@ func ListPostsByCategory(
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
+			&post.Author,
 			&post.Title,
 			&post.Body,
 			&post.CreatedAt,
@@ -388,10 +407,18 @@ func ListPostsByAuthor(
 	offset := (p.Page - 1) * p.PerPage
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, author_id, title, body, created_at, updated_at
-		FROM posts
-		WHERE author_id = ?
-		ORDER BY created_at ASC
+		SELECT
+			p.id,
+			p.author_id,
+			u.username,
+			p.title,
+			p.body,
+			p.created_at,
+			p.updated_at
+		FROM posts p
+		JOIN users u ON u.id = p.author_id
+		WHERE p.author_id = ?
+		ORDER BY p.created_at ASC
 		LIMIT ? OFFSET ?
 	`, p.AuthorID, p.PerPage, offset)
 	if err != nil {
@@ -405,6 +432,7 @@ func ListPostsByAuthor(
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
+			&post.Author,
 			&post.Title,
 			&post.Body,
 			&post.CreatedAt,
@@ -501,11 +529,19 @@ func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUs
 	offset := (p.Page - 1) * p.PerPage
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT p.id, p.author_id, p.title, p.body, p.created_at, p.updated_at
+		SELECT
+			p.id,
+			p.author_id,
+			u.username,
+			p.title,
+			p.body,
+			p.created_at,
+			p.updated_at
 		FROM posts p
+		JOIN users u ON u.id = p.author_id
 		JOIN reactions r ON r.post_id = p.id
 		WHERE r.user_id = ?
-		  AND r.value = 1
+		AND r.value = 1
 		ORDER BY r.created_at ASC
 		LIMIT ? OFFSET ?
 	`, p.UserID, p.PerPage, offset)
@@ -520,6 +556,7 @@ func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUs
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
+			&post.Author,
 			&post.Title,
 			&post.Body,
 			&post.CreatedAt,

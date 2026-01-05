@@ -119,3 +119,7 @@
 .comment:last-child {
   border-bottom: none;
 }
+
+textarea {
+  resize: none;
+}

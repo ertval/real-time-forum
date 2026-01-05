@@ -42,10 +42,19 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/categories/view", categories.ListCategoriesWithPosts)
 
 	// ---------------------------------------------------------
+	// POSTS – PUBLIC COLLECTIONS
+	// ---------------------------------------------------------
+	// IMPORTANT: must be BEFORE /posts/
+	mux.HandleFunc(
+		apiPrefix+"/posts/public",
+		posts.ListPublicPosts,
+	)
+
+	// ---------------------------------------------------------
 	// POSTS COLLECTION
 	// ---------------------------------------------------------
-	// GET  /posts        → list
-	// POST /posts        → create (auth)
+	// GET  /posts → list
+	// POST /posts → create (auth)
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:

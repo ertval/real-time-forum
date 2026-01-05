@@ -114,3 +114,7 @@
   display: block;
   margin-top: 4px;
 }
+
+textarea {
+  resize: none;
+}

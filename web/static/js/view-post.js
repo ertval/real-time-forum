@@ -28,9 +28,7 @@ async function loadPost(postId) {
   document.querySelector(".viewpost-body-text").textContent = post.body;
 
   document.querySelector(".viewpost-author").textContent =
-    post.author
-      ? `Author: ${post.author}`
-      : `Author ID: ${post.author_id}`;
+  `Author: ${post.author || `User ${post.author_id}`}`;
 
   document.querySelector(".viewpost-time").textContent =
     formatCreatedAt(post.created_at);

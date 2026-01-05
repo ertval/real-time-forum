@@ -97,6 +97,17 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, result.Posts, pagination)
 }
 
+// ListPublicPosts handles:
+// GET /api/v1/posts/public
+func (p *PostsHandler) ListPublicPosts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		MethodNotAllowed(w, r)
+		return
+	}
+
+	p.listPosts(w, r)
+}
+
 // ============================================================
 // CREATE POST
 // ============================================================
@@ -124,9 +135,9 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status := "draft"
-	if strings.ToLower(req.Status) == "publish" {
-		status = "published"
+	status := "published"
+	if strings.ToLower(req.Status) == "draft" {
+		status = "draft"
 	}
 
 	postID, err := repository.CreatePostWithCategories(

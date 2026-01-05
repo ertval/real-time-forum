@@ -21,7 +21,32 @@ async function loadPublicPosts(output, emptyEl) {
     });
 
     const payload = await res.json();
-    if (!res.ok || !payload?.data?.length) {
+
+    // ❌ backend error
+    if (!res.ok) {
+      console.error("Failed to load posts:", res.status, payload);
+      showEmpty(output, emptyEl);
+      return;
+    }
+
+    // defensive: malformed payload
+    if (!Array.isArray(payload.data)) {
+      console.warn(
+        "home.js: Backend returned invalid data format for posts:",
+        payload
+      );
+      showEmpty(output, emptyEl);
+      return;
+    }
+
+    // diagnostic: total exists but data empty
+    if (payload.data.length === 0) {
+      if (payload.pagination?.total > 0) {
+        console.warn(
+          "home.js: Backend says total posts exist but returned empty data:",
+          payload
+        );
+      }
       showEmpty(output, emptyEl);
       return;
     }
@@ -59,7 +84,7 @@ function renderPostCard(post) {
     <header class="post-header clickable">
       <div>
         <h3 class="post-title">${post.title}</h3>
-        <p class="muted">Author ID: ${post.author_id}</p>
+        <p class="muted">Author: ${post.author || `User ${post.author_id}`}</p>
       </div>
       <time class="muted">${formatCreatedAt(post.created_at)}</time>
     </header>
