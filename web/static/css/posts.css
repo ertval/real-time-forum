@@ -1,0 +1,108 @@
+/* ==================================================
+   POSTS – COMMON
+================================================== */
+
+.posts {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.post-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.post-body p {
+  margin: 0;
+}
+
+/* ==================================================
+   REACTIONS – COMMON
+================================================== */
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-like-count],
+[data-dislike-count] {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ==================================================
+   COMMENTS – COMMON
+================================================== */
+
+.post-comments {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comments-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.comment {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment:last-child {
+  border-bottom: none;
+}
+
+.comment-meta {
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+}
+
+.comment-body,
+.comment-text {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ==================================================
+   COMMENT FORM – COMMON
+================================================== */
+
+.comment-form {
+  margin-top: 8px;
+}
+
+.comment-form textarea {
+  width: 100%;
+  min-height: 60px;
+  resize: none;
+}

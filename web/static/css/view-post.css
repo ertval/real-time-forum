@@ -1,120 +1,32 @@
-/* view-post.css */
+/* ==================================================
+   VIEW POST PAGE
+================================================== */
 
 .view-post .viewpost-card {
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-.view-post .viewpost-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 12px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .view-post .viewpost-title {
-    margin: 0 0 6px;
+  margin: 0 0 6px;
 }
 
 .view-post .viewpost-author {
-    margin: 0;
+  margin: 0;
 }
 
 .view-post .viewpost-time {
-    white-space: nowrap;
-}
-
-.view-post .viewpost-body {
-    margin-top: 12px;
+  white-space: nowrap;
 }
 
 .view-post .viewpost-body-text {
-    margin: 0;
+  margin: 12px 0 0;
 }
 
-.view-post .viewpost-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
+.view-post .comments-list {
+  max-height: 320px;
 }
 
-.view-post .viewpost-reactions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.view-post .reaction {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.view-post .reaction-count {
-    min-width: 20px;
-    text-align: center;
-    font-weight: 600;
-}
-
-.view-post .viewpost-actions-right {
-    margin-left: auto;
-}
-
-.view-post .viewpost-comments {
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-}
-
-.view-post .viewpost-comments-title {
-    margin: 0 0 12px;
-    font-size: 18px;
-}
-
-.view-post .comment-card {
-    background: var(--surface-muted);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-
-.view-post .comment-card-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 6px;
-}
-
-.view-post .comment-card-text {
-    margin: 0;
-}
-
-.view-post .comment-card:last-child {
-    margin-bottom: 0;
-}
-
-.viewpost-comments {
-  margin-top: 24px;
-}
-
-.comment {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.comment:last-child {
-  border-bottom: none;
-}
-
-.comment small {
-  display: block;
-  margin-top: 4px;
-}
-
-textarea {
-  resize: none;
+.view-post .comment-form {
+  margin-top: 20px;
 }

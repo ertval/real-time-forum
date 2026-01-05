@@ -1,4 +1,3 @@
-<!-- web/templates/view=post.html -->
 <!doctype html>
 <html lang="en">
   <head>
@@ -8,11 +7,14 @@
 
     <link rel="stylesheet" href="/static/css/base.css" />
     <link rel="stylesheet" href="/static/css/header.css" />
+    <link rel="stylesheet" href="/static/css/posts.css" />
     <link rel="stylesheet" href="/static/css/view-post.css" />
 
+    <!-- helpers -->
     <script src="/static/js/helper.js" defer></script>
-    <script src="/static/js/header.js" defer></script>
-    <script src="/static/js/view-post.js" defer></script>
+
+    <!-- page logic (ES module) -->
+    <script type="module" src="/static/js/view-post.js"></script>
   </head>
 
   <body class="view-post">
@@ -22,56 +24,57 @@
       <div id="header"></div>
 
       <!-- POST -->
-      <article class="card card-pad viewpost-card">
-        <h1 class="viewpost-title"></h1>
-        <p class="muted viewpost-author"></p>
-        <time class="muted viewpost-time"></time>
+      <article
+        class="post card card-pad viewpost-card"
+        id="view-post-article"
+        data-post-id=""
+      >
+        <header class="post-header">
+          <div>
+            <h1 class="post-title viewpost-title"></h1>
+            <p class="muted viewpost-author"></p>
+          </div>
+          <time class="muted viewpost-time"></time>
+        </header>
 
-        <p class="viewpost-body-text"></p>
+        <section class="post-body">
+          <p class="viewpost-body-text"></p>
+        </section>
 
         <!-- REACTIONS -->
-        <div class="post-actions">
+        <section class="post-actions">
+          <div class="reaction">
+            <span data-like-count>0</span>
+            <button
+              class="btn btn-ghost"
+              type="button"
+              data-reaction="like"
+              data-post-id=""
+            >
+              Like
+            </button>
+          </div>
 
-         <div class="reaction">
-          <span id="like-count">0</span>
-          <button
-            class="btn btn-ghost"
-            type="button"
-            data-reaction="like"
-          >
-            Like
-          </button>
-        </div>
+          <div class="reaction">
+            <span data-dislike-count>0</span>
+            <button
+              class="btn btn-ghost"
+              type="button"
+              data-reaction="dislike"
+              data-post-id=""
+            >
+              Dislike
+            </button>
+          </div>
+        </section>
 
-        <div class="reaction">
-          <span id="dislike-count">0</span>
-          <button
-            class="btn btn-ghost"
-            type="button"
-            data-reaction="dislike"
-          >
-            Dislike
-          </button>
-        </div>
-
-        </div>
+        <!-- COMMENTS -->
+        <section
+          id="view-post-comments"
+          class="post-comments"
+          data-comments
+        ></section>
       </article>
-
-      <!-- COMMENTS -->
-      <section class="comments-box">
-        <div class="comments-list" id="comments-list"></div>
-
-        <form class="comment-form" id="comment-form" hidden>
-          <textarea
-            id="comment-body"
-            placeholder="Write a comment..."
-            required
-          ></textarea>
-          <button class="btn btn-primary" type="submit">
-            Comment
-          </button>
-        </form>
-      </section>
 
     </main>
 
