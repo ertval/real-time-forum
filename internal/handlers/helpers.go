@@ -108,3 +108,19 @@ func isUniqueConstraint(err error) bool {
 	}
 	return strings.Contains(err.Error(), "UNIQUE")
 }
+
+func getPostIDFromURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 {
+		notFound(w, r)
+		return 0, false
+	}
+
+	id, err := strconv.ParseInt(parts[len(parts)-2], 10, 64)
+	if err != nil || id <= 0 {
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid post id", http.StatusBadRequest))
+		return 0, false
+	}
+
+	return id, true
+}

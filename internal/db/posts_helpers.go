@@ -14,36 +14,57 @@ func countPosts(ctx context.Context, db *sql.DB) (int, error) {
 	return total, nil
 }
 
-func fetchPosts(ctx context.Context, db *sql.DB, p ListPostsParams) ([]Post, error) {
+func fetchPosts(
+	ctx context.Context,
+	db *sql.DB,
+	p ListPostsParams,
+) ([]Post, error) {
+
 	offset := (p.Page - 1) * p.PerPage
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, author_id, title, body, created_at, updated_at
-		FROM posts
-		ORDER BY created_at DESC
+		SELECT
+			p.id,
+			p.author_id,
+			u.username,
+			p.title,
+			p.body,
+			p.created_at,
+			p.updated_at
+		FROM posts p
+		JOIN users u ON u.id = p.author_id
+		WHERE p.status = 'published'
+		ORDER BY p.created_at DESC
 		LIMIT ? OFFSET ?
 	`, p.PerPage, offset)
 	if err != nil {
-		return nil, fmt.Errorf("list posts: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	var posts []Post
+	posts := make([]Post, 0)
+
 	for rows.Next() {
 		var post Post
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
+			&post.Author,
 			&post.Title,
 			&post.Body,
 			&post.CreatedAt,
 			&post.UpdatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("scan post: %w", err)
+			return nil, err
 		}
 		posts = append(posts, post)
 	}
-	return posts, rows.Err()
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }
 
 func attachPostCategories(ctx context.Context, db *sql.DB, posts []Post) error {

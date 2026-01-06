@@ -7,81 +7,93 @@
 
     <link rel="stylesheet" href="/static/css/base.css" />
     <link rel="stylesheet" href="/static/css/header.css" />
+    <link rel="stylesheet" href="/static/css/posts.css" />
     <link rel="stylesheet" href="/static/css/view-post.css" />
-  
+
+    <!-- helpers -->
     <script src="/static/js/helper.js" defer></script>
-    <script src="/static/js/header.js" defer></script>
-    <script src="/static/js/view-post.js" defer></script>
+
+    <!-- page logic (ES module) -->
+    <script type="module" src="/static/js/view-post.js"></script>
   </head>
 
   <body class="view-post">
     <main class="container">
 
-      <!-- common header -->
+      <!-- COMMON HEADER -->
       <div id="header"></div>
 
-      <article class="card card-pad viewpost-card">
-
-        <!-- ================= HEADER ================= -->
-        <header class="viewpost-header">
-          <div class="viewpost-meta">
-            <h1 class="viewpost-title"></h1>
+      <!-- POST -->
+      <article
+        class="post card card-pad viewpost-card"
+        id="view-post-article"
+        data-post-id=""
+      >
+        <header class="post-header">
+          <div>
+            <h1 class="post-title viewpost-title"></h1>
             <p class="muted viewpost-author"></p>
           </div>
-
           <time class="muted viewpost-time"></time>
         </header>
 
-        <!-- ================= BODY ================= -->
-        <section class="viewpost-body">
+        <section class="post-body">
           <p class="viewpost-body-text"></p>
         </section>
 
-        <!-- ================= ACTIONS ================= -->
-        <section class="viewpost-actions">
-          <div class="viewpost-reactions">
+        <!-- REACTIONS -->
+        <section class="post-actions">
+          <div class="reaction">
+            <span data-like-count>0</span>
+            <button
+              class="btn btn-ghost"
+              type="button"
+              data-reaction="like"
+              data-post-id=""
+            >
+              Like
+            </button>
+          </div>
 
-            <div class="reaction">
-              <span id="like-count" class="reaction-count">0</span>
-              <button
-                class="btn btn-ghost"
-                type="button"
-                data-like
-              >
-                Like
-              </button>
-            </div>
-
-            <div class="reaction">
-              <span id="dislike-count" class="reaction-count">0</span>
-              <button
-                class="btn btn-ghost"
-                type="button"
-                data-dislike
-              >
-                Dislike
-              </button>
-            </div>
-
+          <div class="reaction">
+            <span data-dislike-count>0</span>
+            <button
+              class="btn btn-ghost"
+              type="button"
+              data-reaction="dislike"
+              data-post-id=""
+            >
+              Dislike
+            </button>
           </div>
         </section>
 
+        <!-- COMMENTS -->
+        <section
+          id="view-post-comments"
+          class="post-comments"
+          data-comments
+        ></section>
       </article>
+
     </main>
 
-    <!-- load header partial -->
+    <!-- LOAD HEADER PARTIAL -->
     <script>
       fetch("/static/partials/header.html")
-        .then(res => res.text())
+        .then(r => r.text())
         .then(html => {
           document.getElementById("header").innerHTML = html;
 
-          const script = document.createElement("script");
-          script.src = "/web/static/js/header.js";
-          script.defer = true;
-          document.body.appendChild(script);
+          const s = document.createElement("script");
+          s.src = "/static/js/header.js";
+          s.onload = () => {
+            if (typeof initHeader === "function") {
+              initHeader();
+            }
+          };
+          document.body.appendChild(s);
         });
     </script>
-
   </body>
 </html>

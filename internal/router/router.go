@@ -25,30 +25,36 @@ func NewRouter(database *sql.DB) http.Handler {
 	categories := handlers.NewCategoriesHandler(database)
 
 	// ---------------------------------------------------------
-	// MIDDLEWARE INSTANCES
+	// MIDDLEWARE
 	// ---------------------------------------------------------
 	auth := middleware.Auth(database)
 
 	// ---------------------------------------------------------
-	// PUBLIC ROUTES (NO AUTH)
+	// HEALTH
 	// ---------------------------------------------------------
-
-	// Healthcheck
 	mux.HandleFunc(apiPrefix+"/health", health.Health)
 
-	// Categories (read-only)
+	// ---------------------------------------------------------
+	// CATEGORIES (PUBLIC)
+	// ---------------------------------------------------------
 	mux.HandleFunc(apiPrefix+"/categories", categories.HandleCategories)
 	mux.HandleFunc(apiPrefix+"/categories/", categories.HandleCategory)
 	mux.HandleFunc(apiPrefix+"/categories/view", categories.ListCategoriesWithPosts)
 
-	// Public posts
-	mux.HandleFunc(apiPrefix+"/posts/public", posts.PublicList)
+	// ---------------------------------------------------------
+	// POSTS – PUBLIC COLLECTIONS
+	// ---------------------------------------------------------
+	// IMPORTANT: must be BEFORE /posts/
+	mux.HandleFunc(
+		apiPrefix+"/posts/public",
+		posts.ListPublicPosts,
+	)
 
 	// ---------------------------------------------------------
-	// POSTS
+	// POSTS COLLECTION
 	// ---------------------------------------------------------
-
-	// /posts → GET (public), POST (auth required)
+	// GET  /posts → list
+	// POST /posts → create (auth)
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -60,7 +66,17 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
-	// /posts/{id}, /posts/{id}/comments, likes, updates
+	// ---------------------------------------------------------
+	// POSTS ITEM + COMMENTS + REACTIONS
+	// ---------------------------------------------------------
+	// Handles:
+	// GET    /posts/{id}
+	// PATCH  /posts/{id}
+	// DELETE /posts/{id}
+	// POST   /posts/{id}/like
+	// POST   /posts/{id}/dislike
+	// GET    /posts/{id}/comments
+	// POST   /posts/{id}/comments
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -72,13 +88,14 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
-	// My posts (auth)
+	// ---------------------------------------------------------
+	// USER POSTS
+	// ---------------------------------------------------------
 	mux.Handle(
 		apiPrefix+"/posts/mine",
 		auth(http.HandlerFunc(posts.ListMyPosts)),
 	)
 
-	// Liked posts (auth)
 	mux.Handle(
 		apiPrefix+"/posts/liked",
 		auth(http.HandlerFunc(posts.ListLikedPosts)),
@@ -87,8 +104,6 @@ func NewRouter(database *sql.DB) http.Handler {
 	// ---------------------------------------------------------
 	// USERS
 	// ---------------------------------------------------------
-
-	// Auth endpoints
 	mux.HandleFunc(apiPrefix+"/users/register", users.Register)
 	mux.HandleFunc(apiPrefix+"/users/login", users.Login)
 
@@ -108,36 +123,10 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	// ---------------------------------------------------------
-	// COMMENTS
-	// ---------------------------------------------------------
-
-	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			posts.HandleComment(w, r)
-		case http.MethodPost, http.MethodPatch, http.MethodDelete:
-			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
-		default:
-			handlers.MethodNotAllowed(w, r)
-		}
-	})
-
-	// ---------------------------------------------------------
-	// API NOT FOUND (JSON ONLY)
+	// API FALLBACK (JSON 404)
 	// ---------------------------------------------------------
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
-
-	// ---------------------------------------------------------
-	// STATIC ERROR PAGES (FRONTEND)
-	// ---------------------------------------------------------
-	mux.Handle(
-		"/errors/",
-		http.StripPrefix(
-			"/errors/",
-			http.FileServer(http.Dir("./web/errors")),
-		),
-	)
 
 	// ---------------------------------------------------------
 	// GLOBAL MIDDLEWARE

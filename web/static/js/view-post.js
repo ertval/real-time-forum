@@ -1,63 +1,72 @@
-// web/static/js/view-post.js
+import {
+  loadPostCommentsPreview,
+  initReactions,
+} from "./posts.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-  const parts = window.location.pathname.split("/");
-  const postId = parts[parts.length - 1];
+import {
+  API_BASE,
+  formatCreatedAt,
+  resolveUsername,
+  escapeHTML,
+} from "./utils.js";
 
-  if (!postId || isNaN(postId)) {
-    console.error("Invalid post id");
-    return;
+document.addEventListener("DOMContentLoaded", async () => {
+  const postId = window.location.pathname.split("/").pop();
+  if (!postId) return;
+
+  const article = document.querySelector("article[data-post-id]");
+  if (!article) return;
+
+  article.dataset.postId = postId;
+
+  await loadPost(postId, article);
+
+  // comments (reuse posts.js)
+  const commentsContainer = article.querySelector("[data-comments]");
+  if (commentsContainer) {
+    await loadPostCommentsPreview(postId, article);
   }
 
-  loadPost(postId);
+  // reactions (shared with home)
+  initReactions();
 });
 
-async function loadPost(postId) {
-  try {
-    const res = await fetch(`${API_BASE}/posts/${postId}`, {
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    });
+// --------------------------------------------------
+// LOAD POST
+// --------------------------------------------------
 
-    if (!res.ok) {
-      throw new Error("Post not found");
-    }
+async function loadPost(postId, article) {
+  const res = await fetch(`${API_BASE}/posts/${postId}`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) return;
 
-    const payload = await res.json();
-    const post = payload.data;
+  const { data: post } = await res.json();
 
-    renderPost(post);
-  } catch (err) {
-    console.error(err);
-    alert("Failed to load post");
-  }
-}
+  // title / body
+  article.querySelector(".viewpost-title").textContent = post.title;
+  article.querySelector(".viewpost-body-text").innerHTML =
+    escapeHTML(post.body);
 
-function renderPost(post) {
-  // title
-  document.querySelector(".viewpost-title").textContent =
-    post.title ?? "";
+  // author / time
+  article.querySelector(".viewpost-author").textContent =
+    `Author: ${resolveUsername(post)}`;
 
-  // body
-  document.querySelector(".viewpost-body-text").textContent =
-    post.body ?? "";
+  article.querySelector(".viewpost-time").textContent =
+    formatCreatedAt(post.created_at);
 
-  // author (fallback)
-  document.querySelector(".viewpost-author").textContent =
-    post.author
-      ? `Author: ${post.author}`
-      : `Author ID: ${post.author_id}`;
-
-  // time
-  const timeEl = document.querySelector(".viewpost-time");
-  timeEl.dateTime = post.created_at;
-  timeEl.textContent = formatCreatedAt(post.created_at);
-
-  // reactions
-  document.getElementById("like-count").textContent =
+  // reactions counts (SAME selectors as home)
+  article.querySelector("[data-like-count]").textContent =
     post.likes ?? 0;
 
-  document.getElementById("dislike-count").textContent =
+  article.querySelector("[data-dislike-count]").textContent =
     post.dislikes ?? 0;
-}
 
+  // buttons dataset (CRITICAL for initReactions)
+  article
+    .querySelectorAll("[data-reaction]")
+    .forEach(btn => {
+      btn.dataset.postId = postId;
+    });
+}
