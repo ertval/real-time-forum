@@ -110,11 +110,12 @@ function renderComment(comment) {
 
 async function maybeRenderCommentForm(container, postId) {
   try {
-    const res = await fetch(`${API_BASE}/users/me`, {
+    const meRes = await fetch(`${API_BASE}/users/me`, {
       credentials: "include",
     });
+    if (!meRes.ok) return;
 
-    if (!res.ok) return;
+    const { data: me } = await meRes.json();
 
     const form = document.createElement("form");
     form.className = "comment-form";
@@ -130,7 +131,6 @@ async function maybeRenderCommentForm(container, postId) {
       </button>
     `;
 
-    // stop bubbling
     ["click", "mousedown", "keydown", "submit"].forEach(evt => {
       form.addEventListener(evt, e => {
         e.stopPropagation();
@@ -153,10 +153,31 @@ async function maybeRenderCommentForm(container, postId) {
         body: JSON.stringify({ body }),
       });
 
-      if (res.ok) {
-        textarea.value = "";
-        location.reload(); 
+      if (!res.ok) {
+        alert("You must be logged in to comment.");
+        return;
       }
+
+      const { data: newComment } = await res.json();
+      textarea.value = "";
+
+      const commentsList = container.querySelector(".comments-scroll");
+      if (!commentsList) return;
+
+      const commentEl = document.createElement("div");
+      commentEl.className = "comment";
+      commentEl.innerHTML = `
+        <div class="comment-meta muted">
+          <strong>${escapeHTML(me.username)}</strong>
+          · ${formatCreatedAt(newComment.created_at)}
+        </div>
+        <div class="comment-body">
+          ${escapeHTML(newComment.body)}
+        </div>
+      `;
+
+      commentsList.appendChild(commentEl);
+      commentsList.scrollTop = commentsList.scrollHeight;
     });
 
     container.appendChild(form);
