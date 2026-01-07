@@ -10,12 +10,8 @@
     <link rel="stylesheet" href="/static/css/posts.css" />
     <link rel="stylesheet" href="/static/css/home.css" />
 
-    <!-- helpers FIRST -->
-    <script src="/static/js/helper.js" defer></script>
-
     <!-- page logic -->
     <script type="module" src="/static/js/home.js"></script>
-
   </head>
 
   <body class="home">
@@ -23,6 +19,15 @@
       <!-- HEADER INJECTED HERE -->
       <div id="header"></div>
 
+      <!-- CATEGORY FILTER -->
+      <section class="filters">
+        <label for="categoryFilter">Category</label>
+        <select id="categoryFilter">
+          <option value="">All categories</option>
+        </select>
+      </section>
+
+      <!-- POSTS -->
       <section class="posts">
         <div id="posts-output"></div>
         <p id="posts-empty" hidden>No posts yet.</p>

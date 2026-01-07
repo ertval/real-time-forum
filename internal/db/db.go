@@ -8,14 +8,24 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Embed database schema inside the binary.
-//
+// ============================================================
+// EMBEDDED FILES
+// ============================================================
+
 //go:embed forum_schema.sql
 var schemaFS embed.FS
+
+//go:embed seeds/categories.sql
+var categoriesSeed string
+
+// ============================================================
+// InitDB
+// ============================================================
 
 // InitDB opens/creates the SQLite database,
 // applies PRAGMA options via DSN,
 // loads the embedded schema,
+// seeds default categories,
 // and returns a ready-to-use *sql.DB.
 func InitDB(dbPath string) (*sql.DB, error) {
 
@@ -35,17 +45,30 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		return nil, WrapError("ping database", err)
 	}
 
+	// ------------------------------------------------------------
 	// Load embedded schema
+	// ------------------------------------------------------------
+
 	schema, err := schemaFS.ReadFile("forum_schema.sql")
 	if err != nil {
 		db.Close()
 		return nil, WrapError("read schema file", err)
 	}
 
-	// Apply schema (CREATE TABLE IF NOT EXISTS ...)
 	if _, err := db.Exec(string(schema)); err != nil {
 		db.Close()
 		return nil, WrapError("apply schema", MapSQLError(err))
+	}
+
+	// ------------------------------------------------------------
+	// Seed categories (idempotent)
+	// ------------------------------------------------------------
+
+	if categoriesSeed != "" {
+		if _, err := db.Exec(categoriesSeed); err != nil {
+			db.Close()
+			return nil, WrapError("seed categories", MapSQLError(err))
+		}
 	}
 
 	return db, nil
