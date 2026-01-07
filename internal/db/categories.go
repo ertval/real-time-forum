@@ -15,7 +15,6 @@ import (
 type Category struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
-	Slug      string `json:"slug"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -23,7 +22,6 @@ type Category struct {
 type CategoryWithPosts struct {
 	ID    int64  `json:"id"`
 	Name  string `json:"name"`
-	Slug  string `json:"slug"`
 	Posts []Post `json:"posts"`
 }
 
@@ -38,7 +36,7 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	defer cancel()
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, name, slug, created_at
+		SELECT id, name, created_at
 		FROM categories
 		ORDER BY name ASC
 	`)
@@ -51,7 +49,11 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 
 	for rows.Next() {
 		var c Category
-		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&c.ID,
+			&c.Name,
+			&c.CreatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("scan category: %w", err)
 		}
 		categories = append(categories, c)
@@ -75,13 +77,12 @@ func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 	var category Category
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, name, slug, created_at
+		SELECT id, name, created_at
 		FROM categories
 		WHERE id = ?
 	`, id).Scan(
 		&category.ID,
 		&category.Name,
-		&category.Slug,
 		&category.CreatedAt,
 	)
 
@@ -96,14 +97,14 @@ func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 // CREATE CATEGORY
 // ============================================================
 
-func CreateCategory(ctx context.Context, db *sql.DB, name, slug string) (int64, error) {
+func CreateCategory(ctx context.Context, db *sql.DB, name string) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
 	res, err := db.ExecContext(ctx, `
-		INSERT INTO categories (name, slug, created_at)
-		VALUES (?, ?, datetime('now'))
-	`, name, slug)
+		INSERT INTO categories (name, created_at)
+		VALUES (?, datetime('now'))
+	`, name)
 	if err != nil {
 		return 0, fmt.Errorf("create category: %w", err)
 	}
@@ -173,7 +174,6 @@ func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPos
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
-	// Load categories
 	categories, err := ListCategories(ctx, db)
 	if err != nil {
 		return nil, err
@@ -186,16 +186,14 @@ func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPos
 		cp := CategoryWithPosts{
 			ID:    c.ID,
 			Name:  c.Name,
-			Slug:  c.Slug,
 			Posts: []Post{},
 		}
 		result = append(result, cp)
 		index[c.ID] = &result[len(result)-1]
 	}
 
-	// Load posts per category
 	rows, err := db.QueryContext(ctx, `
-		SELECT
+		SELECT DISTINCT
 			c.id,
 			p.id, p.author_id, p.title, p.body, p.created_at, p.updated_at
 		FROM categories c
@@ -233,7 +231,6 @@ func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPos
 		return nil, err
 	}
 
-	// Attach metadata
 	for i := range result {
 		if err := attachPostCategories(ctx, db, result[i].Posts); err != nil {
 			return nil, err

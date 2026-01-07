@@ -86,13 +86,10 @@ func (c *CategoriesHandler) createCategory(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	slug := slugify(req.Name)
-
 	id, err := repository.CreateCategory(
 		r.Context(),
 		c.conn,
 		req.Name,
-		slug,
 	)
 	if err != nil {
 		log.Printf("failed to create category: %v", err)
@@ -209,7 +206,7 @@ func (c *CategoriesHandler) updateCategory(w http.ResponseWriter, r *http.Reques
 	category, err := repository.GetCategory(r.Context(), c.conn, id)
 	if err != nil {
 		log.Printf("failed to load updated category: %v", err)
-		writeHandlerError(w,r, err, "category updated but failed to load")
+		writeHandlerError(w, r, err, "category updated but failed to load")
 		return
 	}
 
