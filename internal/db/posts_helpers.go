@@ -80,49 +80,52 @@ func fetchPosts(
 }
 
 // ============================================================
-// ATTACH CATEGORIES
+// ATTACH CATEGORIES (ID + NAME ONLY)
 // ============================================================
 
 func attachPostCategories(ctx context.Context, db *sql.DB, posts []Post) error {
 	for i := range posts {
-		ids, err := getCategoryIDsByPostID(ctx, db, posts[i].ID)
+		categories, err := getCategoriesByPostID(ctx, db, posts[i].ID)
 		if err != nil {
 			return err
 		}
-		posts[i].CategoryIDs = ids
+		posts[i].Categories = categories
 	}
 	return nil
 }
 
-func getCategoryIDsByPostID(
+func getCategoriesByPostID(
 	ctx context.Context,
 	db *sql.DB,
 	postID int64,
-) ([]int64, error) {
+) ([]PostCategory, error) {
 
-	rows, err := db.QueryContext(ctx,
-		`SELECT category_id FROM post_categories WHERE post_id = ?`,
-		postID,
-	)
+	rows, err := db.QueryContext(ctx, `
+		SELECT c.id, c.name
+		FROM categories c
+		JOIN post_categories pc ON pc.category_id = c.id
+		WHERE pc.post_id = ?
+		ORDER BY c.name ASC
+	`, postID)
 	if err != nil {
 		return nil, fmt.Errorf("load post categories: %w", err)
 	}
 	defer rows.Close()
 
-	var ids []int64
+	var categories []PostCategory
 	for rows.Next() {
-		var cid int64
-		if err := rows.Scan(&cid); err != nil {
+		var c PostCategory
+		if err := rows.Scan(&c.ID, &c.Name); err != nil {
 			return nil, err
 		}
-		ids = append(ids, cid)
+		categories = append(categories, c)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return ids, nil
+	return categories, nil
 }
 
 // ============================================================

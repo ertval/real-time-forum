@@ -45,7 +45,8 @@
           document.getElementById("header").innerHTML = html;
 
           const script = document.createElement("script");
-          script.src = "/static/js/header.js";
+          script.type = "module";
+          script.src = "/static/js/header-loader.js";
           document.body.appendChild(script);
         });
     </script>

@@ -1,13 +1,9 @@
 // web/static/js/header.js
 
+import { API_BASE } from "./utils.js";
 
-/**
- * Entry point
- * Called AFTER header.html is injected into DOM
- */
-initHeader();
-
-async function initHeader() {
+// expose initializer
+export async function initHeader() {
   setupForumLogo();
 
   const greetingEl = document.getElementById("greeting");
@@ -62,11 +58,9 @@ async function loadGreeting(greetingEl, loginBtn, logoutBtn) {
     const payload = await res.json();
     const username = payload?.data?.username;
 
-    greetingEl.textContent = username
-      ? `Hello, ${username}`
-      : "Hello";
-
+    greetingEl.textContent = username ? `Hello, ${username}` : "Hello";
     greetingEl.hidden = false;
+
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-flex";
   } catch {
@@ -83,6 +77,10 @@ async function loadGreeting(greetingEl, loginBtn, logoutBtn) {
 // --------------------------------------------------
 
 function bindLogout(logoutBtn) {
+  // prevent double-binding
+  if (logoutBtn.dataset.bound === "1") return;
+  logoutBtn.dataset.bound = "1";
+
   logoutBtn.addEventListener("click", async (e) => {
     e.preventDefault();
     logoutBtn.disabled = true;

@@ -13,16 +13,21 @@ import (
 // ============================================================
 
 type Post struct {
-	ID          int64   `json:"id"`
-	AuthorID    int64   `json:"author_id"`
-	Author      string  `json:"author"`
-	Title       string  `json:"title"`
-	Body        string  `json:"body"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at,omitempty"`
-	CategoryIDs []int64 `json:"category_ids,omitempty"`
-	Likes       int     `json:"likes"`
-	Dislikes    int     `json:"dislikes"`
+	ID         int64          `json:"id"`
+	AuthorID   int64          `json:"author_id"`
+	Author     string         `json:"author"`
+	Title      string         `json:"title"`
+	Body       string         `json:"body"`
+	CreatedAt  string         `json:"created_at"`
+	UpdatedAt  string         `json:"updated_at,omitempty"`
+	Likes      int            `json:"likes"`
+	Dislikes   int            `json:"dislikes"`
+	Categories []PostCategory `json:"categories"`
+}
+
+type PostCategory struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // ============================================================
@@ -88,17 +93,17 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	var post Post
 
 	err := db.QueryRowContext(ctx, `
-	SELECT
-		p.id,
-		p.author_id,
-		u.username,
-		p.title,
-		p.body,
-		p.created_at,
-		p.updated_at
-	FROM posts p
-	JOIN users u ON u.id = p.author_id
-	WHERE p.id = ?
+		SELECT
+			p.id,
+			p.author_id,
+			u.username,
+			p.title,
+			p.body,
+			p.created_at,
+			p.updated_at
+		FROM posts p
+		JOIN users u ON u.id = p.author_id
+		WHERE p.id = ?
 	`, id).Scan(
 		&post.ID,
 		&post.AuthorID,
@@ -112,11 +117,12 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 		return Post{}, err
 	}
 
-	categories, err := getCategoryIDsByPostID(ctx, db, id)
+	// 👉 categories (ID + name)
+	categories, err := getCategoriesByPostID(ctx, db, id)
 	if err != nil {
 		return Post{}, err
 	}
-	post.CategoryIDs = categories
+	post.Categories = categories
 
 	likes, dislikes, err := CountReactionsForPost(ctx, db, id)
 	if err != nil {
@@ -322,7 +328,8 @@ func ListPostsByCategory(
 		JOIN users u ON u.id = p.author_id
 		JOIN post_categories pc ON pc.post_id = p.id
 		WHERE pc.category_id = ?
-		ORDER BY p.created_at ASC
+		GROUP BY p.id
+		ORDER BY p.created_at DESC
 		LIMIT ? OFFSET ?
 	`, p.CategoryID, p.PerPage, offset)
 	if err != nil {

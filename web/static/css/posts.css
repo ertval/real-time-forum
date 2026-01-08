@@ -105,3 +105,18 @@
   min-height: 60px;
   resize: none;
 }
+
+.post-categories {
+  margin-bottom: 6px;
+}
+
+.category-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  margin-right: 6px;
+  border-radius: 12px;
+  background: #eef2f7;
+  color: #333;
+  font-weight: 500;
+}

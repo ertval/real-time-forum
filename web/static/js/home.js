@@ -1,3 +1,5 @@
+// web/static/js/home.js
+
 import {
   renderPostCard,
   loadPostCommentsPreview,
@@ -5,38 +7,7 @@ import {
 } from "./posts.js";
 
 import { API_BASE } from "./utils.js";
-
-/* =========================
-   CATEGORIES
-========================= */
-
-async function loadCategories() {
-  const res = await fetch(`${API_BASE}/categories`, {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.data ?? [];
-}
-
-async function populateCategoryFilter() {
-  const select = document.getElementById("categoryFilter");
-  if (!select) return;
-
-  const categories = await loadCategories();
-
-  // clean (keep "All")
-  select.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
-
-  for (const c of categories) {
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = c.name;
-    select.appendChild(opt);
-  }
-}
+import { initCategoryFilter } from "./category.js";
 
 /* =========================
    POSTS
@@ -51,6 +22,7 @@ async function loadPosts(categoryId = "") {
     headers: { Accept: "application/json" },
   });
 
+  if (!res.ok) return [];
   const payload = await res.json();
   return payload.data ?? [];
 }
@@ -82,15 +54,9 @@ async function renderPosts(categoryId = "") {
 ========================= */
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await populateCategoryFilter();
-  await renderPosts();
+  const initialCategoryId = await initCategoryFilter(renderPosts);
 
-  const select = document.getElementById("categoryFilter");
-  if (select) {
-    select.addEventListener("change", () => {
-      renderPosts(select.value);
-    });
-  }
+  await renderPosts(initialCategoryId);
 
   initReactions();
 });
