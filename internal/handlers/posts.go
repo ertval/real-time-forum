@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	repository "forum/internal/db"
 )
@@ -418,6 +419,7 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		UserID:          userID,
 		ParentCommentID: req.ParentCommentID,
 		Body:            req.Body,
+		CreatedAt:       time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	WriteCreated(w, comment)

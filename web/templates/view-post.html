@@ -1,99 +1,36 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>View Post</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>View Post</title>
 
-    <link rel="stylesheet" href="/static/css/base.css" />
-    <link rel="stylesheet" href="/static/css/header.css" />
-    <link rel="stylesheet" href="/static/css/posts.css" />
-    <link rel="stylesheet" href="/static/css/view-post.css" />
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/header.css" />
+  <link rel="stylesheet" href="/static/css/posts.css" />
 
-    <!-- helpers -->
-    <script src="/static/js/helper.js" defer></script>
+  <!-- page logic -->
+  <script type="module" src="/static/js/view-post.js"></script>
+</head>
 
-    <!-- page logic (ES module) -->
-    <script type="module" src="/static/js/view-post.js"></script>
-  </head>
+<body>
+  <main class="container">
+    <div id="header"></div>
 
-  <body class="view-post">
-    <main class="container">
+    <section class="posts">
+      <div id="post-output"></div>
+    </section>
+  </main>
 
-      <!-- COMMON HEADER -->
-      <div id="header"></div>
-
-      <!-- POST -->
-      <article
-        class="post card card-pad viewpost-card"
-        id="view-post-article"
-        data-post-id=""
-      >
-        <header class="post-header">
-          <div>
-            <h1 class="post-title viewpost-title"></h1>
-            <p class="muted viewpost-author"></p>
-          </div>
-          <time class="muted viewpost-time"></time>
-        </header>
-
-        <section class="post-body">
-          <p class="viewpost-body-text"></p>
-        </section>
-
-        <!-- REACTIONS -->
-        <section class="post-actions">
-          <div class="reaction">
-            <span data-like-count>0</span>
-            <button
-              class="btn btn-ghost"
-              type="button"
-              data-reaction="like"
-              data-post-id=""
-            >
-              Like
-            </button>
-          </div>
-
-          <div class="reaction">
-            <span data-dislike-count>0</span>
-            <button
-              class="btn btn-ghost"
-              type="button"
-              data-reaction="dislike"
-              data-post-id=""
-            >
-              Dislike
-            </button>
-          </div>
-        </section>
-
-        <!-- COMMENTS -->
-        <section
-          id="view-post-comments"
-          class="post-comments"
-          data-comments
-        ></section>
-      </article>
-
-    </main>
-
-    <!-- LOAD HEADER PARTIAL -->
-    <script>
-      fetch("/static/partials/header.html")
-        .then(r => r.text())
-        .then(html => {
-          document.getElementById("header").innerHTML = html;
-
-          const s = document.createElement("script");
-          s.src = "/static/js/header.js";
-          s.onload = () => {
-            if (typeof initHeader === "function") {
-              initHeader();
-            }
-          };
-          document.body.appendChild(s);
-        });
-    </script>
-  </body>
+  <script>
+    fetch("/static/partials/header.html")
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById("header").innerHTML = html;
+        const s = document.createElement("script");
+        s.src = "/static/js/header.js";
+        document.body.appendChild(s);
+      });
+  </script>
+</body>
 </html>

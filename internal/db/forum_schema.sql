@@ -37,7 +37,6 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS categories (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   name       TEXT NOT NULL UNIQUE,
-  slug       TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 
@@ -52,11 +51,9 @@ CREATE TABLE IF NOT EXISTS posts (
   body        TEXT NOT NULL CHECK (length(body) > 0),
   status      TEXT NOT NULL DEFAULT 'published'
                CHECK (status IN ('draft','published','archived')),
-  category_id INTEGER,
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 
@@ -78,7 +75,7 @@ CREATE TABLE IF NOT EXISTS comments (
 
 
 -- ===============================================================
--- POST-CATEGORY RELATION (M:N)
+-- POST ↔ CATEGORY RELATION (M:N)
 -- ===============================================================
 CREATE TABLE IF NOT EXISTS post_categories (
   post_id     INTEGER NOT NULL,
@@ -91,26 +88,25 @@ CREATE TABLE IF NOT EXISTS post_categories (
 
 -- ===============================================================
 -- REACTIONS (post or comment)
--- Exactly one reaction per user per item.
 -- ===============================================================
 CREATE TABLE IF NOT EXISTS reactions (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id     INTEGER NOT NULL,
-    post_id     INTEGER,
-    comment_id  INTEGER,
-    value       INTEGER NOT NULL CHECK (value IN (-1, 1)), -- like/dislike
-    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-    UNIQUE (user_id, post_id),
-    UNIQUE (user_id, comment_id),
-    CHECK ((post_id IS NOT NULL) != (comment_id IS NOT NULL)), -- XOR
-    FOREIGN KEY (user_id)    REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (post_id)    REFERENCES posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL,
+  post_id     INTEGER,
+  comment_id  INTEGER,
+  value       INTEGER NOT NULL CHECK (value IN (-1, 1)),
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  UNIQUE (user_id, post_id),
+  UNIQUE (user_id, comment_id),
+  CHECK ((post_id IS NOT NULL) != (comment_id IS NOT NULL)),
+  FOREIGN KEY (user_id)    REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (post_id)    REFERENCES posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
 );
 
 
 -- ===============================================================
--- SESSIONS (one active per user)
+-- SESSIONS
 -- ===============================================================
 CREATE TABLE IF NOT EXISTS sessions (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,24 +134,31 @@ CREATE INDEX IF NOT EXISTS idx_comments_user    ON comments(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_parent  ON comments(parent_comment_id);
 
 -- Post ↔ Categories
-CREATE INDEX IF NOT EXISTS idx_post_categories_category ON post_categories(category_id);
+CREATE INDEX IF NOT EXISTS idx_post_categories_category
+  ON post_categories(category_id);
 
 -- Reactions
 CREATE UNIQUE INDEX IF NOT EXISTS ux_react_user_post
-    ON reactions(user_id, post_id)
-    WHERE post_id IS NOT NULL;
+  ON reactions(user_id, post_id)
+  WHERE post_id IS NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_react_user_comment
-    ON reactions(user_id, comment_id)
-    WHERE comment_id IS NOT NULL;
+  ON reactions(user_id, comment_id)
+  WHERE comment_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_reactions_post    ON reactions(post_id);
-CREATE INDEX IF NOT EXISTS idx_reactions_comment ON reactions(comment_id);
+CREATE INDEX IF NOT EXISTS idx_reactions_post
+  ON reactions(post_id);
+
+CREATE INDEX IF NOT EXISTS idx_reactions_comment
+  ON reactions(comment_id);
 
 -- Sessions
 CREATE UNIQUE INDEX IF NOT EXISTS ux_session_single_active
-    ON sessions(user_id)
-    WHERE is_valid = 1;
+  ON sessions(user_id)
+  WHERE is_valid = 1;
 
-CREATE INDEX IF NOT EXISTS idx_sessions_user      ON sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_expires   ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_user
+  ON sessions(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expires
+  ON sessions(expires_at);

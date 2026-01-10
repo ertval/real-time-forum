@@ -1,8 +1,13 @@
-import { formatCreatedAt, resolveUsername, escapeHTML } from "./utils.js";
+import {
+  API_BASE,
+  formatCreatedAt,
+  resolveUsername,
+  escapeHTML,
+} from "./utils.js";
 
-// ==================================================
-// POST CARD
-// ==================================================
+/* ==================================================
+   POST CARD
+================================================== */
 
 export function renderPostCard(post, { clickable = true } = {}) {
   const article = document.createElement("article");
@@ -12,6 +17,7 @@ export function renderPostCard(post, { clickable = true } = {}) {
   article.innerHTML = `
     <header class="post-header ${clickable ? "clickable" : ""}">
       <div>
+        ${renderCategories(post.categories)}
         <h3 class="post-title">${escapeHTML(post.title)}</h3>
         <p class="muted">Author: ${resolveUsername(post)}</p>
       </div>
@@ -29,28 +35,33 @@ export function renderPostCard(post, { clickable = true } = {}) {
     <section class="post-comments" data-comments></section>
   `;
 
-  // navigation ONLY from header & body
   if (clickable) {
-    article.querySelectorAll(".clickable").forEach(el => {
+    article.querySelectorAll(".clickable").forEach((el) => {
       el.addEventListener("click", () => {
         window.location.href = `/view-post/${post.id}`;
       });
     });
   }
 
-  // stop bubbling on interactive elements
+  // stop bubbling so card click doesn't trigger
   article
     .querySelectorAll(".post-actions, .post-comments, button, textarea, form")
-    .forEach(el => {
-      el.addEventListener("click", e => e.stopPropagation());
+    .forEach((el) => {
+      el.addEventListener("click", (e) => e.stopPropagation());
     });
 
   return article;
 }
 
-// ==================================================
-// COMMENTS PREVIEW + FORM (HOME + VIEW)
-// ==================================================
+/* ==================================================
+   COMMENTS
+================================================== */
+
+function extractArray(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+}
 
 export async function loadPostCommentsPreview(postId, article) {
   const container = article.querySelector("[data-comments]");
@@ -61,11 +72,10 @@ export async function loadPostCommentsPreview(postId, article) {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
-
     if (!res.ok) return;
 
     const payload = await res.json();
-    const comments = Array.isArray(payload?.data) ? payload.data : [];
+    const comments = extractArray(payload);
 
     const list = document.createElement("div");
     list.className = "comments comments-scroll";
@@ -73,9 +83,7 @@ export async function loadPostCommentsPreview(postId, article) {
     if (comments.length === 0) {
       list.innerHTML = `<p class="muted">No comments yet.</p>`;
     } else {
-      comments.forEach(c => {
-        list.appendChild(renderComment(c));
-      });
+      comments.forEach((c) => list.appendChild(renderComment(c)));
     }
 
     container.appendChild(list);
@@ -104,9 +112,9 @@ function renderComment(comment) {
   return div;
 }
 
-// ==================================================
-// COMMENT FORM
-// ==================================================
+/* ==================================================
+   COMMENT FORM
+================================================== */
 
 async function maybeRenderCommentForm(container, postId) {
   try {
@@ -115,24 +123,20 @@ async function maybeRenderCommentForm(container, postId) {
     });
     if (!meRes.ok) return;
 
-    const { data: me } = await meRes.json();
+    const payload = await meRes.json();
+    const me = payload?.data;
 
     const form = document.createElement("form");
     form.className = "comment-form";
 
     form.innerHTML = `
-      <textarea
-        placeholder="Write a comment..."
-        rows="2"
-        required
-      ></textarea>
-      <button class="btn btn-primary" type="submit">
-        Comment
-      </button>
+      <textarea placeholder="Write a comment..." rows="2" required></textarea>
+      <button class="btn btn-primary" type="submit">Comment</button>
     `;
 
-    ["click", "mousedown", "keydown", "submit"].forEach(evt => {
-      form.addEventListener(evt, e => {
+    // stop bubbling
+    ["click", "mousedown", "keydown", "submit"].forEach((evt) => {
+      form.addEventListener(evt, (e) => {
         e.stopPropagation();
         if (evt === "submit") e.preventDefault();
       });
@@ -158,7 +162,9 @@ async function maybeRenderCommentForm(container, postId) {
         return;
       }
 
-      const { data: newComment } = await res.json();
+      const createdPayload = await res.json();
+      const newComment = createdPayload?.data ?? createdPayload;
+
       textarea.value = "";
 
       const commentsList = container.querySelector(".comments-scroll");
@@ -168,7 +174,7 @@ async function maybeRenderCommentForm(container, postId) {
       commentEl.className = "comment";
       commentEl.innerHTML = `
         <div class="comment-meta muted">
-          <strong>${escapeHTML(me.username)}</strong>
+          <strong>${escapeHTML(me?.username || "You")}</strong>
           · ${formatCreatedAt(newComment.created_at)}
         </div>
         <div class="comment-body">
@@ -186,48 +192,36 @@ async function maybeRenderCommentForm(container, postId) {
   }
 }
 
-// ==================================================
-// REACTIONS (UI)
-// ==================================================
+/* ==================================================
+   REACTIONS
+================================================== */
 
 export function reactionTemplate(post) {
   return `
     <div class="reaction">
       <span data-like-count>${post.likes ?? 0}</span>
-      <button
-        class="btn btn-ghost"
-        type="button"
-        data-reaction="like"
-        data-post-id="${post.id}"
-      >
+      <button class="btn btn-ghost" type="button" data-reaction="like" data-post-id="${post.id}">
         Like
       </button>
     </div>
-
     <div class="reaction">
       <span data-dislike-count>${post.dislikes ?? 0}</span>
-      <button
-        class="btn btn-ghost"
-        type="button"
-        data-reaction="dislike"
-        data-post-id="${post.id}"
-      >
+      <button class="btn btn-ghost" type="button" data-reaction="dislike" data-post-id="${post.id}">
         Dislike
       </button>
     </div>
   `;
 }
 
-// ==================================================
-// REACTIONS LOGIC (GLOBAL – ONCE)
-// ==================================================
-
 let reactionsBound = false;
 
 export function initReactions() {
+  if (reactionsBound) return;
+  reactionsBound = true;
+
   document.addEventListener(
     "click",
-    async e => {
+    async (e) => {
       const btn = e.target.closest("[data-reaction]");
       if (!btn) return;
 
@@ -239,14 +233,11 @@ export function initReactions() {
       if (!type || !postId) return;
 
       try {
-        const res = await fetch(
-          `${API_BASE}/posts/${postId}/${type}`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: { Accept: "application/json" },
-          }
-        );
+        const res = await fetch(`${API_BASE}/posts/${postId}/${type}`, {
+          method: "POST",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
 
         if (!res.ok) {
           alert("You must be logged in to react");
@@ -255,35 +246,31 @@ export function initReactions() {
 
         const { data } = await res.json();
 
-        /* =========================
-           HOME (article-based)
-        ========================== */
         const article = document.querySelector(
           `article[data-post-id="${postId}"]`
         );
-
         if (article) {
-          const likeEl = article.querySelector("[data-like-count]");
-          const dislikeEl = article.querySelector("[data-dislike-count]");
-
-          if (likeEl) likeEl.textContent = data.likes_count;
-          if (dislikeEl) dislikeEl.textContent = data.dislikes_count;
-          return;
+          article.querySelector("[data-like-count]").textContent =
+            data.likes_count;
+          article.querySelector("[data-dislike-count]").textContent =
+            data.dislikes_count;
         }
-
-        /* =========================
-           VIEW-POST (id-based)
-        ========================== */
-        const likeView = document.getElementById("like-count");
-        const dislikeView = document.getElementById("dislike-count");
-
-        if (likeView) likeView.textContent = data.likes_count;
-        if (dislikeView) dislikeView.textContent = data.dislikes_count;
-
       } catch (err) {
         console.error("Reaction failed:", err);
       }
     },
     true
   );
+}
+
+function renderCategories(categories = []) {
+  if (!categories.length) return "";
+
+  return `
+    <div class="post-categories">
+      ${categories.map(c => `
+        <span class="category-badge">${c.name}</span>
+      `).join("")}
+    </div>
+  `;
 }
