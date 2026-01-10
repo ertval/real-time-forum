@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Posts</title>
+
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/header.css" />
+  <link rel="stylesheet" href="/static/css/home.css" />
+
+  <!-- helpers FIRST -->
+  <script src="/static/js/helpers.js" defer></script>
+
+  <!-- page logic -->
+  <script type="module" src="/static/js/my-posts.js"></script>
+</head>
+
+<body>
+<main class="container">
+
+  <header class="page-header">
+    <div class="page-title-wrap">
+      <a href="/home" class="forum-logo">
+        <h1 class="page-title">Forum</h1>
+      </a>
+    </div>
+
+    <div class="page-actions">
+    </div>
+  </header>
+
+  <section class="filters">
+    <label for="categoryFilter">Category</label>
+    <select id="categoryFilter">
+      <option value="">All categories</option>
+    </select>
+  </section>
+
+  <!-- POSTS -->
+  <section class="posts">
+    <div id="posts-output"></div>
+    <p id="posts-empty" hidden>No posts yet.</p>
+  </section>
+
+</main>
+</body>
+</html>
