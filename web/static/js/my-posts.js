@@ -31,7 +31,7 @@ async function boot() {
     const articles = [];
 
     for (const post of posts) {
-        const article = renderPostCard(post, { clickable: true });
+        const article = renderPostCard(post, { clickable: true, showStatusToggle: true });
         fragment.appendChild(article);
         articles.push(article);
     }

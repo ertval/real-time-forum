@@ -9,7 +9,7 @@ import {
    POST CARD
 ================================================== */
 
-export function renderPostCard(post, { clickable = true } = {}) {
+export function renderPostCard(post, { clickable = true, showStatusToggle = false } = {}) {
   const article = document.createElement("article");
   article.className = "post card card-pad";
   article.dataset.postId = post.id;
@@ -21,7 +21,11 @@ export function renderPostCard(post, { clickable = true } = {}) {
         <h3 class="post-title">${escapeHTML(post.title)}</h3>
         <p class="muted">Author: ${resolveUsername(post)}</p>
       </div>
-      <time class="muted">${formatCreatedAt(post.created_at)}</time>
+      
+      <div class="post-header-right">
+        <time class="muted">${formatCreatedAt(post.created_at)}</time>
+        ${showStatusToggle ? statusToggleTemplate(post) : ""}
+      </div>
     </header>
 
     <section class="post-body ${clickable ? "clickable" : ""}">
@@ -261,6 +265,22 @@ export function initReactions() {
     },
     true
   );
+}
+
+function statusToggleTemplate(post) {
+  if (!post.status) return "";
+
+  const isDraft = post.status === "draft";
+
+  return `
+    <button
+      class="btn btn-outline btn-sm post-status-toggle"
+      data-post-id="${post.id}"
+      data-current-status="${post.status}"
+    >
+      ${isDraft ? "Publish" : "Draft"}
+    </button>
+  `;
 }
 
 function renderCategories(categories = []) {

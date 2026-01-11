@@ -20,6 +20,7 @@ type Post struct {
 	Body       string         `json:"body"`
 	CreatedAt  string         `json:"created_at"`
 	UpdatedAt  string         `json:"updated_at,omitempty"`
+	Status     string         `json:"status"`
 	Likes      int            `json:"likes"`
 	Dislikes   int            `json:"dislikes"`
 	Categories []PostCategory `json:"categories"`
@@ -421,7 +422,8 @@ func ListPostsByAuthor(
 			p.title,
 			p.body,
 			p.created_at,
-			p.updated_at
+			p.updated_at,
+			p.status
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
 		WHERE p.author_id = ?
@@ -444,6 +446,7 @@ func ListPostsByAuthor(
 			&post.Body,
 			&post.CreatedAt,
 			&post.UpdatedAt,
+			&post.Status,
 		); err != nil {
 			return ListPostsByAuthorResult{}, err
 		}
