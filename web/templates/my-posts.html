@@ -14,36 +14,18 @@
   <!-- helpers FIRST -->
   <script src="/static/js/helpers.js" defer></script>
 
-  <!-- page logic -->
-  <script type="module" src="/static/js/my-posts.js"></script>
+  <script type="module" src="/static/js/my-posts-page.js"></script>
 </head>
 
-<body>
-<main class="container">
-
-  <header class="page-header">
-    <div class="page-title-wrap">
-      <a href="/home" class="forum-logo">
-        <h1 class="page-title">Forum</h1>
-      </a>
-    </div>
-
-    <div class="page-actions">
-      <label class="muted" for="status-filter">Status</label>
-      <select id="status-filter" class="input status-filter">
-        <option value="all">All</option>
-        <option value="draft">Draft</option>
-        <option value="published">Published</option>
-      </select>
-    </div>
-  </header>
+<body class="my-posts">
+  <main class="container">
+    <div id="header"></div>
 
   <!-- POSTS -->
-  <section class="posts">
-    <div id="posts-output"></div>
-    <p id="posts-empty" hidden>No posts yet.</p>
-  </section>
-
-</main>
+    <section class="posts">
+      <div id="posts-output"></div>
+      <p id="posts-empty" hidden>No posts yet.</p>
+    </section>
+  </main>
 </body>
 </html>

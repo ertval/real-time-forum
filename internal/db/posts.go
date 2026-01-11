@@ -464,7 +464,7 @@ func ListPostsByAuthor(
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
 		`+where+`
-		ORDER BY p.created_at ASC
+		ORDER BY p.created_at DESC
 		LIMIT ? OFFSET ?
 	`, selectArgs...)
 	if err != nil {

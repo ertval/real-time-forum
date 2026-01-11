@@ -1,14 +1,24 @@
 import { API_BASE, getPaginationFromURL } from "./utils.js";
 import { renderPostCard, loadPostCommentsPreview, initReactions } from "./posts.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+let statusToggleBound = false;
+let deleteBound = false;
+
+function start() {
     initStatusFilterUI();
-    initDeletePost();
+    initStatusToggle();
+    initDeletePost(); // if you added delete
     boot().catch((err) => {
         console.error("My Posts boot failed:", err);
         showMessage("Failed to load your posts.");
     });
-});
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+} else {
+    start(); // DOM already loaded (your current situation)
+}
 
 function getStatusFilterFromURL() {
     const params = new URLSearchParams(window.location.search);
@@ -97,8 +107,6 @@ async function boot() {
     initStatusToggle();
 }
 
-let statusToggleBound = false;
-
 function initStatusToggle() {
     if (statusToggleBound) return;
     statusToggleBound = true;
@@ -151,8 +159,6 @@ function initStatusToggle() {
         }
     }, true);
 }
-
-let deleteBound = false;
 
 function initDeletePost() {
     if (deleteBound) return;
