@@ -480,6 +480,12 @@ func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
 
 	page, perPage := sanitizePagination(r)
 
+	statusPtr, err := parsePostStatusFilter(r)
+	if err != nil {
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
+		return
+	}
+
 	result, err := repository.ListPostsByAuthor(
 		r.Context(),
 		p.conn,
@@ -487,6 +493,7 @@ func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
 			AuthorID: userID,
 			Page:     page,
 			PerPage:  perPage,
+			Status:   statusPtr,
 		},
 	)
 	if err != nil {

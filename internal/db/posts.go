@@ -399,6 +399,7 @@ type ListPostsByAuthorParams struct {
 	AuthorID int64
 	Page     int
 	PerPage  int
+	Status   *string // nil means no filter
 }
 
 type ListPostsByAuthorResult struct {
@@ -429,16 +430,26 @@ func ListPostsByAuthor(
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
+	// Build WHERE clause + args (shared by COUNT and SELECT)
+	where := "WHERE p.author_id = ?"
+	args := []any{p.AuthorID}
+
+	if p.Status != nil {
+		where += " AND p.status = ?"
+		args = append(args, *p.Status)
+	}
+
 	var total int
 	if err := db.QueryRowContext(ctx, `
 		SELECT COUNT(*)
-		FROM posts
-		WHERE author_id = ?
-	`, p.AuthorID).Scan(&total); err != nil {
+		FROM posts p 
+	`+where, args...).Scan(&total); err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
 
 	offset := (p.Page - 1) * p.PerPage
+
+	selectArgs := append(append([]any{}, args...), p.PerPage, offset)
 
 	rows, err := db.QueryContext(ctx, `
 		SELECT
@@ -452,10 +463,10 @@ func ListPostsByAuthor(
 			p.status
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
-		WHERE p.author_id = ?
+		`+where+`
 		ORDER BY p.created_at ASC
 		LIMIT ? OFFSET ?
-	`, p.AuthorID, p.PerPage, offset)
+	`, selectArgs...)
 	if err != nil {
 		return ListPostsByAuthorResult{}, err
 	}

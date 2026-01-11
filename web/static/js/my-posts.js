@@ -2,11 +2,51 @@ import { API_BASE, getPaginationFromURL } from "./utils.js";
 import { renderPostCard, loadPostCommentsPreview, initReactions } from "./posts.js";
 
 document.addEventListener("DOMContentLoaded", () => {
+    initStatusFilterUI();
     boot().catch((err) => {
         console.error("My Posts boot failed:", err);
         showMessage("Failed to load your posts.");
     });
 });
+
+function getStatusFilterFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const v = (params.get("status") || "all").toLowerCase();
+    return v === "draft" || v === "published" ? v : "all";
+}
+
+function setStatusFilterInURL(status) {
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+
+    // changing filter resets pagination
+    params.set("page", "1");
+
+    if (!status || status === "all") {
+        params.delete("status");
+    } else {
+        params.set("status", status);
+    }
+
+    history.replaceState({}, "", url.toString());
+}
+
+function initStatusFilterUI() {
+    const select = document.getElementById("status-filter");
+    if (!select) return;
+
+    select.value = getStatusFilterFromURL();
+
+    // on change updates URL and re-runs boot()
+    select.addEventListener("change", () => {
+        const status = select.value;
+        setStatusFilterInURL(status);
+        boot().catch((err) => {
+            console.error("My Posts boot failed:", err);
+            showMessage("Failed to load your posts.");
+        });
+    });
+}
 
 async function boot() {
     const output = document.getElementById("posts-output");
@@ -18,8 +58,9 @@ async function boot() {
     if (empty) empty.hidden = true;
 
     const { page, perPage } = getPaginationFromURL();
+    const status = getStatusFilterFromURL();
 
-    const { posts } = await fetchMyPosts({ page, perPage });
+    const { posts } = await fetchMyPosts({ page, perPage, status });
 
     if (!posts.length) {
         if (empty) empty.hidden = false;
@@ -55,7 +96,12 @@ async function boot() {
     initStatusToggle();
 }
 
+let statusToggleBound = false;
+
 function initStatusToggle() {
+    if (statusToggleBound) return;
+    statusToggleBound = true;
+
     document.addEventListener("click", async (e) => {
         const btn = e.target.closest(".post-status-toggle");
         if (!btn) return;
@@ -96,17 +142,11 @@ function initStatusToggle() {
                 alert("Failed to update post status.");
                 return;
             }
-
-            // update dataset + label
-            btn.dataset.currentStatus = nextStatus;
-            btn.textContent = nextStatus === "draft" ? "Publish" : "Draft";
+            // dynamically updates on draft/publish button press
+            await boot();
         } catch (err) {
             console.error("Status update request failed:", err);
             alert("Failed to update post status.");
-            // revert text if anything went wrong
-            btn.textContent = originalText;
-        } finally {
-            btn.disabled = false;
         }
     }, true);
 }
@@ -115,10 +155,14 @@ function initStatusToggle() {
    API
 ========================= */
 
-async function fetchMyPosts({ page, perPage }) {
+async function fetchMyPosts({ page, perPage, status }) {
     const url = new URL(`${API_BASE}/posts/mine`, window.location.origin);
     url.searchParams.set("page", String(page));
     url.searchParams.set("per_page", String(perPage));
+
+    if (status && status !== "all") {
+        url.searchParams.set("status", status);
+    }
 
     const res = await fetch(url.toString(), {
         credentials: "include",

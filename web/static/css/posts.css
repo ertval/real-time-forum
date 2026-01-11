@@ -120,3 +120,17 @@
   color: #333;
   font-weight: 500;
 }
+
+/* ==================================================
+   MY POSTS – STATUS DROPDOWN FILTER
+================================================== */
+
+.page-actions {
+  gap: 10px; /* keep header controls tight */
+}
+
+.status-filter {
+  width: 190px;
+  min-height: 40px;
+  padding: 8px 12px;
+}
