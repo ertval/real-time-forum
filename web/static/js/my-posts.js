@@ -50,6 +50,65 @@ async function boot() {
 
     // Bind like/dislike click handler
     initReactions();
+
+    // Bind draft/publish toggle handler (my-posts only)
+    initStatusToggle();
+}
+
+function initStatusToggle() {
+    document.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".post-status-toggle");
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const postId = btn.dataset.postId;
+        const currentStatus = btn.dataset.currentStatus;
+        if (!postId || !currentStatus) return;
+
+        // determine next status
+        const nextStatus = currentStatus === "draft" ? "published" : "draft";
+
+        // disable button while request runs
+        const originalText = btn.textContent;
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE}/posts/${postId}`, {
+                method: "PATCH",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({ status: nextStatus }),
+            });
+
+            if (res.status === 401) {
+                alert("You must be logged in.");
+                return;
+            }
+
+            if (!res.ok) {
+                const text = await res.text().catch(() => "");
+                console.error("Status update failed:", res.status, text);
+                alert("Failed to update post status.");
+                return;
+            }
+
+            // update dataset + label
+            btn.dataset.currentStatus = nextStatus;
+            btn.textContent = nextStatus === "draft" ? "Publish" : "Draft";
+        } catch (err) {
+            console.error("Status update request failed:", err);
+            alert("Failed to update post status.");
+            // revert text if anything went wrong
+            btn.textContent = originalText;
+        } finally {
+            btn.disabled = false;
+        }
+    }, true);
 }
 
 /* =========================
