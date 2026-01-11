@@ -3,6 +3,7 @@ import { renderPostCard, loadPostCommentsPreview, initReactions } from "./posts.
 
 document.addEventListener("DOMContentLoaded", () => {
     initStatusFilterUI();
+    initDeletePost();
     boot().catch((err) => {
         console.error("My Posts boot failed:", err);
         showMessage("Failed to load your posts.");
@@ -72,7 +73,7 @@ async function boot() {
     const articles = [];
 
     for (const post of posts) {
-        const article = renderPostCard(post, { clickable: true, showStatusToggle: true });
+        const article = renderPostCard(post, { clickable: true, showStatusToggle: true, showDelete: true });
         fragment.appendChild(article);
         articles.push(article);
     }
@@ -149,6 +150,67 @@ function initStatusToggle() {
             alert("Failed to update post status.");
         }
     }, true);
+}
+
+let deleteBound = false;
+
+function initDeletePost() {
+    if (deleteBound) return;
+    deleteBound = true;
+
+    document.addEventListener(
+        "click",
+        async (e) => {
+            const btn = e.target.closest(".post-delete");
+            if (!btn) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const postId = btn.dataset.postId;
+            if (!postId) return;
+
+            const ok = confirm("Delete this post? This cannot be undone.");
+            if (!ok) return;
+
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/posts/${postId}`, {
+                    method: "DELETE",
+                    credentials: "include",
+                    headers: { Accept: "application/json" },
+                });
+
+                if (res.status === 401) {
+                    alert("You must be logged in.");
+                    return;
+                }
+
+                if (res.status === 404) {
+                    alert("Post not found (it may have already been deleted).");
+                    await boot();
+                    return;
+                }
+
+                if (!res.ok) {
+                    const text = await res.text().catch(() => "");
+                    console.error("Delete failed:", res.status, text);
+                    alert("Failed to delete post.");
+                    return;
+                }
+
+                // re-render so it disappears and filter stays correct
+                await boot();
+            } catch (err) {
+                console.error("Delete request failed:", err);
+                alert("Failed to delete post.");
+            } finally {
+                if (document.contains(btn)) btn.disabled = false;
+            }
+        },
+        true
+    );
 }
 
 /* =========================

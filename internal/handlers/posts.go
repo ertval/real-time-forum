@@ -304,6 +304,10 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 
 	if err := repository.DeletePost(r.Context(), p.conn, postID); err != nil {
 		log.Printf("failed to delete post: %v", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			notFound(w, r)
+			return
+		}
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error deleting post", http.StatusInternalServerError))
 		return
 	}

@@ -9,7 +9,7 @@ import {
    POST CARD
 ================================================== */
 
-export function renderPostCard(post, { clickable = true, showStatusToggle = false } = {}) {
+export function renderPostCard(post, { clickable = true, showStatusToggle = false, showDelete = false } = {}) {
   const article = document.createElement("article");
   article.className = "post card card-pad";
   article.dataset.postId = post.id;
@@ -25,6 +25,7 @@ export function renderPostCard(post, { clickable = true, showStatusToggle = fals
       <div class="post-header-right">
         <time class="muted">${formatCreatedAt(post.created_at)}</time>
         ${showStatusToggle ? statusToggleTemplate(post) : ""}
+        ${showDelete ? deletePostTemplate(post) : ""}
       </div>
     </header>
 
@@ -292,5 +293,18 @@ function renderCategories(categories = []) {
         <span class="category-badge">${c.name}</span>
       `).join("")}
     </div>
+  `;
+}
+
+function deletePostTemplate(post) {
+  return `
+    <button
+      class="btn btn-danger btn-sm post-delete"
+      type="button"
+      data-post-id="${post.id}"
+      aria-label="Delete post"
+    >
+      Delete
+    </button>
   `;
 }
