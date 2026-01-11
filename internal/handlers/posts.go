@@ -244,8 +244,9 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 	}
 
 	var req struct {
-		Title *string `json:"title"`
-		Body  *string `json:"body"`
+		Title  *string `json:"title"`
+		Body   *string `json:"body"`
+		Status *string `json:"status"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -253,22 +254,46 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 		return
 	}
 
-	if req.Title == nil && req.Body == nil {
+	if req.Title == nil && req.Body == nil && req.Status == nil {
 		WriteError(w, r, NewError("BAD_REQUEST", "nothing to update", http.StatusBadRequest))
 		return
 	}
 
-	if err := repository.UpdatePost(
-		r.Context(),
-		p.conn,
-		postID,
-		repository.UpdatePostInput{Title: req.Title, Body: req.Body},
-	); err != nil {
-		log.Printf("failed to update post: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
-		return
-	}
+	if req.Status != nil {
+		status := strings.ToLower(strings.TrimSpace(*req.Status))
+		if status != "draft" && status != "published" {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
+			return
+		}
 
+		if err := repository.UpdatePostStatus(
+			r.Context(),
+			p.conn,
+			postID,
+			0, // authorID ignored for now
+			status,
+		); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				notFound(w, r)
+				return
+			}
+			log.Printf("failed to update post status: %v", err)
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post status", http.StatusInternalServerError))
+			return
+		}
+	}
+	if req.Title != nil || req.Body != nil {
+		if err := repository.UpdatePostContent(
+			r.Context(),
+			p.conn,
+			postID,
+			repository.UpdatePostInput{Title: req.Title, Body: req.Body},
+		); err != nil {
+			log.Printf("failed to update post: %v", err)
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
+			return
+		}
+	}
 	WriteOK(w, map[string]string{"status": "updated"}, nil)
 }
 
