@@ -24,25 +24,31 @@ async function loadHeader() {
     const host = document.getElementById("header");
     if (!host) throw new Error("Missing #header container");
     host.innerHTML = html;
+    //Hides my posts button if on my posts page
+    document.getElementById("my-posts-btn")?.remove();
 
     const actions = document.querySelector(".page-actions");
     if (!actions) throw new Error("Header missing .page-actions");
 
     const { label, select } = buildStatusFilter();
 
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
     // Insert BEFORE Create Post button if it can be found
     const createBtn =
         actions.querySelector('#create-post-btn') ||
         actions.querySelector('a[href="/create-post"]') ||
         actions.querySelector('a[href="/create-post/"]');
+    //clears actions area
+    actions.innerHTML = "";
 
-    if (createBtn) {
-        actions.insertBefore(label, createBtn);
-        actions.insertBefore(select, createBtn);
-    } else {
-        actions.appendChild(label);
-        actions.appendChild(select);
-    }
+    //rebuilds button/dropdown order
+    actions.appendChild(label);
+    actions.appendChild(select);
+
+    if (loginBtn) actions.appendChild(loginBtn);
+    if (logoutBtn) actions.appendChild(logoutBtn);
+    if (createBtn) actions.appendChild(createBtn);
 }
 
 function loadModuleScript(src) {

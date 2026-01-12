@@ -6,6 +6,7 @@ import { API_BASE } from "./utils.js";
 export async function initHeader() {
   setupForumLogo();
 
+  const myPostsBtn = document.getElementById("my-posts-btn");
   const greetingEl = document.getElementById("greeting");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
@@ -15,7 +16,7 @@ export async function initHeader() {
     return;
   }
 
-  await loadGreeting(greetingEl, loginBtn, logoutBtn);
+  await loadGreeting(greetingEl, loginBtn, logoutBtn, myPostsBtn);
   bindLogout(logoutBtn);
 }
 
@@ -37,7 +38,7 @@ function setupForumLogo() {
 // GREETING + AUTH STATE
 // --------------------------------------------------
 
-async function loadGreeting(greetingEl, loginBtn, logoutBtn) {
+async function loadGreeting(greetingEl, loginBtn, logoutBtn, myPostsBtn) {
   try {
     const res = await fetch(`${API_BASE}/users/me`, {
       credentials: "include",
@@ -51,6 +52,7 @@ async function loadGreeting(greetingEl, loginBtn, logoutBtn) {
 
       loginBtn.style.display = "inline-flex";
       logoutBtn.style.display = "none";
+      if (myPostsBtn) myPostsBtn.style.display = "none";
       return;
     }
 
@@ -63,12 +65,14 @@ async function loadGreeting(greetingEl, loginBtn, logoutBtn) {
 
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-flex";
+    if (myPostsBtn) myPostsBtn.style.display = "inline-flex";
   } catch {
     greetingEl.textContent = "Hello, Guest";
     greetingEl.hidden = false;
 
     loginBtn.style.display = "inline-flex";
     logoutBtn.style.display = "none";
+    if (myPostsBtn) myPostsBtn.style.display = "none";
   }
 }
 
