@@ -176,6 +176,15 @@ select:focus {
 
 .btn-full { width: 100%; height: 46px; border-radius: 10px; }
 
+.btn-danger {
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    background: rgba(220, 38, 38, 0.50);
+}
+
+.btn-danger:hover {
+    background: rgba(220, 38, 38, 0.14);
+}
+
 /* ---------- Compatibility layer (so existing classes work) ---------- */
 /* These map your existing button classes to the new .btn system */
 .load-comments,

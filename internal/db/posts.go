@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-// ============================================================
-// MODEL
-// ============================================================
+/* ============================================================
+   MODEL
+   ============================================================ */
 
 type Post struct {
 	ID         int64          `json:"id"`
@@ -20,6 +20,7 @@ type Post struct {
 	Body       string         `json:"body"`
 	CreatedAt  string         `json:"created_at"`
 	UpdatedAt  string         `json:"updated_at,omitempty"`
+	Status     string         `json:"status"`
 	Likes      int            `json:"likes"`
 	Dislikes   int            `json:"dislikes"`
 	Categories []PostCategory `json:"categories"`
@@ -30,9 +31,9 @@ type PostCategory struct {
 	Name string `json:"name"`
 }
 
-// ============================================================
-// LIST POSTS
-// ============================================================
+/* ============================================================
+   LIST POSTS
+   ============================================================ */
 
 type ListPostsParams struct {
 	Page    int
@@ -82,9 +83,9 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 	return ListPostsResult{Posts: posts, Total: total}, nil
 }
 
-// ============================================================
-// GET POST
-// ============================================================
+/* ============================================================
+   GET POST
+   ============================================================ */
 
 func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -134,9 +135,9 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	return post, nil
 }
 
-// ============================================================
-// CREATE POST (TRANSACTIONAL)
-// ============================================================
+/* ============================================================
+   CREATE POST (TRANSACTIONAL)
+   ============================================================ */
 
 func CreatePostWithCategories(
 	ctx context.Context,
@@ -184,16 +185,16 @@ func CreatePostWithCategories(
 	return postID, nil
 }
 
-// ============================================================
-// UPDATE POST
-// ============================================================
+/* ============================================================
+   UPDATE POST
+   ============================================================ */
 
 type UpdatePostInput struct {
 	Title *string
 	Body  *string
 }
 
-func UpdatePost(ctx context.Context, db *sql.DB, id int64, in UpdatePostInput) error {
+func UpdatePostContent(ctx context.Context, db *sql.DB, id int64, in UpdatePostInput) error {
 	set := []string{}
 	args := []any{}
 
@@ -201,6 +202,7 @@ func UpdatePost(ctx context.Context, db *sql.DB, id int64, in UpdatePostInput) e
 		set = append(set, "title = ?")
 		args = append(args, *in.Title)
 	}
+
 	if in.Body != nil {
 		set = append(set, "body = ?")
 		args = append(args, *in.Body)
@@ -231,9 +233,34 @@ func UpdatePost(ctx context.Context, db *sql.DB, id int64, in UpdatePostInput) e
 	return nil
 }
 
-// ============================================================
-// DELETE POST (TRANSACTIONAL)
-// ============================================================
+func UpdatePostStatus(ctx context.Context, db *sql.DB, postID, authorID int64, status string) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	res, err := db.ExecContext(ctx, `
+        UPDATE posts
+        SET status = ?, updated_at = datetime('now')
+        WHERE id = ?
+    `, status, postID)
+	if err != nil {
+		return err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+/* ============================================================
+   DELETE POST (TRANSACTIONAL)
+  ============================================================ */
 
 func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -266,9 +293,9 @@ func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	return tx.Commit()
 }
 
-// ============================================================
-// LIST POSTS BY CATEGORY
-// ============================================================
+/* ============================================================
+   LIST POSTS BY CATEGORY
+   ============================================================ */
 
 type ListPostsByCategoryParams struct {
 	CategoryID int64
@@ -364,14 +391,15 @@ func ListPostsByCategory(
 	return ListPostsByCategoryResult{Posts: posts, Total: total}, nil
 }
 
-// ============================================================
-// LIST POSTS BY AUTHOR (MY POSTS)
-// ============================================================
+/* ============================================================
+   LIST POSTS BY AUTHOR (MY POSTS)
+   ============================================================ */
 
 type ListPostsByAuthorParams struct {
 	AuthorID int64
 	Page     int
 	PerPage  int
+	Status   *string // nil means no filter
 }
 
 type ListPostsByAuthorResult struct {
@@ -402,16 +430,26 @@ func ListPostsByAuthor(
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
+	// Build WHERE clause + args (shared by COUNT and SELECT)
+	where := "WHERE p.author_id = ?"
+	args := []any{p.AuthorID}
+
+	if p.Status != nil {
+		where += " AND p.status = ?"
+		args = append(args, *p.Status)
+	}
+
 	var total int
 	if err := db.QueryRowContext(ctx, `
 		SELECT COUNT(*)
-		FROM posts
-		WHERE author_id = ?
-	`, p.AuthorID).Scan(&total); err != nil {
+		FROM posts p 
+	`+where, args...).Scan(&total); err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
 
 	offset := (p.Page - 1) * p.PerPage
+
+	selectArgs := append(append([]any{}, args...), p.PerPage, offset)
 
 	rows, err := db.QueryContext(ctx, `
 		SELECT
@@ -421,13 +459,14 @@ func ListPostsByAuthor(
 			p.title,
 			p.body,
 			p.created_at,
-			p.updated_at
+			p.updated_at,
+			p.status
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
-		WHERE p.author_id = ?
-		ORDER BY p.created_at ASC
+		`+where+`
+		ORDER BY p.created_at DESC
 		LIMIT ? OFFSET ?
-	`, p.AuthorID, p.PerPage, offset)
+	`, selectArgs...)
 	if err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
@@ -444,6 +483,7 @@ func ListPostsByAuthor(
 			&post.Body,
 			&post.CreatedAt,
 			&post.UpdatedAt,
+			&post.Status,
 		); err != nil {
 			return ListPostsByAuthorResult{}, err
 		}
@@ -460,9 +500,9 @@ func ListPostsByAuthor(
 	return ListPostsByAuthorResult{Posts: posts, Total: total}, nil
 }
 
-// ============================================================
-// LIST POSTS LIKED BY USER (ISSUE #21)
-// ============================================================
+/* ============================================================
+   LIST POSTS LIKED BY USER
+   ============================================================ */
 
 type ListPostsLikedByUserParams struct {
 	UserID  int64
@@ -581,9 +621,9 @@ func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUs
 	return posts, nil
 }
 
-// ============================================================
-// HELPERS (TX SAFE)
-// ============================================================
+/* ============================================================
+   HELPERS (TX SAFE)
+   ============================================================ */
 
 func validateCategoriesTx(ctx context.Context, tx *sql.Tx, ids []int64) error {
 	if len(ids) == 0 {

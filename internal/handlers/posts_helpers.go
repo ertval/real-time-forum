@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,4 +27,17 @@ func resolvePostRoute(w http.ResponseWriter, r *http.Request) (postID int64, act
 	}
 
 	return id, action, true
+}
+
+func parsePostStatusFilter(r *http.Request) (*string, error) {
+	status := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("status")))
+
+	switch status {
+	case "", "all":
+		return nil, nil
+	case "draft", "published":
+		return &status, nil
+	default:
+		return nil, errors.New("invalid status filter")
+	}
 }

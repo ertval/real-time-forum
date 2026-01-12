@@ -52,3 +52,20 @@ export function resolveUsername(obj) {
     (obj.user_id ? `User ${obj.user_id}` : "User")
   );
 }
+
+/* =========================
+   Pagination (read only for now)
+========================= */
+
+export function getPaginationFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    page: toPositiveInt(params.get("page")) || 1,
+    perPage: toPositiveInt(params.get("per_page")) || 10,
+  };
+}
+
+export function toPositiveInt(v) {
+  const n = Number.parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}

@@ -128,9 +128,9 @@ func getCategoriesByPostID(
 	return categories, nil
 }
 
-// ============================================================
-// ATTACH REACTIONS
-// ============================================================
+/* ============================================================
+   ATTACH REACTIONS
+   ============================================================ */
 
 func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post) error {
 	for i := range posts {
