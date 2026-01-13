@@ -85,6 +85,21 @@ CREATE TABLE IF NOT EXISTS post_categories (
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 );
 
+-- ===============================================================
+-- SESSIONS
+-- ===============================================================
+CREATE TABLE IF NOT EXISTS sessions (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL,
+  token       TEXT NOT NULL UNIQUE,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  expires_at  TEXT NOT NULL CHECK (expires_at > created_at),
+  ip          TEXT,
+  user_agent  TEXT CHECK (length(user_agent) <= 512),
+  is_valid    INTEGER NOT NULL DEFAULT 1 CHECK (is_valid IN (0, 1)),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 
 -- ===============================================================
 -- REACTIONS (post or comment)
@@ -103,23 +118,6 @@ CREATE TABLE IF NOT EXISTS reactions (
   FOREIGN KEY (post_id)    REFERENCES posts(id) ON DELETE CASCADE,
   FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
 );
-
-
--- ===============================================================
--- SESSIONS
--- ===============================================================
-CREATE TABLE IF NOT EXISTS sessions (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id     INTEGER NOT NULL,
-  token       TEXT NOT NULL UNIQUE,
-  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-  expires_at  TEXT NOT NULL CHECK (expires_at > created_at),
-  ip          TEXT,
-  user_agent  TEXT CHECK (length(user_agent) <= 512),
-  is_valid    INTEGER NOT NULL DEFAULT 1 CHECK (is_valid IN (0, 1)),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
 
 -- ===============================================================
 -- INDEXES

@@ -1,3 +1,4 @@
+// internal/db/comments_helpers.go
 package db
 
 import (

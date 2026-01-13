@@ -123,6 +123,25 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	// ---------------------------------------------------------
+	// COMMENTS ITEM + REACTIONS
+	// ---------------------------------------------------------
+	// GET    /comments/{id}
+	// PATCH  /comments/{id}
+	// DELETE /comments/{id}
+	// POST   /comments/{id}/like
+	// POST   /comments/{id}/dislike
+	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			posts.HandleComment(w, r)
+		case http.MethodPost, http.MethodPatch, http.MethodDelete:
+			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
+		default:
+			handlers.MethodNotAllowed(w, r)
+		}
+	})
+
+	// ---------------------------------------------------------
 	// API FALLBACK (JSON 404)
 	// ---------------------------------------------------------
 	mux.HandleFunc("/api", notFoundJSON)

@@ -1,3 +1,4 @@
+// internal/db/reactions.go
 package db
 
 import (
