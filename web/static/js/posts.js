@@ -1,3 +1,4 @@
+// js/posts.js
 import {
   API_BASE,
   formatCreatedAt,
@@ -103,14 +104,42 @@ export async function loadPostCommentsPreview(postId, article) {
 function renderComment(comment) {
   const div = document.createElement("div");
   div.className = "comment";
+  div.dataset.commentId = comment.id;
 
   div.innerHTML = `
     <div class="comment-meta muted">
       <strong>${resolveUsername(comment)}</strong>
       · ${formatCreatedAt(comment.created_at)}
     </div>
+
     <div class="comment-body">
       ${escapeHTML(comment.body)}
+    </div>
+
+    <div class="comment-actions">
+      <div class="reaction">
+        <span data-like-count>${comment.likes ?? 0}</span>
+        <button
+          class="btn btn-ghost"
+          type="button"
+          data-reaction="like"
+          data-comment-id="${comment.id}"
+        >
+          Like
+        </button>
+      </div>
+
+      <div class="reaction">
+        <span data-dislike-count>${comment.dislikes ?? 0}</span>
+        <button
+          class="btn btn-ghost"
+          type="button"
+          data-reaction="dislike"
+          data-comment-id="${comment.id}"
+        >
+          Dislike
+        </button>
+      </div>
     </div>
   `;
 
@@ -221,12 +250,9 @@ export function reactionTemplate(post) {
 let reactionsBound = false;
 
 export function initReactions() {
-  if (reactionsBound) return;
-  reactionsBound = true;
-
   document.addEventListener(
     "click",
-    async (e) => {
+    async e => {
       const btn = e.target.closest("[data-reaction]");
       if (!btn) return;
 
@@ -235,10 +261,20 @@ export function initReactions() {
 
       const type = btn.dataset.reaction;
       const postId = btn.dataset.postId;
-      if (!type || !postId) return;
+      const commentId = btn.dataset.commentId;
+
+      let url = null;
+
+      if (postId) {
+        url = `${API_BASE}/posts/${postId}/${type}`;
+      } else if (commentId) {
+        url = `${API_BASE}/comments/${commentId}/${type}`;
+      } else {
+        return;
+      }
 
       try {
-        const res = await fetch(`${API_BASE}/posts/${postId}/${type}`, {
+        const res = await fetch(url, {
           method: "POST",
           credentials: "include",
           headers: { Accept: "application/json" },
@@ -251,15 +287,20 @@ export function initReactions() {
 
         const { data } = await res.json();
 
-        const article = document.querySelector(
-          `article[data-post-id="${postId}"]`
+        const container = btn.closest(
+          postId
+            ? `article[data-post-id="${postId}"]`
+            : `div[data-comment-id="${commentId}"]`
         );
-        if (article) {
-          article.querySelector("[data-like-count]").textContent =
-            data.likes_count;
-          article.querySelector("[data-dislike-count]").textContent =
-            data.dislikes_count;
-        }
+
+        if (!container) return;
+
+        container.querySelector("[data-like-count]").textContent =
+          data.likes_count;
+
+        container.querySelector("[data-dislike-count]").textContent =
+          data.dislikes_count;
+
       } catch (err) {
         console.error("Reaction failed:", err);
       }
