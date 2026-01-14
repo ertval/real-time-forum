@@ -55,8 +55,8 @@ func WriteError(w http.ResponseWriter, r *http.Request, err *APIError) {
 			http.Error(w, err.Message, err.Status)
 			return
 		}
-		w.WriteHeader(err.Status)
 		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(err.Status)
 		tmpl.Execute(w, err)
 	} else {
 		//Fallback to json

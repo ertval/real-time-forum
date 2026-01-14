@@ -64,3 +64,24 @@ body.error-page {
 .error-message:empty {
     display: none;
 }
+
+/* Back to Home button */
+.error-home {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 10px 16px;
+    border: 2px solid var(--error-border);
+    color: var(--error-title-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.error-home:hover {
+    background: var(--error-border);
+    color: var(--error-bg);
+}
+
+.error-home:focus {
+    outline: 3px solid var(--error-border);
+    outline-offset: 3px;
+}
