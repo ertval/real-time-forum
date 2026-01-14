@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (payload.status === "draft") {
         alert("Draft saved successfully");
       } else {
-        window.location.href = "/home";
+        window.location.href = "/";
       }
 
     } catch (err) {

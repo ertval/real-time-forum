@@ -50,7 +50,6 @@ func main() {
 	// Pages (HTML templates)
 	// ---------------------------------------------------------
 
-	mux.HandleFunc("/home", serveTemplate("./web/templates/home.html"))
 	mux.HandleFunc("/create-post", serveTemplate("./web/templates/create-post.html"))
 	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgot-password.html"))
 	mux.HandleFunc("/login", serveTemplate("./web/templates/login.html"))
