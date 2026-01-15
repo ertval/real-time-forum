@@ -1,6 +1,8 @@
+// cmd/frontend/main.go
 package main
 
 import (
+	"forum/internal/handlers"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -18,6 +20,16 @@ func main() {
 		http.StripPrefix(
 			"/static/",
 			http.FileServer(http.Dir("./web/static")),
+		),
+	)
+	// ---------------------------------------------------------
+	// Error assets (/errors/*)
+	// ---------------------------------------------------------
+	mux.Handle(
+		"/errors/",
+		http.StripPrefix(
+			"/errors/",
+			http.FileServer(http.Dir("./web/errors")),
 		),
 	)
 
@@ -38,15 +50,26 @@ func main() {
 	// Pages (HTML templates)
 	// ---------------------------------------------------------
 
-	mux.HandleFunc("/", serveTemplate("./web/templates/home.html"))
-
-	mux.HandleFunc("/home", serveTemplate("./web/templates/home.html"))
 	mux.HandleFunc("/create-post", serveTemplate("./web/templates/create-post.html"))
 	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgot-password.html"))
 	mux.HandleFunc("/login", serveTemplate("./web/templates/login.html"))
 	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
 	mux.HandleFunc("/my-posts/", serveTemplate("./web/templates/my-posts.html"))
 	mux.Handle("/view-post/", serveTemplate("./web/templates/view-post.html"))
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("HIT / handler: %s", r.URL.Path)
+
+		if r.URL.Path != "/" {
+			handlers.WriteError(w, r, handlers.NewError(
+				"NOT_FOUND",
+				"route not found",
+				http.StatusNotFound,
+			))
+			return
+		}
+		http.ServeFile(w, r, "./web/templates/home.html")
+	})
 
 	log.Println("Frontend running at http://localhost:3000")
 	log.Fatal(http.ListenAndServe(":3000", mux))

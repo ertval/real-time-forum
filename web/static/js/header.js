@@ -21,7 +21,7 @@ export async function initHeader() {
 }
 
 // --------------------------------------------------
-// FORUM LOGO → /home
+// FORUM LOGO → /
 // --------------------------------------------------
 
 function setupForumLogo() {
@@ -30,7 +30,7 @@ function setupForumLogo() {
 
   forumTitle.style.cursor = "pointer";
   forumTitle.addEventListener("click", () => {
-    window.location.assign("/home");
+    window.location.assign("/");
   });
 }
 
