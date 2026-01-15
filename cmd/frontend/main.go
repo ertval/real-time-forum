@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 )
 
 func main() {
@@ -77,6 +78,20 @@ func main() {
 
 func serveTemplate(path string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := os.Stat(path); err != nil {
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError(
+					"TEMPLATE_NOT_FOUND",
+					"Internal server error",
+					http.StatusInternalServerError,
+				),
+			)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.ServeFile(w, r, path)
 	}
 }

@@ -1,16 +1,16 @@
+// internal/handlers/response.go
 package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
 )
 
-// ------------------------------------------------------------
-// API RESPONSE ENVELOPE
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   API RESPONSE ENVELOPE
+   ------------------------------------------------------------ */
 
 // APIResponse is the unified JSON envelope for all API responses.
 type APIResponse struct {
@@ -19,9 +19,15 @@ type APIResponse struct {
 	Error *APIError `json:"error,omitempty"`
 }
 
-// ------------------------------------------------------------
-// SUCCESS RESPONSES
-// ------------------------------------------------------------
+type ErrorPageData struct {
+	Code    int
+	Title   string
+	Message string
+}
+
+/* ------------------------------------------------------------
+   SUCCESS RESPONSES
+   ------------------------------------------------------------ */
 
 func WriteOK(w http.ResponseWriter, data any, meta any) {
 	resp := &APIResponse{
@@ -43,27 +49,37 @@ func WriteNoContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ------------------------------------------------------------
-// ERROR RESPONSES
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   ERROR RESPONSES
+   ------------------------------------------------------------ */
 
 func WriteError(w http.ResponseWriter, r *http.Request, err *APIError) {
-	if strings.Contains(r.Header.Get("Accept"), "text/html") {
-		tmplPath := fmt.Sprintf("./web/errors/%d.html", err.Status)
-		tmpl, tmplErr := template.ParseFiles(tmplPath)
+	acceptsHTML := strings.Contains(r.Header.Get("Accept"), "text/html")
+	//Custom error page shouldn't be served for forbidden and unauthorized http errors
+	isAuthError := err.Status == http.StatusUnauthorized || err.Status == http.StatusForbidden
+	if acceptsHTML && !isAuthError {
+		tmpl, tmplErr := template.ParseFiles("./web/errors/error.html")
 		if tmplErr != nil {
 			http.Error(w, err.Message, err.Status)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html")
+		data := ErrorPageData{
+			Code:    err.Status,
+			Title:   statusTitle(err.Status),
+			Message: err.Message,
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(err.Status)
-		tmpl.Execute(w, err)
-	} else {
-		//Fallback to json
-		writeJSON(w, err.Status, &APIResponse{
-			Error: err,
-		})
+		if execErr := tmpl.Execute(w, data); execErr != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+		return
 	}
+	//Fallback to JSON
+	writeJSON(w, err.Status, &APIResponse{
+		Error: err,
+	})
 }
 
 func NewError(code, message string, status int) *APIError {
@@ -74,12 +90,29 @@ func NewError(code, message string, status int) *APIError {
 	}
 }
 
-// ------------------------------------------------------------
-// INTERNAL JSON WRITER
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   INTERNAL JSON WRITER
+   ------------------------------------------------------------ */
 
 func writeJSON(w http.ResponseWriter, status int, body *APIResponse) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+/* ------------------------------------------------------------
+	Writeerror Helpers
+   ------------------------------------------------------------ */
+
+func statusTitle(code int) string {
+	switch code {
+	case http.StatusBadRequest:
+		return "Bad Request"
+	case http.StatusNotFound:
+		return "Not Found"
+	case http.StatusInternalServerError:
+		return "Internal Server Error"
+	default:
+		return "Error"
+	}
 }
