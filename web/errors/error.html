@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>500 – Internal Server Error</title>
+    <title>{{.Code}} – {{.Title}}</title>
 
     <!-- Common HTTP error styles -->
     <link rel="stylesheet" href="/errors/common.css" />
@@ -11,16 +11,15 @@
 
 <body class="error-page">
 <div class="error-container">
-    <div class="error-code">500</div>
-    <div class="error-title">Internal Server Error</div>
+    <div class="error-code">{{.Code}}</div>
+    <div class="error-title">{{.Title}}</div>
 
     <!-- Custom / server-provided message (optional) -->
-    <p class="error-message">
-        The server encountered an internal error.
-    </p>
+    {{if .Message}}
+    <p class="error-message">{{.Message}}</p>
+    {{end}}
 
     <a class="error-home" href="/">Back to Home</a>
-
 </div>
 </body>
 </html>
