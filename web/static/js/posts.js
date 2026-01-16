@@ -1,4 +1,5 @@
-// js/posts.js
+// web/static/js/posts.js
+
 import {
   API_BASE,
   formatCreatedAt,
@@ -6,11 +7,16 @@ import {
   escapeHTML,
 } from "./utils.js";
 
+import { Auth } from "./auth.js";
+
 /* ==================================================
    POST CARD
 ================================================== */
 
-export function renderPostCard(post, { clickable = true, showStatusToggle = false, showDelete = false } = {}) {
+export function renderPostCard(
+  post,
+  { clickable = true, showStatusToggle = false, showDelete = false } = {}
+) {
   const article = document.createElement("article");
   article.className = "post card card-pad";
   article.dataset.postId = post.id;
@@ -22,7 +28,7 @@ export function renderPostCard(post, { clickable = true, showStatusToggle = fals
         <h3 class="post-title">${escapeHTML(post.title)}</h3>
         <p class="muted">Author: ${resolveUsername(post)}</p>
       </div>
-      
+
       <div class="post-header-right">
         <time class="muted">${formatCreatedAt(post.created_at)}</time>
         ${showStatusToggle ? statusToggleTemplate(post) : ""}
@@ -42,19 +48,17 @@ export function renderPostCard(post, { clickable = true, showStatusToggle = fals
   `;
 
   if (clickable) {
-    article.querySelectorAll(".clickable").forEach((el) => {
+    article.querySelectorAll(".clickable").forEach(el => {
       el.addEventListener("click", () => {
         window.location.href = `/view-post/${post.id}`;
       });
     });
   }
 
-  // stop bubbling so card click doesn't trigger
+  // Prevent bubbling
   article
     .querySelectorAll(".post-actions, .post-comments, button, textarea, form")
-    .forEach((el) => {
-      el.addEventListener("click", (e) => e.stopPropagation());
-    });
+    .forEach(el => el.addEventListener("click", e => e.stopPropagation()));
 
   return article;
 }
@@ -78,6 +82,7 @@ export async function loadPostCommentsPreview(postId, article) {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
+
     if (!res.ok) return;
 
     const payload = await res.json();
@@ -89,15 +94,15 @@ export async function loadPostCommentsPreview(postId, article) {
     if (comments.length === 0) {
       list.innerHTML = `<p class="muted">No comments yet.</p>`;
     } else {
-      comments.forEach((c) => list.appendChild(renderComment(c)));
+      comments.forEach(c => list.appendChild(renderComment(c)));
     }
 
     container.appendChild(list);
     list.scrollTop = list.scrollHeight;
 
-    await maybeRenderCommentForm(container, postId);
+    maybeRenderCommentForm(container, postId);
   } catch (err) {
-    console.error("Failed to load comments", err);
+    console.error("Failed to load comments:", err);
   }
 }
 
@@ -117,29 +122,7 @@ function renderComment(comment) {
     </div>
 
     <div class="comment-actions">
-      <div class="reaction">
-        <span data-like-count>${comment.likes ?? 0}</span>
-        <button
-          class="btn btn-ghost"
-          type="button"
-          data-reaction="like"
-          data-comment-id="${comment.id}"
-        >
-          Like
-        </button>
-      </div>
-
-      <div class="reaction">
-        <span data-dislike-count>${comment.dislikes ?? 0}</span>
-        <button
-          class="btn btn-ghost"
-          type="button"
-          data-reaction="dislike"
-          data-comment-id="${comment.id}"
-        >
-          Dislike
-        </button>
-      </div>
+      ${reactionTemplate(comment, true)}
     </div>
   `;
 
@@ -147,107 +130,83 @@ function renderComment(comment) {
 }
 
 /* ==================================================
-   COMMENT FORM
+   COMMENT FORM (AUTH-BASED)
 ================================================== */
 
-async function maybeRenderCommentForm(container, postId) {
-  try {
-    const meRes = await fetch(`${API_BASE}/users/me`, {
+function maybeRenderCommentForm(container, postId) {
+  // Guest → do nothing (EXPECTED)
+  if (!Auth.isAuthenticated) return;
+
+  const form = document.createElement("form");
+  form.className = "comment-form";
+
+  form.innerHTML = `
+    <textarea placeholder="Write a comment..." rows="2" required></textarea>
+    <button class="btn btn-primary" type="submit">Comment</button>
+  `;
+
+  ["click", "mousedown", "keydown", "submit"].forEach(evt => {
+    form.addEventListener(evt, e => {
+      e.stopPropagation();
+      if (evt === "submit") e.preventDefault();
+    });
+  });
+
+  form.addEventListener("submit", async () => {
+    const textarea = form.querySelector("textarea");
+    const body = textarea.value.trim();
+    if (!body) return;
+
+    const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
+      method: "POST",
       credentials: "include",
-    });
-    if (!meRes.ok) return;
-
-    const payload = await meRes.json();
-    const me = payload?.data;
-
-    const form = document.createElement("form");
-    form.className = "comment-form";
-
-    form.innerHTML = `
-      <textarea placeholder="Write a comment..." rows="2" required></textarea>
-      <button class="btn btn-primary" type="submit">Comment</button>
-    `;
-
-    // stop bubbling
-    ["click", "mousedown", "keydown", "submit"].forEach((evt) => {
-      form.addEventListener(evt, (e) => {
-        e.stopPropagation();
-        if (evt === "submit") e.preventDefault();
-      });
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ body }),
     });
 
-    form.addEventListener("submit", async () => {
-      const textarea = form.querySelector("textarea");
-      const body = textarea.value.trim();
-      if (!body) return;
+    if (!res.ok) {
+      alert("You must be logged in to comment.");
+      return;
+    }
 
-      const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ body }),
-      });
+    const payload = await res.json();
+    const newComment = payload.data ?? payload;
 
-      if (!res.ok) {
-        alert("You must be logged in to comment.");
-        return;
-      }
+    textarea.value = "";
 
-      const createdPayload = await res.json();
-      const newComment = createdPayload?.data ?? createdPayload;
+    const commentsList = container.querySelector(".comments-scroll");
+    if (!commentsList) return;
 
-      textarea.value = "";
+    commentsList.appendChild(renderComment(newComment));
+    commentsList.scrollTop = commentsList.scrollHeight;
+  });
 
-      const commentsList = container.querySelector(".comments-scroll");
-      if (!commentsList) return;
-
-      const commentEl = document.createElement("div");
-      commentEl.className = "comment";
-      commentEl.innerHTML = `
-        <div class="comment-meta muted">
-          <strong>${escapeHTML(me?.username || "You")}</strong>
-          · ${formatCreatedAt(newComment.created_at)}
-        </div>
-        <div class="comment-body">
-          ${escapeHTML(newComment.body)}
-        </div>
-      `;
-
-      commentsList.appendChild(commentEl);
-      commentsList.scrollTop = commentsList.scrollHeight;
-    });
-
-    container.appendChild(form);
-  } catch (err) {
-    console.error("Failed to render comment form", err);
-  }
+  container.appendChild(form);
 }
 
 /* ==================================================
    REACTIONS
 ================================================== */
 
-export function reactionTemplate(post) {
+export function reactionTemplate(item, isComment = false) {
+  const idAttr = isComment
+    ? `data-comment-id="${item.id}"`
+    : `data-post-id="${item.id}"`;
+
   return `
     <div class="reaction">
-      <span data-like-count>${post.likes ?? 0}</span>
-      <button class="btn btn-ghost" type="button" data-reaction="like" data-post-id="${post.id}">
-        Like
-      </button>
+      <span data-like-count>${item.likes ?? 0}</span>
+      <button class="btn btn-ghost" data-reaction="like" ${idAttr}>Like</button>
     </div>
     <div class="reaction">
-      <span data-dislike-count>${post.dislikes ?? 0}</span>
-      <button class="btn btn-ghost" type="button" data-reaction="dislike" data-post-id="${post.id}">
-        Dislike
-      </button>
+      <span data-dislike-count>${item.dislikes ?? 0}</span>
+      <button class="btn btn-ghost" data-reaction="dislike" ${idAttr}>Dislike</button>
     </div>
   `;
 }
-
-let reactionsBound = false;
 
 export function initReactions() {
   document.addEventListener(
@@ -259,19 +218,18 @@ export function initReactions() {
       e.preventDefault();
       e.stopPropagation();
 
+      if (!Auth.isAuthenticated) {
+        alert("You must be logged in to react.");
+        return;
+      }
+
       const type = btn.dataset.reaction;
       const postId = btn.dataset.postId;
       const commentId = btn.dataset.commentId;
 
-      let url = null;
-
-      if (postId) {
-        url = `${API_BASE}/posts/${postId}/${type}`;
-      } else if (commentId) {
-        url = `${API_BASE}/comments/${commentId}/${type}`;
-      } else {
-        return;
-      }
+      const url = postId
+        ? `${API_BASE}/posts/${postId}/${type}`
+        : `${API_BASE}/comments/${commentId}/${type}`;
 
       try {
         const res = await fetch(url, {
@@ -280,10 +238,7 @@ export function initReactions() {
           headers: { Accept: "application/json" },
         });
 
-        if (!res.ok) {
-          alert("You must be logged in to react");
-          return;
-        }
+        if (!res.ok) return;
 
         const { data } = await res.json();
 
@@ -297,10 +252,8 @@ export function initReactions() {
 
         container.querySelector("[data-like-count]").textContent =
           data.likes_count;
-
         container.querySelector("[data-dislike-count]").textContent =
           data.dislikes_count;
-
       } catch (err) {
         console.error("Reaction failed:", err);
       }
@@ -309,42 +262,34 @@ export function initReactions() {
   );
 }
 
+/* ==================================================
+   HELPERS
+================================================== */
+
 function statusToggleTemplate(post) {
   if (!post.status) return "";
-
-  const isDraft = post.status === "draft";
-
   return `
-    <button
-      class="btn btn-outline btn-sm post-status-toggle"
+    <button class="btn btn-outline btn-sm post-status-toggle"
       data-post-id="${post.id}"
-      data-current-status="${post.status}"
-    >
-      ${isDraft ? "Publish" : "Draft"}
+      data-current-status="${post.status}">
+      ${post.status === "draft" ? "Publish" : "Draft"}
     </button>
   `;
 }
 
 function renderCategories(categories = []) {
   if (!categories.length) return "";
-
   return `
     <div class="post-categories">
-      ${categories.map(c => `
-        <span class="category-badge">${c.name}</span>
-      `).join("")}
+      ${categories.map(c => `<span class="category-badge">${c.name}</span>`).join("")}
     </div>
   `;
 }
 
 function deletePostTemplate(post) {
   return `
-    <button
-      class="btn btn-danger btn-sm post-delete"
-      type="button"
-      data-post-id="${post.id}"
-      aria-label="Delete post"
-    >
+    <button class="btn btn-danger btn-sm post-delete"
+      data-post-id="${post.id}">
       Delete
     </button>
   `;
