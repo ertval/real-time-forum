@@ -72,11 +72,18 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
-			"category_id": categoryID,
-		})
+		totalPages := (result.Total + perPage - 1) / perPage
 
-		WriteOK(w, result.Posts, pagination)
+		meta := &Meta{
+			Pagination: &PaginationMeta{
+				Page:       page,
+				PerPage:    perPage,
+				Total:      result.Total,
+				TotalPages: totalPages,
+			},
+		}
+
+		WriteOK(w, result.Posts, meta)
 		return
 	}
 
@@ -95,8 +102,18 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pagination := buildPaginationInfo(page, perPage, result.Total, nil)
-	WriteOK(w, result.Posts, pagination)
+	totalPages := (result.Total + perPage - 1) / perPage
+
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      result.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, result.Posts, meta)
 }
 
 // ListPublicPosts handles:
@@ -399,11 +416,18 @@ func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, post
 		return
 	}
 
-	pagination := buildPaginationInfo(page, perPage, listResult.Total, map[string]any{
-		"post_id": postID,
-	})
+	totalPages := (listResult.Total + perPage - 1) / perPage
 
-	WriteOK(w, listResult.Comments, pagination)
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      listResult.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, listResult.Comments, meta)
 }
 
 func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, postID int64) {
@@ -507,11 +531,18 @@ func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
-		"author_id": userID,
-	})
+	totalPages := (result.Total + perPage - 1) / perPage
 
-	WriteOK(w, result.Posts, pagination)
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      result.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, result.Posts, meta)
 }
 
 func (p *PostsHandler) ListLikedPosts(w http.ResponseWriter, r *http.Request) {
@@ -537,9 +568,16 @@ func (p *PostsHandler) ListLikedPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pagination := buildPaginationInfo(page, perPage, result.Total, map[string]any{
-		"user_id": userID,
-	})
+	totalPages := (result.Total + perPage - 1) / perPage
 
-	WriteOK(w, result.Posts, pagination)
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      result.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, result.Posts, meta)
 }
