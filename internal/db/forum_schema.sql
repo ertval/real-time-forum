@@ -160,3 +160,10 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user
 
 CREATE INDEX IF NOT EXISTS idx_sessions_expires
   ON sessions(expires_at);
+
+-- ===============================================================
+-- DRAFTS (ONE PER USER)
+-- ===============================================================
+CREATE UNIQUE INDEX IF NOT EXISTS ux_posts_one_draft_per_user
+ON posts(author_id)
+WHERE status = 'draft';

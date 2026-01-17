@@ -285,8 +285,8 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 
 	if req.Status != nil {
 		status := strings.ToLower(strings.TrimSpace(*req.Status))
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
 		if status != "draft" && status != "published" {
-			WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
 			return
 		}
 

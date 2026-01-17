@@ -51,6 +51,14 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	// ---------------------------------------------------------
+	// POSTS DRAFT (AUTOSAVE)
+	// ---------------------------------------------------------
+	mux.Handle(
+		apiPrefix+"/posts/draft",
+		auth(http.HandlerFunc(posts.HandleDraft)),
+	)
+
+	// ---------------------------------------------------------
 	// POSTS COLLECTION
 	// ---------------------------------------------------------
 	// GET  /posts → list
