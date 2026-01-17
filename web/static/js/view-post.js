@@ -29,11 +29,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("post-output");
   if (!container) return;
 
-  // load post + navigation
-  const categoryId = await loadAndRenderPost(postId, container);
+  const result = await loadAndRenderPost(postId, container);
+  if (!result) return;
 
+  const { article, categoryId } = result;
+
+  // reactions AFTER DOM is ready
   initReactions();
 
+  // navigation only if category exists
   if (categoryId) {
     initPostNavigation(postId, categoryId);
   }
@@ -41,7 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 /* ==================================================
    LOAD + RENDER SINGLE POST
-   Returns categoryId (or null)
+   Returns { article, categoryId } | null
 ================================================== */
 
 async function loadAndRenderPost(postId, container) {
@@ -63,16 +67,15 @@ async function loadAndRenderPost(postId, container) {
     container.innerHTML = "";
     container.appendChild(article);
 
-    // comments preview
+    // comments preview AFTER article exists
     await loadPostCommentsPreview(postId, article);
 
-    // 🔑 παίρνουμε category από το ίδιο το post
     const categoryId =
       Array.isArray(post.categories) && post.categories.length > 0
         ? post.categories[0].id
         : null;
 
-    return categoryId;
+    return { article, categoryId };
   } catch (err) {
     console.error("Failed to load post:", err);
     container.innerHTML = `<p class="muted">Failed to load post.</p>`;

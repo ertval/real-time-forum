@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	repository "forum/internal/db"
 )
@@ -511,6 +510,7 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
+	// Create comment
 	commentID, err := repository.CreateComment(
 		r.Context(),
 		p.conn,
@@ -527,15 +527,23 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
-	comment := repository.Comment{
-		ID:              commentID,
-		PostID:          postID,
-		UserID:          userID,
-		ParentCommentID: req.ParentCommentID,
-		Body:            req.Body,
-		CreatedAt:       time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+	// Reload comment WITH author 
+	comment, err := repository.GetCommentWithAuthor(
+		r.Context(),
+		p.conn,
+		commentID,
+	)
+	if err != nil {
+		log.Printf("comment created but failed to load hydrated comment: %v", err)
+		WriteError(w, r, NewError(
+			"INTERNAL_SERVER_ERROR",
+			"comment created but failed to load",
+			http.StatusInternalServerError,
+		))
+		return
 	}
 
+	// Return hydrated comment
 	WriteCreated(w, comment)
 }
 

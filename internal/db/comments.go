@@ -122,14 +122,28 @@ func CreateComment(
 // GET COMMENT
 // ---------------------------------------------------------
 
-func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
+func GetCommentWithAuthor(
+	ctx context.Context,
+	db *sql.DB,
+	id int64,
+) (Comment, error) {
+
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
 	const query = `
-		SELECT id, post_id, user_id, parent_comment_id, body, created_at, updated_at
-		FROM comments
-		WHERE id = ?
+		SELECT
+			c.id,
+			c.post_id,
+			c.user_id,
+			u.username,
+			c.parent_comment_id,
+			c.body,
+			c.created_at,
+			c.updated_at
+		FROM comments c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.id = ?
 	`
 
 	var comment Comment
@@ -140,6 +154,7 @@ func GetComment(ctx context.Context, db *sql.DB, id int64) (Comment, error) {
 			&comment.ID,
 			&comment.PostID,
 			&comment.UserID,
+			&comment.Username,
 			&parentID,
 			&comment.Body,
 			&comment.CreatedAt,

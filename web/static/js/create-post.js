@@ -36,7 +36,6 @@ async function populateCategories() {
   const payload = await loadCategories();
   const categories = extractArray(payload);
 
-  // καθαρίζουμε τυχόν παλιές επιλογές
   select.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
 
   categories.forEach(c => {

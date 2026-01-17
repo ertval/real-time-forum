@@ -20,7 +20,6 @@ func newTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("open sqlite: %v", err)
 	}
 
-	// SQLite FK enforcement is OFF by default.
 	if _, err := db.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
 		t.Fatalf("enable foreign_keys: %v", err)
 	}
@@ -30,7 +29,6 @@ func newTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("read schema: %v", err)
 	}
 
-	// Execute schema.
 	if _, err := db.Exec(string(schemaBytes)); err != nil {
 		t.Fatalf("exec schema: %v", err)
 	}
@@ -41,13 +39,24 @@ func newTestDB(t *testing.T) *sql.DB {
 func seedUserAndPost(t *testing.T, db *sql.DB) (userID, postID int64) {
 	t.Helper()
 
-	res, err := db.Exec(`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`, "user1", "u1@example.com", "hash")
+	res, err := db.Exec(
+		`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`,
+		"user1",
+		"u1@example.com",
+		"hash",
+	)
 	if err != nil {
 		t.Fatalf("insert user: %v", err)
 	}
 	userID, _ = res.LastInsertId()
 
-	res, err = db.Exec(`INSERT INTO posts (author_id, title, body, status) VALUES (?, ?, ?, ?)`, userID, "t", "b", "published")
+	res, err = db.Exec(
+		`INSERT INTO posts (author_id, title, body, status) VALUES (?, ?, ?, ?)`,
+		userID,
+		"t",
+		"b",
+		"published",
+	)
 	if err != nil {
 		t.Fatalf("insert post: %v", err)
 	}
@@ -61,10 +70,9 @@ func TestCreateGetUpdateDeleteComment(t *testing.T) {
 	defer db.Close()
 
 	userID, postID := seedUserAndPost(t, db)
-
 	ctx := context.Background()
 
-	// Create
+	// CREATE
 	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
 		PostID: postID,
 		UserID: userID,
@@ -77,16 +85,20 @@ func TestCreateGetUpdateDeleteComment(t *testing.T) {
 		t.Fatalf("expected non-zero commentID")
 	}
 
-	// Get
-	c, err := repository.GetComment(ctx, db, commentID)
+	// GET (hydrated)
+	c, err := repository.GetCommentWithAuthor(ctx, db, commentID)
 	if err != nil {
-		t.Fatalf("GetComment: %v", err)
+		t.Fatalf("GetCommentWithAuthor: %v", err)
 	}
+
 	if c.ID != commentID || c.PostID != postID || c.UserID != userID {
 		t.Fatalf("unexpected comment: %+v", c)
 	}
 	if c.Body != "hello" {
 		t.Fatalf("expected body 'hello', got %q", c.Body)
+	}
+	if c.Username != "user1" {
+		t.Fatalf("expected username 'user1', got %q", c.Username)
 	}
 	if c.ParentCommentID != nil {
 		t.Fatalf("expected nil parent_comment_id")
@@ -98,24 +110,28 @@ func TestCreateGetUpdateDeleteComment(t *testing.T) {
 		t.Fatalf("expected CreatedAt to be set")
 	}
 
-	// Update
+	// UPDATE
 	newBody := "updated"
-	if err := repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{Body: &newBody}); err != nil {
+	if err := repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{
+		Body: &newBody,
+	}); err != nil {
 		t.Fatalf("UpdateComment: %v", err)
 	}
-	c2, err := repository.GetComment(ctx, db, commentID)
+
+	c2, err := repository.GetCommentWithAuthor(ctx, db, commentID)
 	if err != nil {
-		t.Fatalf("GetComment after update: %v", err)
+		t.Fatalf("GetCommentWithAuthor after update: %v", err)
 	}
 	if c2.Body != "updated" {
 		t.Fatalf("expected updated body, got %q", c2.Body)
 	}
 
-	// Delete
+	// DELETE
 	if err := repository.DeleteComment(ctx, db, commentID); err != nil {
 		t.Fatalf("DeleteComment: %v", err)
 	}
-	_, err = repository.GetComment(ctx, db, commentID)
+
+	_, err = repository.GetCommentWithAuthor(ctx, db, commentID)
 	if err == nil {
 		t.Fatalf("expected error after delete")
 	}
@@ -129,15 +145,17 @@ func TestUpdateComment_NoFieldsIsNoop(t *testing.T) {
 	defer db.Close()
 
 	userID, postID := seedUserAndPost(t, db)
-
 	ctx := context.Background()
-	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{PostID: postID, UserID: userID, Body: "x"})
+
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+		PostID: postID,
+		UserID: userID,
+		Body:   "x",
+	})
 	if err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
 
-	// Should not error and should not change updated_at in a way we can easily assert,
-	// but it must at least return nil.
 	if err := repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{}); err != nil {
 		t.Fatalf("UpdateComment noop: %v", err)
 	}
@@ -149,48 +167,70 @@ func TestCreateComment_FKEnforced(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Non-existent post_id/user_id should fail under FK enforcement.
-	_, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{PostID: 999, UserID: 999, Body: "x"})
+	_, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+		PostID: 999,
+		UserID: 999,
+		Body:   "x",
+	})
 	if err == nil {
 		t.Fatalf("expected fk error")
 	}
 }
 
-func TestCommentReactions_CountsFlowThroughGetComment(t *testing.T) {
+func TestCommentReactions_CountsFlowThroughGetCommentWithAuthor(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
 	userID, postID := seedUserAndPost(t, db)
-	// Seed a second user for another reaction.
-	res, err := db.Exec(`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`, "user2", "u2@example.com", "hash")
+
+	res, err := db.Exec(
+		`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`,
+		"user2",
+		"u2@example.com",
+		"hash",
+	)
 	if err != nil {
 		t.Fatalf("insert user2: %v", err)
 	}
 	user2, _ := res.LastInsertId()
 
 	ctx := context.Background()
-	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{PostID: postID, UserID: userID, Body: "hello"})
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+		PostID: postID,
+		UserID: userID,
+		Body:   "hello",
+	})
 	if err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
 
-	// Like by user1, dislike by user2.
-	_, err = db.Exec(`INSERT INTO reactions (user_id, comment_id, value) VALUES (?, ?, ?)`, userID, commentID, 1)
+	_, err = db.Exec(
+		`INSERT INTO reactions (user_id, comment_id, value) VALUES (?, ?, ?)`,
+		userID,
+		commentID,
+		1,
+	)
 	if err != nil {
 		t.Fatalf("insert like reaction: %v", err)
 	}
-	_, err = db.Exec(`INSERT INTO reactions (user_id, comment_id, value) VALUES (?, ?, ?)`, user2, commentID, -1)
+
+	_, err = db.Exec(
+		`INSERT INTO reactions (user_id, comment_id, value) VALUES (?, ?, ?)`,
+		user2,
+		commentID,
+		-1,
+	)
 	if err != nil {
 		t.Fatalf("insert dislike reaction: %v", err)
 	}
 
-	// Give SQLite a tick if your reaction counting uses time-based constraints (it shouldn't).
 	time.Sleep(5 * time.Millisecond)
 
-	c, err := repository.GetComment(ctx, db, commentID)
+	c, err := repository.GetCommentWithAuthor(ctx, db, commentID)
 	if err != nil {
-		t.Fatalf("GetComment: %v", err)
+		t.Fatalf("GetCommentWithAuthor: %v", err)
 	}
+
 	if c.Likes != 1 || c.Dislikes != 1 {
 		t.Fatalf("expected likes/dislikes 1/1, got %d/%d", c.Likes, c.Dislikes)
 	}
