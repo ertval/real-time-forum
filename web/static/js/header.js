@@ -1,22 +1,32 @@
 // web/static/js/header.js
 
-import { API_BASE } from "./utils.js";
+import { Auth } from "./auth.js";
 
-// expose initializer
 export async function initHeader() {
+  await Auth.init();
+
   setupForumLogo();
 
-  const myPostsBtn = document.getElementById("my-posts-btn");
   const greetingEl = document.getElementById("greeting");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
+  const myPostsBtn = document.getElementById("my-posts-btn");
 
-  if (!greetingEl || !loginBtn || !logoutBtn) {
-    console.warn("Header elements not found");
+  if (!greetingEl || !loginBtn || !logoutBtn) return;
+
+  if (!Auth.isAuthenticated) {
+    greetingEl.textContent = "Hello, Guest";
+    loginBtn.style.display = "inline-flex";
+    logoutBtn.style.display = "none";
+    if (myPostsBtn) myPostsBtn.style.display = "none";
     return;
   }
 
-  await loadGreeting(greetingEl, loginBtn, logoutBtn, myPostsBtn);
+  greetingEl.textContent = `Hello, ${Auth.user.username}`;
+  loginBtn.style.display = "none";
+  logoutBtn.style.display = "inline-flex";
+  if (myPostsBtn) myPostsBtn.style.display = "inline-flex";
+
   bindLogout(logoutBtn);
 }
 
@@ -35,72 +45,21 @@ function setupForumLogo() {
 }
 
 // --------------------------------------------------
-// GREETING + AUTH STATE
-// --------------------------------------------------
-
-async function loadGreeting(greetingEl, loginBtn, logoutBtn, myPostsBtn) {
-  try {
-    const res = await fetch(`${API_BASE}/users/me`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
-
-    // Guest
-    if (!res.ok) {
-      greetingEl.textContent = "Hello, Guest";
-      greetingEl.hidden = false;
-
-      loginBtn.style.display = "inline-flex";
-      logoutBtn.style.display = "none";
-      if (myPostsBtn) myPostsBtn.style.display = "none";
-      return;
-    }
-
-    // Logged in
-    const payload = await res.json();
-    const username = payload?.data?.username;
-
-    greetingEl.textContent = username ? `Hello, ${username}` : "Hello";
-    greetingEl.hidden = false;
-
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-flex";
-    if (myPostsBtn) myPostsBtn.style.display = "inline-flex";
-  } catch {
-    greetingEl.textContent = "Hello, Guest";
-    greetingEl.hidden = false;
-
-    loginBtn.style.display = "inline-flex";
-    logoutBtn.style.display = "none";
-    if (myPostsBtn) myPostsBtn.style.display = "none";
-  }
-}
-
-// --------------------------------------------------
 // LOGOUT
 // --------------------------------------------------
 
 function bindLogout(logoutBtn) {
-  // prevent double-binding
-  if (logoutBtn.dataset.bound === "1") return;
+  if (logoutBtn.dataset.bound) return;
   logoutBtn.dataset.bound = "1";
 
   logoutBtn.addEventListener("click", async (e) => {
     e.preventDefault();
-    logoutBtn.disabled = true;
 
-    try {
-      await fetch(`${API_BASE}/users/logout`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
+    await fetch("/api/v1/users/logout", {
+      method: "POST",
+      credentials: "include",
+    });
 
-      window.location.assign("/login");
-    } catch (err) {
-      console.error("Logout failed:", err);
-      alert("Logout failed. Please try again.");
-      logoutBtn.disabled = false;
-    }
+    window.location.assign("/login");
   });
 }
