@@ -168,6 +168,13 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		req.CategoryIDs,
 	)
 
+	// If post is published, delete any existing draft
+	if status == "published" {
+		if err := repository.DeleteUserDraft(r.Context(), p.conn, userID); err != nil {
+			log.Printf("warning: failed to delete draft after publish: %v", err)
+		}
+	}
+
 	if err != nil {
 		log.Printf("failed to create post: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
@@ -527,7 +534,7 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
-	// Reload comment WITH author 
+	// Reload comment WITH author
 	comment, err := repository.GetCommentWithAuthor(
 		r.Context(),
 		p.conn,

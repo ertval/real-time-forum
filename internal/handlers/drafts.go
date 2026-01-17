@@ -64,6 +64,14 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 
 		WriteOK(w, map[string]int64{"id": id}, nil)
 
+	case http.MethodDelete:
+		err := repository.DeleteUserDraft(r.Context(), p.conn, userID)
+		if err != nil {
+			WriteError(w, r, NewError("INTERNAL", "delete draft failed", 500))
+			return
+		}
+		WriteNoContent(w)
+
 	default:
 		MethodNotAllowed(w, r)
 	}

@@ -126,3 +126,15 @@ func GetMyDraft(
 ) (*Draft, error) {
 	return GetLatestDraftByUser(ctx, db, userID)
 }
+
+func DeleteUserDraft(ctx context.Context, db *sql.DB, userID int64) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, `
+		DELETE FROM posts
+		WHERE author_id = ? AND status = 'draft'
+	`, userID)
+
+	return err
+}

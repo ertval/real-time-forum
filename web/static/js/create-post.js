@@ -107,7 +107,13 @@ async function restoreDraftIfExists() {
     if (!data) return;
 
     const ok = confirm("Unsaved draft found. Restore it?");
-    if (!ok) return;
+    if (!ok) {
+      await fetch(`${API_BASE}/posts/draft`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      return;
+    }
 
     document.getElementById("title").value = data.title || "";
     document.getElementById("body").value  = data.body || "";
