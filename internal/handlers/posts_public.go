@@ -1,3 +1,4 @@
+// /internal/handlers/posts_public.go
 package handlers
 
 import (
@@ -7,13 +8,24 @@ import (
 	repository "forum/internal/db"
 )
 
+// ============================================================
+// PUBLIC POSTS
+// ============================================================
+
+// PublicList handles:
+// GET /api/v1/posts/public
 func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		MethodNotAllowed(w, r)
 		return
 	}
+
 	p.publicListPosts(w, r)
 }
+
+// ------------------------------------------------------------
+// Internal helpers
+// ------------------------------------------------------------
 
 func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
@@ -38,9 +50,23 @@ func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	paginationMeta := buildPaginationInfo(page, perPage, result.Total, map[string]any{
-		"sort": sort,
-	})
+	// ------------------------------------------------------------
+	// Build pagination metadata
+	// ------------------------------------------------------------
 
-	WriteOK(w, result.Posts, paginationMeta)
+	totalPages := 0
+	if perPage > 0 {
+		totalPages = (result.Total + perPage - 1) / perPage
+	}
+
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      result.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, result.Posts, meta)
 }

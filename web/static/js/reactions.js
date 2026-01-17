@@ -31,7 +31,6 @@ function bindReactions(container = document) {
       const payload = await res.json();
       const data = payload.data;
 
-      // ενημέρωση counters
       const postEl = container.querySelector(
         `[data-post-id="${postId}"]`
       );
