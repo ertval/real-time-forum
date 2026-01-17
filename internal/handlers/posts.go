@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	repository "forum/internal/db"
 )
@@ -233,6 +232,13 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 			MethodNotAllowed(w, r)
 		}
 
+	case "nav":
+		if r.Method == http.MethodGet {
+			p.getPostNavigation(w, r, postID)
+			return
+		}
+		MethodNotAllowed(w, r)
+
 	default:
 		notFound(w, r)
 	}
@@ -331,6 +337,59 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	}
 
 	WriteNoContent(w)
+}
+
+// ============================================================
+// POST NAVIGATION (CATEGORY-AWARE)
+// ============================================================
+
+// GET /api/v1/posts/{id}/nav?category_id=3
+func (p *PostsHandler) getPostNavigation(
+	w http.ResponseWriter,
+	r *http.Request,
+	postID int64,
+) {
+	categoryIDStr := r.URL.Query().Get("category_id")
+	if categoryIDStr == "" {
+		WriteError(w, r, NewError(
+			"BAD_REQUEST",
+			"category_id is required for post navigation",
+			http.StatusBadRequest,
+		))
+		return
+	}
+
+	categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
+	if err != nil || categoryID <= 0 {
+		WriteError(w, r, NewError(
+			"BAD_REQUEST",
+			"invalid category_id",
+			http.StatusBadRequest,
+		))
+		return
+	}
+
+	result, err := repository.GetPostNavigationByCategory(
+		r.Context(),
+		p.conn,
+		postID,
+		categoryID,
+	)
+	if err != nil {
+		log.Printf("failed to get post navigation: %v", err)
+		WriteError(w, r, NewError(
+			"INTERNAL_SERVER_ERROR",
+			"failed to load post navigation",
+			http.StatusInternalServerError,
+		))
+		return
+	}
+
+	WriteOK(w, map[string]any{
+		"category_id": categoryID,
+		"prev_id":     result.PrevID,
+		"next_id":     result.NextID,
+	}, nil)
 }
 
 // ============================================================
@@ -451,6 +510,7 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
+	// Create comment
 	commentID, err := repository.CreateComment(
 		r.Context(),
 		p.conn,
@@ -467,15 +527,23 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
-	comment := repository.Comment{
-		ID:              commentID,
-		PostID:          postID,
-		UserID:          userID,
-		ParentCommentID: req.ParentCommentID,
-		Body:            req.Body,
-		CreatedAt:       time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+	// Reload comment WITH author 
+	comment, err := repository.GetCommentWithAuthor(
+		r.Context(),
+		p.conn,
+		commentID,
+	)
+	if err != nil {
+		log.Printf("comment created but failed to load hydrated comment: %v", err)
+		WriteError(w, r, NewError(
+			"INTERNAL_SERVER_ERROR",
+			"comment created but failed to load",
+			http.StatusInternalServerError,
+		))
+		return
 	}
 
+	// Return hydrated comment
 	WriteCreated(w, comment)
 }
 

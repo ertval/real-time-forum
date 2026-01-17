@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/css/base.css" />
   <link rel="stylesheet" href="/static/css/header.css" />
   <link rel="stylesheet" href="/static/css/posts.css" />
+  <link rel="stylesheet" href="/static/css/post-navigation.css" />
 
   <!-- page logic -->
   <script type="module" src="/static/js/view-post.js"></script>
@@ -21,6 +22,25 @@
       <div id="post-output"></div>
     </section>
   </main>
+
+  <!-- NAVIGATION ARROWS -->
+  <button
+    id="post-prev"
+    class="post-nav post-nav-left"
+    aria-label="Previous post"
+    hidden
+  >
+    ‹
+  </button>
+
+  <button
+    id="post-next"
+    class="post-nav post-nav-right"
+    aria-label="Next post"
+    hidden
+  >
+    ›
+  </button>
 
   <script>
     fetch("/static/partials/header.html")
