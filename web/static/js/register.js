@@ -7,7 +7,7 @@
     const emailEl = document.getElementById('email');
     const passwordEl = document.getElementById('password');
     const confirmEl = document.getElementById('confirm_password');
-    const toggleBtns = document.querySelectorAll('.password-toggle');
+    const toggleBtn = document.querySelector('.password-toggle');
 
     const submitBtn = form.querySelector('button[type="submit"]');
 
@@ -25,19 +25,19 @@
         errorEl.style.display = msg ? 'block' : 'none';
     }
 
-    toggleBtns.forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const input = btn.previousElementSibling;
-            if (!input) return;
+    if (toggleBtn && passwordEl && confirmEl) {
+        toggleBtn.addEventListener('click', () => {
+            const show = passwordEl.type === 'password';
 
-            const show = input.type === 'password';
-            input.type = show ? 'text' : 'password';
-            btn.setAttribute(
+            passwordEl.type = show ? 'text' : 'password';
+            confirmEl.type = show ? 'text' : 'password';
+
+            toggleBtn.setAttribute(
                 'aria-label',
-                show ? 'Hide password' : 'Show password'
+                show ? 'Hide passwords' : 'Show passwords'
             );
         });
-    });
+    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -90,6 +90,7 @@
             submitBtn.disabled = false;
         }
     });
+
     document.getElementById('guest-login-btn')?.addEventListener('click', () => {
         window.location.assign('/');
     });

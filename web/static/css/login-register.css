@@ -99,9 +99,17 @@
     position: relative;
 }
 
-.auth .password-toggle {
+.auth .password-input-wrap {
+    position: relative;
+}
+
+.auth .password-input-wrap .input {
+    padding-right: 40px;
+}
+
+.auth .password-input-wrap .password-toggle {
     position: absolute;
-    right: 10px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
 
