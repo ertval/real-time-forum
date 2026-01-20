@@ -14,7 +14,6 @@
 
     <script src="/static/js/helpers.js" defer></script>
     <script type="module" src="/static/js/home.js"></script>
-
   </head>
 
   <body class="home">
@@ -24,14 +23,14 @@
       <section class="filters">
         <div class="filter-group">
           <label for="categoryFilter">Category</label>
-          <select id="categoryFilter">
+          <select id="categoryFilter" name="category">
             <option value="">All categories</option>
           </select>
         </div>
 
         <div class="filter-group">
           <label for="perPageSelect">Posts per page</label>
-          <select id="perPageSelect">
+          <select id="perPageSelect" name="per_page">
             <option value="5">5</option>
             <option value="10">10</option>
             <option value="20">20</option>

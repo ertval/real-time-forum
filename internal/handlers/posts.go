@@ -296,8 +296,13 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 
 	if req.Status != nil {
 		status := strings.ToLower(strings.TrimSpace(*req.Status))
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
+
 		if status != "draft" && status != "published" {
+			WriteError(w, r, NewError(
+				"BAD_REQUEST",
+				"invalid status",
+				http.StatusBadRequest,
+			))
 			return
 		}
 
@@ -313,10 +318,15 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 				return
 			}
 			log.Printf("failed to update post status: %v", err)
-			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post status", http.StatusInternalServerError))
+			WriteError(w, r, NewError(
+				"INTERNAL_SERVER_ERROR",
+				"error updating post status",
+				http.StatusInternalServerError,
+			))
 			return
 		}
 	}
+
 	if req.Title != nil || req.Body != nil {
 		if err := repository.UpdatePostContent(
 			r.Context(),
