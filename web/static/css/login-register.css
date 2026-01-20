@@ -54,6 +54,14 @@
     margin-top: 18px;
 }
 
+.login .login-error {
+    display: none;
+    margin: 10px 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc2626;
+}
+
 /* ---------- Auth shared layout ---------- */
 
 .auth .auth-card {
@@ -118,4 +126,12 @@
     cursor: pointer;
     color: #94a3b8;
     padding: 0;
+}
+
+.auth .auth-error {
+    display: none;
+    margin: 10px 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc2626;
 }
