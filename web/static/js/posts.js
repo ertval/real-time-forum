@@ -302,10 +302,13 @@ function statusToggleTemplate(post) {
 }
 
 function renderCategories(categories = []) {
-  if (!categories.length) return "";
+  if (!Array.isArray(categories) || categories.length === 0) return "";
+
   return `
     <div class="post-categories">
-      ${categories.map(c => `<span class="category-badge">${c.name}</span>`).join("")}
+      ${categories
+        .map(c => `<span class="category-badge">${c.name}</span>`)
+        .join("")}
     </div>
   `;
 }

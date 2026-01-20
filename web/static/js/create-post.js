@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // 🔴 STOP AUTOSAVE COMPLETELY
+    // 🛑 STOP AUTOSAVE
     autosaveEnabled = false;
     clearTimeout(draftTimer);
 
@@ -172,19 +172,42 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    if (!categoryId && action !== "draft") {
-      alert("Category is required");
-      return;
-    }
-
-    const payload = {
-      title,
-      body,
-      status: action === "draft" ? "draft" : "published",
-      category_ids: categoryId ? [Number(categoryId)] : [],
-    };
-
     try {
+      /* =========================
+        SAVE DRAFT
+      ========================= */
+      if (action === "draft") {
+        const res = await fetch(`${API_BASE}/posts/draft`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            body,
+            // κρατάμε category για UX consistency (αγνοείται backend for now)
+            category_id: categoryId ? Number(categoryId) : null,
+          }),
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          alert(data?.error?.message || "Failed to save draft");
+          return;
+        }
+
+        alert("Draft saved successfully");
+        return;
+      }
+
+      /* =========================
+        PUBLISH POST
+      ========================= */
+      if (!categoryId) {
+        alert("Category is required");
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/posts`, {
         method: "POST",
         credentials: "include",
@@ -192,11 +215,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          title,
+          body,
+          category_ids: [Number(categoryId)],
+        }),
       });
 
       if (res.status === 401) {
-        alert("You must be logged in to create a post.");
         window.location.href = "/login";
         return;
       }
@@ -204,26 +230,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.error?.message || "Failed to create post");
+        alert(data?.error?.message || "Failed to publish post");
         return;
       }
 
-      if (payload.status === "published") {
-        // 🧹 CLEAN DRAFT & REDIRECT
-        await fetch(`${API_BASE}/posts/draft`, {
-          method: "DELETE",
-          credentials: "include",
-        });
+      // 🧹 CLEAN DRAFT & REDIRECT
+      await fetch(`${API_BASE}/posts/draft`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
-        window.location.href = "/";
-        return;
-      }
-
-      alert("Draft saved successfully");
+      window.location.href = "/";
 
     } catch (err) {
       console.error("Create post error:", err);
-      alert("Unexpected error while creating post");
+      alert("Unexpected error");
     }
   });
 });
