@@ -21,7 +21,7 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
-		post, err := repository.GetMyDraft(r.Context(), p.conn, userID)
+		post, err := repository.DraftGet(r.Context(), p.conn, userID)
 		if err == sql.ErrNoRows {
 			WriteOK(w, nil, nil)
 			return
@@ -49,7 +49,7 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		id, err := repository.UpsertDraft(
+		id, err := repository.DraftUpsert(
 			r.Context(),
 			p.conn,
 			userID,
@@ -65,7 +65,7 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 		WriteOK(w, map[string]int64{"id": id}, nil)
 
 	case http.MethodDelete:
-		err := repository.DeleteUserDraft(r.Context(), p.conn, userID)
+		err := repository.DraftDeleteByUser(r.Context(), p.conn, userID)
 		if err != nil {
 			WriteError(w, r, NewError("INTERNAL", "delete draft failed", 500))
 			return

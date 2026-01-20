@@ -170,7 +170,11 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 
 	// If post is published, delete any existing draft
 	if status == "published" {
-		if err := repository.DeleteUserDraft(r.Context(), p.conn, userID); err != nil {
+		if err := repository.DraftDeleteByUser(
+			r.Context(),
+			p.conn,
+			userID,
+		); err != nil {
 			log.Printf("warning: failed to delete draft after publish: %v", err)
 		}
 	}

@@ -52,13 +52,17 @@ async function populateCategories() {
 ========================= */
 
 let draftTimer = null;
+let autosaveEnabled = true;
 
 function scheduleDraftSave() {
+  if (!autosaveEnabled) return;
   clearTimeout(draftTimer);
   draftTimer = setTimeout(saveDraft, 1000);
 }
 
 async function saveDraft() {
+  if (!autosaveEnabled) return;
+
   const title = document.getElementById("title")?.value.trim();
   const body  = document.getElementById("body")?.value.trim();
 
@@ -78,6 +82,8 @@ async function saveDraft() {
 
 // for tab close / refresh
 function saveDraftSync() {
+  if (!autosaveEnabled) return;
+
   const title = document.getElementById("title")?.value.trim();
   const body  = document.getElementById("body")?.value.trim();
 
@@ -99,9 +105,7 @@ async function restoreDraftIfExists() {
       credentials: "include",
     });
 
-    if (!res.ok) return;
-
-    if (res.status === 401) return;
+    if (!res.ok || res.status === 401) return;
 
     const { data } = await res.json();
     if (!data) return;
@@ -154,6 +158,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // 🔴 STOP AUTOSAVE COMPLETELY
+    autosaveEnabled = false;
+    clearTimeout(draftTimer);
+
     const title = titleInput.value.trim();
     const body  = bodyInput.value.trim();
     const categoryId = document.getElementById("categorySelect").value;
@@ -164,7 +172,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    if (!categoryId) {
+    if (!categoryId && action !== "draft") {
       alert("Category is required");
       return;
     }
@@ -173,7 +181,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       title,
       body,
       status: action === "draft" ? "draft" : "published",
-      category_ids: [Number(categoryId)],
+      category_ids: categoryId ? [Number(categoryId)] : [],
     };
 
     try {
@@ -200,11 +208,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      if (payload.status === "draft") {
-        alert("Draft saved successfully");
-      } else {
+      if (payload.status === "published") {
+        // 🧹 CLEAN DRAFT & REDIRECT
+        await fetch(`${API_BASE}/posts/draft`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+
         window.location.href = "/";
+        return;
       }
+
+      alert("Draft saved successfully");
 
     } catch (err) {
       console.error("Create post error:", err);

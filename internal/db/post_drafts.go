@@ -1,5 +1,3 @@
-// internal/db/post_drafts.go
-
 package db
 
 import (
@@ -15,7 +13,7 @@ type Draft struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
-func UpsertDraft(
+func DraftUpsert(
 	ctx context.Context,
 	db *sql.DB,
 	userID int64,
@@ -25,30 +23,26 @@ func UpsertDraft(
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	var existingID int64
+	var id int64
 	err := db.QueryRowContext(ctx, `
-		SELECT id
-		FROM posts
+		SELECT id FROM posts
 		WHERE author_id = ? AND status = 'draft'
 		LIMIT 1
-	`, userID).Scan(&existingID)
+	`, userID).Scan(&id)
 
 	if err == nil {
-		// 2️⃣ UPDATE existing draft
 		_, err = db.ExecContext(ctx, `
 			UPDATE posts
 			SET title = ?, body = ?, updated_at = datetime('now')
 			WHERE id = ?
-		`, title, body, existingID)
-
-		return existingID, err
+		`, title, body, id)
+		return id, err
 	}
 
 	if err != sql.ErrNoRows {
 		return 0, err
 	}
 
-	// 3️⃣ INSERT new draft
 	res, err := db.ExecContext(ctx, `
 		INSERT INTO posts (author_id, title, body, status)
 		VALUES (?, ?, ?, 'draft')
@@ -61,7 +55,7 @@ func UpsertDraft(
 	return res.LastInsertId()
 }
 
-func GetLatestDraftByUser(
+func DraftGet(
 	ctx context.Context,
 	db *sql.DB,
 	userID int64,
@@ -75,7 +69,6 @@ func GetLatestDraftByUser(
 		SELECT id, title, body, updated_at
 		FROM posts
 		WHERE author_id = ? AND status = 'draft'
-		ORDER BY updated_at DESC
 		LIMIT 1
 	`, userID).Scan(&d.ID, &d.Title, &d.Body, &d.UpdatedAt)
 
@@ -86,48 +79,12 @@ func GetLatestDraftByUser(
 	return &d, nil
 }
 
-func DeleteDraft(ctx context.Context, db *sql.DB, draftID int64) error {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
-	_, err := db.ExecContext(ctx,
-		`DELETE FROM posts WHERE id = ? AND status = 'draft'`,
-		draftID,
-	)
-	return err
-}
-
-func CreateDraft(
-	ctx context.Context,
-	db *sql.DB,
-	authorID int64,
-	title, body string,
-) (int64, error) {
-
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
-	res, err := db.ExecContext(ctx, `
-		INSERT INTO posts (author_id, title, body, status)
-		VALUES (?, ?, ?, 'draft')
-	`, authorID, title, body)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return res.LastInsertId()
-}
-
-func GetMyDraft(
+func DraftDeleteByUser(
 	ctx context.Context,
 	db *sql.DB,
 	userID int64,
-) (*Draft, error) {
-	return GetLatestDraftByUser(ctx, db, userID)
-}
+) error {
 
-func DeleteUserDraft(ctx context.Context, db *sql.DB, userID int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
