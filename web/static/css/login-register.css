@@ -54,6 +54,14 @@
     margin-top: 18px;
 }
 
+.login .login-error {
+    display: none;
+    margin: 10px 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc2626;
+}
+
 /* ---------- Auth shared layout ---------- */
 
 .auth .auth-card {
@@ -99,9 +107,17 @@
     position: relative;
 }
 
-.auth .password-toggle {
+.auth .password-input-wrap {
+    position: relative;
+}
+
+.auth .password-input-wrap .input {
+    padding-right: 40px;
+}
+
+.auth .password-input-wrap .password-toggle {
     position: absolute;
-    right: 10px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
 
@@ -110,4 +126,12 @@
     cursor: pointer;
     color: #94a3b8;
     padding: 0;
+}
+
+.auth .auth-error {
+    display: none;
+    margin: 10px 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc2626;
 }
