@@ -1,3 +1,5 @@
+// web/static/js/my-posts.js
+
 import { API_BASE, getPaginationFromURL } from "./utils.js";
 import { renderPostCard, loadPostCommentsPreview, initReactions } from "./posts.js";
 

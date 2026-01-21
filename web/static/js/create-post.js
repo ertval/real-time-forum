@@ -1,16 +1,7 @@
 // web/static/js/create-post.js
-
 import { API_BASE } from "./utils.js";
 
-/* =========================
-   HELPERS
-========================= */
-
-function extractArray(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.data)) return payload.data;
-  return [];
-}
+const MANUAL_DRAFT_KEY = "manual_draft_saved";
 
 /* =========================
    LOAD CATEGORIES
@@ -22,7 +13,6 @@ async function loadCategories() {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
-
     if (!res.ok) return [];
     return await res.json();
   } catch {
@@ -35,7 +25,7 @@ async function populateCategories() {
   if (!select) return;
 
   const payload = await loadCategories();
-  const categories = extractArray(payload);
+  const categories = Array.isArray(payload?.data) ? payload.data : payload;
 
   select.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
 
@@ -48,7 +38,7 @@ async function populateCategories() {
 }
 
 /* =========================
-   DRAFT AUTO-SAVE
+   AUTOSAVE
 ========================= */
 
 let draftTimer = null;
@@ -56,38 +46,23 @@ let autosaveEnabled = true;
 
 function scheduleDraftSave() {
   if (!autosaveEnabled) return;
+
+  const title = document.getElementById("title")?.value.trim();
+  if (!title) return; 
+
+  localStorage.removeItem(MANUAL_DRAFT_KEY);
+
   clearTimeout(draftTimer);
   draftTimer = setTimeout(saveDraft, 1000);
 }
 
-async function saveDraft() {
-  if (!autosaveEnabled) return;
-
-  const title = document.getElementById("title")?.value.trim();
-  const body  = document.getElementById("body")?.value.trim();
-
-  if (!title && !body) return;
-
-  try {
-    await fetch(`${API_BASE}/posts/draft`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body }),
-    });
-  } catch (err) {
-    console.warn("Draft auto-save failed", err);
-  }
-}
-
-// for tab close / refresh
 function saveDraftSync() {
   if (!autosaveEnabled) return;
 
   const title = document.getElementById("title")?.value.trim();
   const body  = document.getElementById("body")?.value.trim();
 
-  if (!title && !body) return;
+  if (!title) return; 
 
   navigator.sendBeacon(
     `${API_BASE}/posts/draft`,
@@ -100,6 +75,9 @@ function saveDraftSync() {
 ========================= */
 
 async function restoreDraftIfExists() {
+  // manual draft → no restore prompt
+  if (localStorage.getItem(MANUAL_DRAFT_KEY)) return;
+
   try {
     const res = await fetch(`${API_BASE}/posts/draft`, {
       credentials: "include",
@@ -111,24 +89,17 @@ async function restoreDraftIfExists() {
     if (!data) return;
 
     const ok = confirm("Unsaved draft found. Restore it?");
-    if (!ok) {
-      await fetch(`${API_BASE}/posts/draft`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      return;
-    }
+    if (!ok) return;
 
     document.getElementById("title").value = data.title || "";
     document.getElementById("body").value  = data.body || "";
-
-  } catch (err) {
-    console.warn("Draft restore failed", err);
+  } catch {
+    /* silent */
   }
 }
 
 /* =========================
-   CREATE POST
+   MAIN
 ========================= */
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -138,29 +109,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   const titleInput = document.getElementById("title");
   const bodyInput  = document.getElementById("body");
 
-  populateCategories();
+  await populateCategories();
 
   const user = await getCurrentUser();
+  if (!user) return;
 
-  if (user) {
-    restoreDraftIfExists();
+  await restoreDraftIfExists();
 
-    titleInput?.addEventListener("input", scheduleDraftSave);
-    bodyInput?.addEventListener("input", scheduleDraftSave);
+  titleInput.addEventListener("input", scheduleDraftSave);
+  bodyInput.addEventListener("input", scheduleDraftSave);
 
-    window.addEventListener("beforeunload", saveDraftSync);
-    window.addEventListener("pagehide", saveDraftSync);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) saveDraft();
-    });
-  }
+  window.addEventListener("beforeunload", saveDraftSync);
+  window.addEventListener("pagehide", saveDraftSync);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
-    // 🛑 STOP AUTOSAVE
-    autosaveEnabled = false;
-    clearTimeout(draftTimer);
 
     const title = titleInput.value.trim();
     const body  = bodyInput.value.trim();
@@ -172,88 +135,71 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    try {
-      /* =========================
-        SAVE DRAFT
-      ========================= */
-      if (action === "draft") {
-        const res = await fetch(`${API_BASE}/posts/draft`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title,
-            body,
-            // κρατάμε category για UX consistency (αγνοείται backend for now)
-            category_id: categoryId ? Number(categoryId) : null,
-          }),
-        });
-
-        const data = await res.json().catch(() => null);
-
-        if (!res.ok) {
-          alert(data?.error?.message || "Failed to save draft");
-          return;
-        }
-
-        alert("Draft saved successfully");
-        return;
-      }
-
-      /* =========================
-        PUBLISH POST
-      ========================= */
-      if (!categoryId) {
-        alert("Category is required");
-        return;
-      }
-
-      const res = await fetch(`${API_BASE}/posts`, {
+    /* =========================
+       MANUAL SAVE DRAFT
+    ========================= */
+    if (action === "draft") {
+      const res = await fetch(`${API_BASE}/posts/draft`, {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          body,
-          category_ids: [Number(categoryId)],
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body }),
       });
-
-      if (res.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
-
-      const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.error?.message || "Failed to publish post");
+        alert("Failed to save draft");
         return;
       }
 
-      // 🧹 CLEAN DRAFT & REDIRECT
-      await fetch(`${API_BASE}/posts/draft`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-
-      window.location.href = "/";
-
-    } catch (err) {
-      console.error("Create post error:", err);
-      alert("Unexpected error");
+      localStorage.setItem(MANUAL_DRAFT_KEY, "1");
+      alert("Draft saved successfully");
+      return;
     }
+
+    /* =========================
+       PUBLISH
+    ========================= */
+    if (!categoryId) {
+      alert("Category is required");
+      return;
+    }
+
+    autosaveEnabled = false;
+    clearTimeout(draftTimer);
+
+    const res = await fetch(`${API_BASE}/posts`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        title,
+        body,
+        category_ids: [Number(categoryId)],
+      }),
+    });
+
+    if (!res.ok) {
+      autosaveEnabled = true;
+      alert("Failed to publish post");
+      return;
+    }
+
+    await fetch(`${API_BASE}/posts/draft`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    localStorage.removeItem(MANUAL_DRAFT_KEY);
+    window.location.href = "/";
   });
 });
 
 async function getCurrentUser() {
   try {
-    const res = await fetch(`${API_BASE}/users/me`, {
-      credentials: "include",
-    });
+    const res = await fetch(`${API_BASE}/users/me`, { credentials: "include" });
     if (!res.ok) return null;
     const { data } = await res.json();
     return data;
