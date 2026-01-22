@@ -1,10 +1,11 @@
+// internal/middleware/auth.go
+
 package middleware
 
 import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -42,7 +43,7 @@ func Auth(database *sql.DB) func(http.Handler) http.Handler {
 
 			session, err := db.GetSessionByToken(r.Context(), database, token)
 			if err != nil {
-				log.Printf("failed to get session by token: %v", err)
+				clearSessionCookie(w)
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
@@ -60,4 +61,15 @@ func GetUserID(ctx context.Context) (int64, error) {
 		return 0, errors.New("unauthenticated")
 	}
 	return id, nil
+}
+
+func clearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
