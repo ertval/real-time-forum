@@ -1,3 +1,5 @@
+// internal/db/sessions.go
+
 package db
 
 import (
@@ -15,14 +17,20 @@ const (
 )
 
 type Session struct {
-	ID        int64
-	UserID    int64
-	Token     string
-	CreatedAt time.Time
-	ExpiresAt time.Time
-	IP        string
-	UserAgent string
-	IsValid   bool
+	ID             int64
+	UserID         int64
+	Token          string
+	SessionVersion int
+	CreatedAt      time.Time
+	ExpiresAt      time.Time
+	IP             string
+	UserAgent      string
+	IsValid        bool
+}
+
+type SessionData struct {
+	UserID         int64
+	SessionVersion int
 }
 
 // ============================================================
@@ -45,6 +53,11 @@ func CreateSession(
 		return Session{}, err
 	}
 	defer tx.Rollback()
+
+	version, err := bumpSessionVersionTx(ctx, tx, userID)
+	if err != nil {
+		return Session{}, err
+	}
 
 	if err := invalidateUserSessionsTx(ctx, tx, userID); err != nil {
 		return Session{}, err
@@ -71,13 +84,14 @@ func CreateSession(
 	}
 
 	return Session{
-		ID:        id,
-		UserID:    userID,
-		Token:     token,
-		ExpiresAt: expiresAt,
-		IP:        ip,
-		UserAgent: userAgent,
-		IsValid:   true,
+		ID:             id,
+		UserID:         userID,
+		Token:          token,
+		SessionVersion: version,
+		ExpiresAt:      expiresAt,
+		IP:             ip,
+		UserAgent:      userAgent,
+		IsValid:        true,
 	}, nil
 }
 
@@ -170,15 +184,25 @@ func fetchValidSession(
 ) (Session, error) {
 
 	const query = `
-		SELECT id, user_id, token, created_at, expires_at, ip, user_agent
-		FROM sessions
-		WHERE token = ?
-		  AND is_valid = 1
-		  AND expires_at > datetime('now')
+		SELECT
+			s.id,
+			s.user_id,
+			s.token,
+			s.created_at,
+			s.expires_at,
+			s.ip,
+			s.user_agent,
+			u.session_version
+		FROM sessions s
+		JOIN users u ON u.id = s.user_id
+		WHERE s.token = ?
+		  AND s.is_valid = 1
+		  AND s.expires_at > datetime('now')
 	`
 
 	var session Session
 	var createdRaw, expiresRaw string
+	var dbSessionVersion int
 
 	err := db.QueryRowContext(ctx, query, token).Scan(
 		&session.ID,
@@ -188,6 +212,7 @@ func fetchValidSession(
 		&expiresRaw,
 		&session.IP,
 		&session.UserAgent,
+		&dbSessionVersion,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -196,8 +221,16 @@ func fetchValidSession(
 		return Session{}, fmt.Errorf("get session: %w", err)
 	}
 
+	// Parse timestamps
 	session.CreatedAt, _ = time.Parse(time.RFC3339, createdRaw)
 	session.ExpiresAt, _ = time.Parse(time.RFC3339, expiresRaw)
+
+	// enforce single active session
+	if session.SessionVersion != 0 && session.SessionVersion != dbSessionVersion {
+		return Session{}, fmt.Errorf("session superseded")
+	}
+
+	session.SessionVersion = dbSessionVersion
 	session.IsValid = true
 
 	return session, nil
@@ -205,4 +238,30 @@ func fetchValidSession(
 
 func generateSessionToken() string {
 	return uuid.New().String()
+}
+
+func bumpSessionVersionTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	userID int64,
+) (int, error) {
+
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE users
+		 SET session_version = session_version + 1
+		 WHERE id = ?`,
+		userID,
+	); err != nil {
+		return 0, err
+	}
+
+	var newVersion int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT session_version FROM users WHERE id = ?`,
+		userID,
+	).Scan(&newVersion); err != nil {
+		return 0, err
+	}
+
+	return newVersion, nil
 }

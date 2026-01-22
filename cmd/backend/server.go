@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"forum/internal/db"
 	"forum/internal/router"
@@ -28,6 +30,20 @@ func Start() {
 	}()
 
 	log.Println("Database initialized")
+
+	// ---------------------------------------------------------
+	// Background session cleanup
+	// ---------------------------------------------------------
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if err := db.CleanupSessions(context.Background(), database); err != nil {
+				log.Printf("session cleanup error: %v", err)
+			}
+		}
+	}()
 
 	// ---------------------------------------------------------
 	// Build HTTP handler (router + middleware)
