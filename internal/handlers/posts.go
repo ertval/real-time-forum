@@ -168,6 +168,17 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		req.CategoryIDs,
 	)
 
+	// If post is published, delete any existing draft
+	if status == "published" {
+		if err := repository.DraftDeleteByUser(
+			r.Context(),
+			p.conn,
+			userID,
+		); err != nil {
+			log.Printf("warning: failed to delete draft after publish: %v", err)
+		}
+	}
+
 	if err != nil {
 		log.Printf("failed to create post: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
@@ -285,8 +296,13 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 
 	if req.Status != nil {
 		status := strings.ToLower(strings.TrimSpace(*req.Status))
+
 		if status != "draft" && status != "published" {
-			WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
+			WriteError(w, r, NewError(
+				"BAD_REQUEST",
+				"invalid status",
+				http.StatusBadRequest,
+			))
 			return
 		}
 
@@ -302,10 +318,15 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 				return
 			}
 			log.Printf("failed to update post status: %v", err)
-			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post status", http.StatusInternalServerError))
+			WriteError(w, r, NewError(
+				"INTERNAL_SERVER_ERROR",
+				"error updating post status",
+				http.StatusInternalServerError,
+			))
 			return
 		}
 	}
+
 	if req.Title != nil || req.Body != nil {
 		if err := repository.UpdatePostContent(
 			r.Context(),
@@ -527,7 +548,7 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
-	// Reload comment WITH author 
+	// Reload comment WITH author
 	comment, err := repository.GetCommentWithAuthor(
 		r.Context(),
 		p.conn,
