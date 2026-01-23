@@ -1,3 +1,5 @@
+// internal/router/router.go
+
 package router
 
 import (
@@ -48,6 +50,14 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(
 		apiPrefix+"/posts/public",
 		posts.ListPublicPosts,
+	)
+
+	// ---------------------------------------------------------
+	// POSTS DRAFT (AUTOSAVE)
+	// ---------------------------------------------------------
+	mux.Handle(
+		apiPrefix+"/posts/draft",
+		auth(http.HandlerFunc(posts.HandleDraft)),
 	)
 
 	// ---------------------------------------------------------

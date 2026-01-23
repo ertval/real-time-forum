@@ -1,3 +1,4 @@
+// internal/handlers/users.go
 package handlers
 
 import (
@@ -137,7 +138,9 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		r.RemoteAddr,
 		r.UserAgent(),
 	)
-	if writeHandlerError(w, r, err, "failed to create session") {
+	if err != nil {
+		log.Printf("CreateSession ERROR: %+v\n", err)
+		writeHandlerError(w, r, err, "failed to create session")
 		return
 	}
 

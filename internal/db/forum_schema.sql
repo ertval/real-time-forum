@@ -21,15 +21,15 @@
 -- USERS
 -- ===============================================================
 CREATE TABLE IF NOT EXISTS users (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  username      TEXT NOT NULL UNIQUE CHECK (length(username) BETWEEN 3 AND 30),
-  email         TEXT NOT NULL UNIQUE CHECK (instr(email, '@') > 1),
-  password_hash TEXT NOT NULL,
-  is_active     INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
-  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-  updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  username         TEXT NOT NULL UNIQUE CHECK (length(username) BETWEEN 3 AND 30),
+  email            TEXT NOT NULL UNIQUE CHECK (instr(email, '@') > 1),
+  password_hash    TEXT NOT NULL,
+  is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+  session_version  INTEGER NOT NULL DEFAULT 0,
+  created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
-
 
 -- ===============================================================
 -- CATEGORIES
@@ -160,3 +160,10 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user
 
 CREATE INDEX IF NOT EXISTS idx_sessions_expires
   ON sessions(expires_at);
+
+-- ===============================================================
+-- DRAFTS (ONE PER USER)
+-- ===============================================================
+CREATE UNIQUE INDEX IF NOT EXISTS ux_posts_one_draft_per_user
+ON posts(author_id)
+WHERE status = 'draft';

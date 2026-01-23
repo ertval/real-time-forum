@@ -1,14 +1,7 @@
+// web/static/js/create-post.js
 import { API_BASE } from "./utils.js";
 
-/* =========================
-   HELPERS
-========================= */
-
-function extractArray(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.data)) return payload.data;
-  return [];
-}
+const MANUAL_DRAFT_KEY = "manual_draft_saved";
 
 /* =========================
    LOAD CATEGORIES
@@ -20,9 +13,7 @@ async function loadCategories() {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
-
     if (!res.ok) return [];
-
     return await res.json();
   } catch {
     return [];
@@ -34,7 +25,7 @@ async function populateCategories() {
   if (!select) return;
 
   const payload = await loadCategories();
-  const categories = extractArray(payload);
+  const categories = Array.isArray(payload?.data) ? payload.data : payload;
 
   select.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
 
@@ -47,20 +38,95 @@ async function populateCategories() {
 }
 
 /* =========================
-   CREATE POST
+   AUTOSAVE
 ========================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+let draftTimer = null;
+let autosaveEnabled = true;
+
+function scheduleDraftSave() {
+  if (!autosaveEnabled) return;
+
+  const title = document.getElementById("title")?.value.trim();
+  if (!title) return; 
+
+  localStorage.removeItem(MANUAL_DRAFT_KEY);
+
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraft, 1000);
+}
+
+function saveDraftSync() {
+  if (!autosaveEnabled) return;
+
+  const title = document.getElementById("title")?.value.trim();
+  const body  = document.getElementById("body")?.value.trim();
+
+  if (!title) return; 
+
+  navigator.sendBeacon(
+    `${API_BASE}/posts/draft`,
+    JSON.stringify({ title, body })
+  );
+}
+
+/* =========================
+   RESTORE DRAFT
+========================= */
+
+async function restoreDraftIfExists() {
+  // manual draft → no restore prompt
+  if (localStorage.getItem(MANUAL_DRAFT_KEY)) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/posts/draft`, {
+      credentials: "include",
+    });
+
+    if (!res.ok || res.status === 401) return;
+
+    const { data } = await res.json();
+    if (!data) return;
+
+    const ok = confirm("Unsaved draft found. Restore it?");
+    if (!ok) return;
+
+    document.getElementById("title").value = data.title || "";
+    document.getElementById("body").value  = data.body || "";
+  } catch {
+    /* silent */
+  }
+}
+
+/* =========================
+   MAIN
+========================= */
+
+document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("create-post-form");
   if (!form) return;
 
-  populateCategories();
+  const titleInput = document.getElementById("title");
+  const bodyInput  = document.getElementById("body");
+
+  await populateCategories();
+
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await restoreDraftIfExists();
+
+  titleInput.addEventListener("input", scheduleDraftSave);
+  bodyInput.addEventListener("input", scheduleDraftSave);
+
+  window.addEventListener("beforeunload", saveDraftSync);
+  window.addEventListener("pagehide", saveDraftSync);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const title = document.getElementById("title").value.trim();
-    const body = document.getElementById("body").value.trim();
+    const title = titleInput.value.trim();
+    const body  = bodyInput.value.trim();
     const categoryId = document.getElementById("categorySelect").value;
     const action = e.submitter?.value;
 
@@ -69,51 +135,75 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    /* =========================
+       MANUAL SAVE DRAFT
+    ========================= */
+    if (action === "draft") {
+      const res = await fetch(`${API_BASE}/posts/draft`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body }),
+      });
+
+      if (!res.ok) {
+        alert("Failed to save draft");
+        return;
+      }
+
+      localStorage.setItem(MANUAL_DRAFT_KEY, "1");
+      alert("Draft saved successfully");
+      return;
+    }
+
+    /* =========================
+       PUBLISH
+    ========================= */
     if (!categoryId) {
       alert("Category is required");
       return;
     }
 
-    const payload = {
-      title,
-      body,
-      status: action === "draft" ? "draft" : "published",
-      category_ids: [Number(categoryId)],
-    };
+    autosaveEnabled = false;
+    clearTimeout(draftTimer);
 
-    try {
-      const res = await fetch(`${API_BASE}/posts`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch(`${API_BASE}/posts`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        title,
+        body,
+        category_ids: [Number(categoryId)],
+      }),
+    });
 
-      if (res.status === 401) {
-        alert("You must be logged in to create a post.");
-        window.location.href = "/login";
-        return;
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data?.error?.message || "Failed to create post");
-        return;
-      }
-
-      if (payload.status === "draft") {
-        alert("Draft saved successfully");
-      } else {
-        window.location.href = "/";
-      }
-
-    } catch (err) {
-      console.error("Create post error:", err);
-      alert("Unexpected error while creating post");
+    if (!res.ok) {
+      autosaveEnabled = true;
+      alert("Failed to publish post");
+      return;
     }
+
+    await fetch(`${API_BASE}/posts/draft`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    localStorage.removeItem(MANUAL_DRAFT_KEY);
+    window.location.href = "/";
   });
 });
+
+async function getCurrentUser() {
+  try {
+    const res = await fetch(`${API_BASE}/users/me`, { credentials: "include" });
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return data;
+  } catch {
+    return null;
+  }
+}

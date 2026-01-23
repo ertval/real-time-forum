@@ -140,8 +140,11 @@ function maybeRenderCommentForm(container, postId) {
   const form = document.createElement("form");
   form.className = "comment-form";
 
+  form.setAttribute("novalidate", "novalidate");
+
   form.innerHTML = `
-    <textarea placeholder="Write a comment..." rows="2" required></textarea>
+    <textarea placeholder="Write a comment..." rows="2"></textarea>
+    <p class="comment-error" role="alert" hidden></p>
     <button class="btn btn-primary" type="submit">Comment</button>
   `;
 
@@ -154,8 +157,29 @@ function maybeRenderCommentForm(container, postId) {
 
   form.addEventListener("submit", async () => {
     const textarea = form.querySelector("textarea");
+
+    /* clears possible previous error as user types */
+    textarea.addEventListener("input", () => {
+      const errorEl = form.querySelector(".comment-error");
+      if (!errorEl) return;
+
+      if (textarea.value.trim()) {
+        errorEl.textContent = "";
+        errorEl.hidden = true;
+      }
+    });
+
+    const errorEl = form.querySelector(".comment-error");
     const body = textarea.value.trim();
-    if (!body) return;
+    if (!body) {
+      errorEl.textContent = "Cannot submit an empty comment";
+      errorEl.hidden = false;
+      textarea.focus();
+      return;
+    }
+
+    errorEl.textContent = "";
+    errorEl.hidden = true;
 
     const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
       method: "POST",
@@ -278,10 +302,13 @@ function statusToggleTemplate(post) {
 }
 
 function renderCategories(categories = []) {
-  if (!categories.length) return "";
+  if (!Array.isArray(categories) || categories.length === 0) return "";
+
   return `
     <div class="post-categories">
-      ${categories.map(c => `<span class="category-badge">${c.name}</span>`).join("")}
+      ${categories
+        .map(c => `<span class="category-badge">${c.name}</span>`)
+        .join("")}
     </div>
   `;
 }
