@@ -57,6 +57,7 @@ func main() {
 	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
 	mux.HandleFunc("/my-posts/", serveTemplate("./web/templates/my-posts.html"))
 	mux.Handle("/view-post/", serveTemplate("./web/templates/view-post.html"))
+	mux.Handle("/my-liked-posts", serveTemplate("./web/templates/my-liked-posts.html"))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("HIT / handler: %s", r.URL.Path)
