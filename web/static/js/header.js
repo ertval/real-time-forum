@@ -10,24 +10,35 @@ export async function initHeader() {
   const greetingEl = document.getElementById("greeting");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
-  const myPostsBtn = document.getElementById("my-posts-btn");
+
+  const authedOnlyEls = [
+    document.getElementById("my-posts-btn"),
+    document.getElementById("my-liked-posts-btn"),
+  ].filter(Boolean);
 
   if (!greetingEl || !loginBtn || !logoutBtn) return;
 
-  if (!Auth.isAuthenticated) {
-    greetingEl.textContent = "Hello, Guest";
-    loginBtn.style.display = "inline-flex";
-    logoutBtn.style.display = "none";
-    if (myPostsBtn) myPostsBtn.style.display = "none";
-    return;
+  const isAuthed = Auth.isAuthenticated;
+  //fallback if auth.user is nullified
+  const username = Auth.user?.username ?? "User";
+
+
+  greetingEl.textContent = isAuthed ? `Hello, ${username}` : "Hello, Guest";
+  loginBtn.style.display = isAuthed ? "none" : "inline-flex";
+  logoutBtn.style.display = isAuthed ? "inline-flex" : "none";
+
+  setAuthedOnlyVisibility(authedOnlyEls, isAuthed)
+
+  if (isAuthed) {
+    bindLogout(logoutBtn);
   }
+}
 
-  greetingEl.textContent = `Hello, ${Auth.user.username}`;
-  loginBtn.style.display = "none";
-  logoutBtn.style.display = "inline-flex";
-  if (myPostsBtn) myPostsBtn.style.display = "inline-flex";
-
-  bindLogout(logoutBtn);
+function setAuthedOnlyVisibility(elements, isAuthed) {
+  const displayValue = isAuthed ? "inline-flex" : "none";
+  for (const el of elements) {
+    el.style.display = displayValue;
+  }
 }
 
 // --------------------------------------------------

@@ -24,7 +24,8 @@ async function loadHeader() {
     const host = document.getElementById("header");
     if (!host) throw new Error("Missing #header container");
     host.innerHTML = html;
-    //Hides my posts button if on my posts page
+
+    // Hide "My posts" button when already on My Posts page
     document.getElementById("my-posts-btn")?.remove();
 
     const actions = document.querySelector(".page-actions");
@@ -32,23 +33,23 @@ async function loadHeader() {
 
     const { label, select } = buildStatusFilter();
 
-    const loginBtn = document.getElementById("login-btn");
-    const logoutBtn = document.getElementById("logout-btn");
-    // Insert BEFORE Create Post button if it can be found
+    // Insert filter BEFORE the Create Post button if present, otherwise at the end
     const createBtn =
-        actions.querySelector('#create-post-btn') ||
+        actions.querySelector("#create-post-btn") ||
         actions.querySelector('a[href="/create-post"]') ||
         actions.querySelector('a[href="/create-post/"]');
-    //clears actions area
-    actions.innerHTML = "";
 
-    //rebuilds button/dropdown order
-    actions.appendChild(label);
-    actions.appendChild(select);
+    const likedBtn = actions.querySelector("#my-liked-posts-btn");
 
-    if (loginBtn) actions.appendChild(loginBtn);
-    if (logoutBtn) actions.appendChild(logoutBtn);
-    if (createBtn) actions.appendChild(createBtn);
+    const anchor = likedBtn || createBtn;
+
+    if (anchor) {
+        actions.insertBefore(label, anchor);
+        actions.insertBefore(select, anchor);
+    } else {
+        actions.appendChild(label);
+        actions.appendChild(select);
+    }
 }
 
 function loadModuleScript(src) {
