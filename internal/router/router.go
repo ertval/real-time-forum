@@ -34,22 +34,50 @@ func NewRouter(database *sql.DB) http.Handler {
 	// ---------------------------------------------------------
 	// HEALTH
 	// ---------------------------------------------------------
-	mux.HandleFunc(apiPrefix+"/health", health.Health)
-
+	mux.Handle(
+		apiPrefix+"/health",
+		middleware.AllowMethods(
+			http.HandlerFunc(health.Health),
+			http.MethodGet,
+		),
+	)
 	// ---------------------------------------------------------
 	// CATEGORIES (PUBLIC)
 	// ---------------------------------------------------------
-	mux.HandleFunc(apiPrefix+"/categories", categories.HandleCategories)
-	mux.HandleFunc(apiPrefix+"/categories/", categories.HandleCategory)
-	mux.HandleFunc(apiPrefix+"/categories/view", categories.ListCategoriesWithPosts)
+	mux.Handle(
+		apiPrefix+"/categories",
+		middleware.AllowMethods(
+			http.HandlerFunc(categories.HandleCategories),
+			http.MethodGet,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/categories/",
+		middleware.AllowMethods(
+			http.HandlerFunc(categories.HandleCategory),
+			http.MethodGet,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/categories/view",
+		middleware.AllowMethods(
+			http.HandlerFunc(categories.ListCategoriesWithPosts),
+			http.MethodGet,
+		),
+	)
 
 	// ---------------------------------------------------------
 	// POSTS – PUBLIC COLLECTIONS
 	// ---------------------------------------------------------
-	// IMPORTANT: must be BEFORE /posts/
-	mux.HandleFunc(
+
+	mux.Handle(
 		apiPrefix+"/posts/public",
-		posts.ListPublicPosts,
+		middleware.AllowMethods(
+			http.HandlerFunc(posts.ListPublicPosts),
+			http.MethodGet,
+		),
 	)
 
 	// ---------------------------------------------------------
@@ -57,7 +85,12 @@ func NewRouter(database *sql.DB) http.Handler {
 	// ---------------------------------------------------------
 	mux.Handle(
 		apiPrefix+"/posts/draft",
-		auth(http.HandlerFunc(posts.HandleDraft)),
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(posts.HandleDraft)),
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodDelete,
+		),
 	)
 
 	// ---------------------------------------------------------
@@ -103,33 +136,61 @@ func NewRouter(database *sql.DB) http.Handler {
 	// ---------------------------------------------------------
 	mux.Handle(
 		apiPrefix+"/posts/mine",
-		auth(http.HandlerFunc(posts.ListMyPosts)),
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(posts.ListMyPosts)),
+			http.MethodGet,
+		),
 	)
 
 	mux.Handle(
 		apiPrefix+"/posts/liked",
-		auth(http.HandlerFunc(posts.ListLikedPosts)),
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(posts.ListLikedPosts)),
+			http.MethodGet,
+		),
 	)
 
 	// ---------------------------------------------------------
 	// USERS
 	// ---------------------------------------------------------
-	mux.HandleFunc(apiPrefix+"/users/register", users.Register)
-	mux.HandleFunc(apiPrefix+"/users/login", users.Login)
+	mux.Handle(
+		apiPrefix+"/users/register",
+		middleware.AllowMethods(
+			http.HandlerFunc(users.Register),
+			http.MethodPost,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/users/login",
+		middleware.AllowMethods(
+			http.HandlerFunc(users.Login),
+			http.MethodPost,
+		),
+	)
 
 	mux.Handle(
 		apiPrefix+"/users/logout",
-		auth(http.HandlerFunc(users.Logout)),
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.Logout)),
+			http.MethodPost,
+		),
 	)
 
 	mux.Handle(
 		apiPrefix+"/users/me",
-		auth(http.HandlerFunc(users.Me)),
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.Me)),
+			http.MethodGet,
+		),
 	)
 
 	mux.Handle(
 		apiPrefix+"/users/",
-		auth(http.HandlerFunc(users.HandleUser)),
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.HandleUser)),
+			http.MethodGet,
+		),
 	)
 
 	// ---------------------------------------------------------
