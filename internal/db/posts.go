@@ -1,3 +1,4 @@
+// internal/db/posts.go
 package db
 
 import (
@@ -630,12 +631,24 @@ func validateCategoriesTx(ctx context.Context, tx *sql.Tx, ids []int64) error {
 		return nil
 	}
 
-	placeholders := strings.TrimRight(strings.Repeat("?,", len(ids)), ",")
+	// de-duplicate ids
+	unique := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		if id > 0 {
+			unique[id] = struct{}{}
+		}
+	}
+
+	if len(unique) == 0 {
+		return fmt.Errorf("no valid categories provided")
+	}
+
+	placeholders := strings.TrimRight(strings.Repeat("?,", len(unique)), ",")
 	query := `SELECT COUNT(*) FROM categories WHERE id IN (` + placeholders + `)`
 
-	args := make([]any, len(ids))
-	for i, id := range ids {
-		args[i] = id
+	args := make([]any, 0, len(unique))
+	for id := range unique {
+		args = append(args, id)
 	}
 
 	var count int
@@ -643,7 +656,7 @@ func validateCategoriesTx(ctx context.Context, tx *sql.Tx, ids []int64) error {
 		return err
 	}
 
-	if count != len(ids) {
+	if count != len(unique) {
 		return fmt.Errorf("one or more categories do not exist")
 	}
 
@@ -651,7 +664,17 @@ func validateCategoriesTx(ctx context.Context, tx *sql.Tx, ids []int64) error {
 }
 
 func insertPostCategoriesTx(ctx context.Context, tx *sql.Tx, postID int64, ids []int64) error {
+	seen := make(map[int64]struct{}, len(ids))
+
 	for _, cid := range ids {
+		if cid <= 0 {
+			continue
+		}
+		if _, ok := seen[cid]; ok {
+			continue
+		}
+		seen[cid] = struct{}{}
+
 		if _, err := tx.ExecContext(ctx,
 			`INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)`,
 			postID, cid,
@@ -659,5 +682,6 @@ func insertPostCategoriesTx(ctx context.Context, tx *sql.Tx, postID int64, ids [
 			return err
 		}
 	}
+
 	return nil
 }
