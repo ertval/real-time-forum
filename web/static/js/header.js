@@ -1,11 +1,8 @@
 // web/static/js/header.js
-
 import { Auth } from "./auth.js";
 
 export async function initHeader() {
   await Auth.init();
-
-  setupForumLogo();
 
   const greetingEl = document.getElementById("greeting");
   const loginBtn = document.getElementById("login-btn");
@@ -19,20 +16,26 @@ export async function initHeader() {
   if (!greetingEl || !loginBtn || !logoutBtn) return;
 
   const isAuthed = Auth.isAuthenticated;
-  //fallback if auth.user is nullified
   const username = Auth.user?.username ?? "User";
 
+  // TEXT
+  greetingEl.textContent = isAuthed
+    ? `Hello, ${username}`
+    : "Hello, Guest";
 
-  greetingEl.textContent = isAuthed ? `Hello, ${username}` : "Hello, Guest";
+  // VISIBILITY
+  greetingEl.style.display = "block";
   loginBtn.style.display = isAuthed ? "none" : "inline-flex";
   logoutBtn.style.display = isAuthed ? "inline-flex" : "none";
 
-  setAuthedOnlyVisibility(authedOnlyEls, isAuthed)
-
-  if (isAuthed) {
-    bindLogout(logoutBtn);
+  for (const el of authedOnlyEls) {
+    el.style.display = isAuthed ? "inline-flex" : "none";
   }
 }
+
+// ==================================================
+// HELPERS
+// ==================================================
 
 function setAuthedOnlyVisibility(elements, isAuthed) {
   const displayValue = isAuthed ? "inline-flex" : "none";
@@ -44,13 +47,13 @@ function setAuthedOnlyVisibility(elements, isAuthed) {
 // --------------------------------------------------
 // FORUM LOGO → /
 // --------------------------------------------------
-
 function setupForumLogo() {
   const forumTitle = document.getElementById("forum-title");
   if (!forumTitle) return;
 
   forumTitle.style.cursor = "pointer";
-  forumTitle.addEventListener("click", () => {
+  forumTitle.addEventListener("click", (e) => {
+    e.preventDefault();
     window.location.assign("/");
   });
 }
@@ -58,7 +61,6 @@ function setupForumLogo() {
 // --------------------------------------------------
 // LOGOUT
 // --------------------------------------------------
-
 function bindLogout(logoutBtn) {
   if (logoutBtn.dataset.bound) return;
   logoutBtn.dataset.bound = "1";
@@ -71,6 +73,10 @@ function bindLogout(logoutBtn) {
       credentials: "include",
     });
 
-    window.location.assign("/login");
+    Auth.checked = false;
+    Auth.isAuthenticated = false;
+    Auth.user = null;
+
+    window.location.reload();
   });
 }

@@ -130,16 +130,12 @@ function renderComment(comment) {
 }
 
 /* ==================================================
-   COMMENT FORM (AUTH-BASED)
+   COMMENT FORM (GUEST-AWARE)
 ================================================== */
 
 function maybeRenderCommentForm(container, postId) {
-  // Guest → do nothing (EXPECTED)
-  if (!Auth.isAuthenticated) return;
-
   const form = document.createElement("form");
   form.className = "comment-form";
-
   form.setAttribute("novalidate", "novalidate");
 
   form.innerHTML = `
@@ -156,21 +152,13 @@ function maybeRenderCommentForm(container, postId) {
   });
 
   form.addEventListener("submit", async () => {
+    const allowed = await Auth.requireOrPrompt();
+    if (!allowed) return;
+
     const textarea = form.querySelector("textarea");
-
-    /* clears possible previous error as user types */
-    textarea.addEventListener("input", () => {
-      const errorEl = form.querySelector(".comment-error");
-      if (!errorEl) return;
-
-      if (textarea.value.trim()) {
-        errorEl.textContent = "";
-        errorEl.hidden = true;
-      }
-    });
-
     const errorEl = form.querySelector(".comment-error");
     const body = textarea.value.trim();
+
     if (!body) {
       errorEl.textContent = "Cannot submit an empty comment";
       errorEl.hidden = false;
@@ -178,7 +166,6 @@ function maybeRenderCommentForm(container, postId) {
       return;
     }
 
-    errorEl.textContent = "";
     errorEl.hidden = true;
 
     const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
@@ -191,10 +178,7 @@ function maybeRenderCommentForm(container, postId) {
       body: JSON.stringify({ body }),
     });
 
-    if (!res.ok) {
-      alert("You must be logged in to comment.");
-      return;
-    }
+    if (!res.ok) return;
 
     const payload = await res.json();
     const newComment = payload.data ?? payload;
@@ -212,7 +196,7 @@ function maybeRenderCommentForm(container, postId) {
 }
 
 /* ==================================================
-   REACTIONS
+   REACTIONS (TEMPLATE ONLY – LOGIC IN reactions.js)
 ================================================== */
 
 export function reactionTemplate(item, isComment = false) {
@@ -223,67 +207,17 @@ export function reactionTemplate(item, isComment = false) {
   return `
     <div class="reaction">
       <span data-like-count>${item.likes ?? 0}</span>
-      <button class="btn btn-ghost" data-reaction="like" ${idAttr}>Like</button>
+      <button class="btn btn-ghost" data-reaction="like" ${idAttr}>
+        Like
+      </button>
     </div>
     <div class="reaction">
       <span data-dislike-count>${item.dislikes ?? 0}</span>
-      <button class="btn btn-ghost" data-reaction="dislike" ${idAttr}>Dislike</button>
+      <button class="btn btn-ghost" data-reaction="dislike" ${idAttr}>
+        Dislike
+      </button>
     </div>
   `;
-}
-
-export function initReactions() {
-  document.addEventListener(
-    "click",
-    async e => {
-      const btn = e.target.closest("[data-reaction]");
-      if (!btn) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (!Auth.isAuthenticated) {
-        alert("You must be logged in to react.");
-        return;
-      }
-
-      const type = btn.dataset.reaction;
-      const postId = btn.dataset.postId;
-      const commentId = btn.dataset.commentId;
-
-      const url = postId
-        ? `${API_BASE}/posts/${postId}/${type}`
-        : `${API_BASE}/comments/${commentId}/${type}`;
-
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-
-        if (!res.ok) return;
-
-        const { data } = await res.json();
-
-        const container = btn.closest(
-          postId
-            ? `article[data-post-id="${postId}"]`
-            : `div[data-comment-id="${commentId}"]`
-        );
-
-        if (!container) return;
-
-        container.querySelector("[data-like-count]").textContent =
-          data.likes_count;
-        container.querySelector("[data-dislike-count]").textContent =
-          data.dislikes_count;
-      } catch (err) {
-        console.error("Reaction failed:", err);
-      }
-    },
-    true
-  );
 }
 
 /* ==================================================

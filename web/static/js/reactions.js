@@ -1,91 +1,62 @@
-// web/static/js/reactions.js
+import { API_BASE } from "./utils.js";
+import { Auth } from "./auth.js";
 
+let bound = false;
 
-function bindReactions(container = document) {
-  container.addEventListener("click", async (e) => {
-    const likeBtn = e.target.closest("[data-like]");
-    const dislikeBtn = e.target.closest("[data-dislike]");
+export function initReactions() {
+  if (bound) return;
+  bound = true;
 
-    if (!likeBtn && !dislikeBtn) return;
+  document.addEventListener(
+    "click",
+    async (e) => {
+      const btn = e.target.closest("[data-reaction]");
+      if (!btn) return;
 
-    e.stopPropagation(); 
+      e.preventDefault();
+      e.stopPropagation();
 
-    const postId = likeBtn
-      ? likeBtn.dataset.like
-      : dislikeBtn.dataset.dislike;
+      // Guest → auth modal
+      const allowed = await Auth.requireOrPrompt();
+      if (!allowed) return;
 
-    const type = likeBtn ? "like" : "dislike";
+      const type = btn.dataset.reaction;
+      const postId = btn.dataset.postId;
+      const commentId = btn.dataset.commentId;
 
-    try {
-      const res = await fetch(`/api/v1/posts/${postId}/${type}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
+      const url = postId
+        ? `${API_BASE}/posts/${postId}/${type}`
+        : `${API_BASE}/comments/${commentId}/${type}`;
 
-      if (!res.ok) {
-        alert("You must be logged in to react");
-        return;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+
+        if (!res.ok) return;
+
+        const { data } = await res.json();
+
+        const container = btn.closest(
+          postId
+            ? `article[data-post-id="${postId}"]`
+            : `div[data-comment-id="${commentId}"]`
+        );
+
+        if (!container) return;
+
+        container.querySelector("[data-like-count]").textContent =
+          data.likes_count;
+
+        container.querySelector("[data-dislike-count]").textContent =
+          data.dislikes_count;
+
+      } catch (err) {
+        console.error("Reaction failed:", err);
       }
-
-      const payload = await res.json();
-      const data = payload.data;
-
-      const postEl = container.querySelector(
-        `[data-post-id="${postId}"]`
-      );
-
-      if (!postEl) return;
-
-      postEl.querySelector(".like-count").textContent =
-        data.likes_count;
-
-      postEl.querySelector(".dislike-count").textContent =
-        data.dislikes_count;
-
-    } catch (err) {
-      console.error("Reaction failed:", err);
-    }
-  });
-}
-
-
-async function handleReaction(postId, type, btn) {
-  if (!postId) return;
-
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(`${API_BASE}/posts/${postId}/${type}`, {
-      method: "POST",
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
-      throw new Error("Reaction failed");
-    }
-
-    const payload = await res.json();
-    updateCounters(postId, payload.data);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function updateCounters(postId, data) {
-  const card = document.querySelector(`[data-post-id="${postId}"]`);
-  if (!card) return;
-
-  const likeCount = card.querySelector(".like-count");
-  const dislikeCount = card.querySelector(".dislike-count");
-
-  if (likeCount) likeCount.textContent = data.likes;
-  if (dislikeCount) dislikeCount.textContent = data.dislikes;
+    },
+    true
+  );
 }

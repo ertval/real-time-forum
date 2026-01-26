@@ -1,5 +1,6 @@
 // web/static/js/auth.js
 import { API_BASE } from "./utils.js";
+import { openAuthModal } from "./auth-modal.js";
 
 export const Auth = {
   checked: false,
@@ -7,6 +8,9 @@ export const Auth = {
   user: null,
   _poller: null,
 
+  /* ==================================================
+     INITIAL AUTH CHECK
+  ================================================== */
   async init() {
     if (this.checked) return this;
 
@@ -19,7 +23,7 @@ export const Auth = {
       });
 
       if (res.status === 401) {
-        // Guest or session invalidated
+        // Guest OR session invalidated
         this.isAuthenticated = false;
         this.user = null;
         return this;
@@ -46,11 +50,11 @@ export const Auth = {
     }
   },
 
-  // --------------------------------------------------
-  // Periodic session check (single-session enforcement UX)
-  // --------------------------------------------------
+  /* ==================================================
+     SINGLE-SESSION WATCHER (UX ENFORCEMENT)
+  ================================================== */
   startSessionWatcher(intervalMs = 30_000) {
-    if (this._poller) return; // avoid duplicates
+    if (this._poller || !this.isAuthenticated) return;
 
     this._poller = setInterval(async () => {
       const wasAuthenticated = this.isAuthenticated;
@@ -59,10 +63,11 @@ export const Auth = {
       this.checked = false;
       await this.init();
 
-      // session was invalidated elsewhere
+      // session invalidated elsewhere
       if (wasAuthenticated && !this.isAuthenticated) {
         console.info("Auth: session invalidated remotely");
-        window.location.href = "/login";
+        this.stopSessionWatcher();
+        openAuthModal();
       }
     }, intervalMs);
   },
@@ -72,5 +77,17 @@ export const Auth = {
       clearInterval(this._poller);
       this._poller = null;
     }
-  }
+  },
+};
+
+/* ==================================================
+   AUTH GUARD (USED BY UI ACTIONS)
+================================================== */
+Auth.requireOrPrompt = async function () {
+  await this.init();
+
+  if (this.isAuthenticated) return true;
+
+  openAuthModal();
+  return false;
 };

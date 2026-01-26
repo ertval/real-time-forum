@@ -1,5 +1,6 @@
 // web/static/js/create-post.js
 import { API_BASE } from "./utils.js";
+import { Auth } from "./auth.js";
 
 const MANUAL_DRAFT_KEY = "manual_draft_saved";
 
@@ -48,7 +49,9 @@ async function renderCategoryCheckboxes() {
 
 function getSelectedCategoryIds() {
   return Array.from(
-    document.querySelectorAll("#categoryCheckboxes input[type='checkbox']:checked")
+    document.querySelectorAll(
+      "#categoryCheckboxes input[type='checkbox']:checked"
+    )
   ).map((el) => Number(el.value));
 }
 
@@ -75,7 +78,7 @@ function saveDraft() {
   if (!autosaveEnabled) return;
 
   const title = document.getElementById("title")?.value.trim();
-  const body  = document.getElementById("body")?.value.trim();
+  const body = document.getElementById("body")?.value.trim();
 
   if (!title) return;
 
@@ -106,7 +109,7 @@ async function restoreDraftIfExists() {
     if (!ok) return;
 
     document.getElementById("title").value = data.title || "";
-    document.getElementById("body").value  = data.body || "";
+    document.getElementById("body").value = data.body || "";
   } catch {}
 }
 
@@ -119,10 +122,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!form) return;
 
   const titleInput = document.getElementById("title");
-  const bodyInput  = document.getElementById("body");
+  const bodyInput = document.getElementById("body");
 
   await renderCategoryCheckboxes();
-
   await restoreDraftIfExists();
 
   titleInput.addEventListener("input", scheduleDraftSave);
@@ -134,8 +136,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // 🔐 AUTH GUARD (modal for guests)
+    const allowed = await Auth.requireOrPrompt();
+    if (!allowed) return;
+
     const title = titleInput.value.trim();
-    const body  = bodyInput.value.trim();
+    const body = bodyInput.value.trim();
     const categoryIds = getSelectedCategoryIds();
     const action = e.submitter?.value;
 
@@ -175,7 +181,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       body: JSON.stringify({
         title,
         body,
-        category_ids: categoryIds, 
+        category_ids: categoryIds,
       }),
     });
 

@@ -2,21 +2,18 @@
 
 import { initHeader } from "./header.js";
 import { Auth } from "./auth.js";
+import { loadAuthModal } from "./auth-modal.js";
 
-// --------------------------------------------------
-// Initialize auth state (who am I?)
-// --------------------------------------------------
-await Auth.init();
+(async function bootstrap() {
+  // preload auth modal ONCE
+  await loadAuthModal();
 
-// --------------------------------------------------
-// Start session watcher ONLY for authenticated users
-// (detect remote logout / superseded session)
-// --------------------------------------------------
-if (Auth.isAuthenticated) {
-  Auth.startSessionWatcher();
-}
+  // auth state
+  await Auth.init();
 
-// --------------------------------------------------
-// Initialize header UI (login/logout buttons, user info)
-// --------------------------------------------------
-initHeader();
+  if (Auth.isAuthenticated) {
+    Auth.startSessionWatcher();
+  }
+
+  initHeader();
+})();

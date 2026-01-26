@@ -3,8 +3,9 @@
 import {
   renderPostCard,
   loadPostCommentsPreview,
-  initReactions,
 } from "./posts.js";
+
+import { initReactions } from "./reactions.js";
 
 import { API_BASE } from "./utils.js";
 import { initCategoryFilter } from "./category.js";
