@@ -71,3 +71,17 @@ func EnableCORS(origin string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+func AllowMethods(h http.Handler, methods ...string) http.Handler {
+	allowed := make(map[string]struct{}, len(methods))
+	for _, m := range methods {
+		allowed[m] = struct{}{}
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := allowed[r.Method]; !ok {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
