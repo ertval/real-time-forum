@@ -158,6 +158,15 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		status = "draft"
 	}
 
+	if status == "published" && len(req.CategoryIDs) == 0 {
+		WriteError(w, r, NewError(
+			"BAD_REQUEST",
+			"at least one category is required",
+			http.StatusBadRequest,
+		))
+		return
+	}
+
 	postID, err := repository.CreatePostWithCategories(
 		r.Context(),
 		p.conn,
@@ -167,28 +176,31 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		status,
 		req.CategoryIDs,
 	)
+	if err != nil {
+		log.Printf("failed to create post: %v", err)
+		WriteError(w, r, NewError(
+			"INTERNAL_SERVER_ERROR",
+			"error creating post",
+			http.StatusInternalServerError,
+		))
+		return
+	}
 
 	// If post is published, delete any existing draft
 	if status == "published" {
-		if err := repository.DraftDeleteByUser(
-			r.Context(),
-			p.conn,
-			userID,
-		); err != nil {
+		if err := repository.DraftDeleteByUser(r.Context(), p.conn, userID); err != nil {
 			log.Printf("warning: failed to delete draft after publish: %v", err)
 		}
-	}
-
-	if err != nil {
-		log.Printf("failed to create post: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error creating post", http.StatusInternalServerError))
-		return
 	}
 
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
 		log.Printf("failed to load post after creation: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "post created but failed to load", http.StatusInternalServerError))
+		WriteError(w, r, NewError(
+			"INTERNAL_SERVER_ERROR",
+			"post created but failed to load",
+			http.StatusInternalServerError,
+		))
 		return
 	}
 
