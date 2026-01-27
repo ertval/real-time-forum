@@ -1,7 +1,8 @@
 // web/static/js/my-posts.js
 
 import { API_BASE, getPaginationFromURL } from "./utils.js";
-import { renderPostCard, loadPostCommentsPreview, initReactions } from "./posts.js";
+import { renderPostCard, loadPostCommentsPreview } from "./posts.js";
+import { initReactions } from "./reactions.js";
 
 let statusToggleBound = false;
 let deleteBound = false;
