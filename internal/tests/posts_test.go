@@ -119,10 +119,10 @@ func TestAPIPostsCreateWithCategories(t *testing.T) {
 	defer db.Close()
 
 	_, err := db.Exec(`
-		INSERT INTO categories (id, name, slug, created_at)
+		INSERT INTO categories (id, name, created_at)
 		VALUES 
-		(2, 'Cat2', 'cat2', strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-		(3, 'Cat3', 'cat3', strftime('%Y-%m-%dT%H:%M:%SZ','now'));
+		(2, 'Cat2', strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+		(3, 'Cat3', strftime('%Y-%m-%dT%H:%M:%SZ','now'));
 	`)
 	if err != nil {
 		t.Fatalf("failed to seed categories: %v", err)
@@ -168,8 +168,8 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 	defer db.Close()
 
 	_, err := db.Exec(`
-		INSERT INTO categories (id, name, slug, created_at)
-		VALUES (2, 'Extra', 'extra', strftime('%Y-%m-%dT%H:%M:%SZ','now'));
+		INSERT INTO categories (id, name, created_at)
+		VALUES (2, 'Extra', strftime('%Y-%m-%dT%H:%M:%SZ','now'));
 
 		INSERT INTO post_categories (post_id, category_id) VALUES (1, 1);
 		INSERT INTO post_categories (post_id, category_id) VALUES (1, 2);

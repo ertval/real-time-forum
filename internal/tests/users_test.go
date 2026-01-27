@@ -84,7 +84,7 @@ func TestUserRegistration(t *testing.T) {
 	}
 }
 
-func TestAuthFlow(t *testing.T) {
+func TestUserAuthFlow(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 	r := router.NewRouter(db)

@@ -54,11 +54,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 	// SEED CATEGORY
 	// -------------------------
 	_, err = dbConn.Exec(`
-		INSERT INTO categories (id, name, slug, created_at)
+		INSERT INTO categories (id, name, created_at)
 		VALUES (
 			1,
 			'Test Category',
-			'test-category',
 			strftime('%Y-%m-%dT%H:%M:%SZ','now')
 		)
 	`)
@@ -139,8 +138,8 @@ func setupTestDBForCategories(t *testing.T) *sql.DB {
 
 	// Seed one category
 	_, err = db.Exec(`
-		INSERT INTO categories (id, name, slug, created_at)
-		VALUES (1, 'Seed Category', 'seed-category', datetime('now'))
+		INSERT INTO categories (id, name, created_at)
+		VALUES (1, 'Seed Category', datetime('now'))
 	`)
 	if err != nil {
 		t.Fatalf("failed to seed category: %v", err)

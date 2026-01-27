@@ -3,7 +3,6 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -71,37 +70,6 @@ func doPostReaction(t *testing.T, h http.Handler, token, url string) reactionRes
 	}
 
 	return resp
-}
-
-func createComment(t *testing.T, h http.Handler, token string, postID int64, body string) int64 {
-	t.Helper()
-
-	reqBody := map[string]string{"body": body}
-	jsonBody, _ := json.Marshal(reqBody)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/posts/"+fmt.Sprintf("%d", postID)+"/comments", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", "session_token="+token)
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("create comment failed: %d body=%s", rec.Code, rec.Body.String())
-	}
-
-	var env apiEnvelope
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
-		t.Fatalf("unmarshal envelope: %v", err)
-	}
-
-	var comment struct {
-		ID int64 `json:"id"`
-	}
-	if err := json.Unmarshal(env.Data, &comment); err != nil {
-		t.Fatalf("unmarshal comment: %v", err)
-	}
-
-	return comment.ID
 }
 
 func TestAPIPostsReactionToggle_LikeThenUnlike(t *testing.T) {
