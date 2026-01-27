@@ -1,23 +1,37 @@
 // web/static/js/password-toggle.js
+
 export function initPasswordToggles(root = document) {
-  root.querySelectorAll(".password-toggle").forEach((btn) => {
+  const toggles = root.querySelectorAll(".password-toggle");
+  if (!toggles.length) return;
+
+  toggles.forEach((btn) => {
     if (btn.dataset.bound) return;
     btn.dataset.bound = "1";
 
     btn.addEventListener("click", () => {
-      const input = btn
-        .closest(".password-input-wrap")
-        ?.querySelector("input");
+      const form = btn.closest("form");
+      if (!form) return;
 
-      if (!input) return;
-
-      const isPassword = input.type === "password";
-      input.type = isPassword ? "text" : "password";
-
-      btn.setAttribute(
-        "aria-label",
-        isPassword ? "Hide password" : "Show password"
+      const inputs = form.querySelectorAll(
+        'input[type="password"], input[type="text"][data-password]'
       );
+
+      if (!inputs.length) return;
+
+      const shouldShow = inputs[0].type === "password";
+
+      inputs.forEach((input) => {
+        input.type = shouldShow ? "text" : "password";
+        input.dataset.password = "1"; // marker
+      });
+
+      form.querySelectorAll(".password-toggle").forEach((eye) => {
+        eye.setAttribute(
+          "aria-label",
+          shouldShow ? "Hide password" : "Show password"
+        );
+        eye.title = shouldShow ? "Hide password" : "Show password";
+      });
     });
   });
 }
