@@ -1,13 +1,11 @@
 // web/static/js/auth-modal.js
 import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
+import { initPasswordToggles } from "./password-toggle.js";
 
 let modalLoaded = false;
 let modal = null;
 
-/* ==================================================
-   LOAD MODAL (SAFE, ONCE)
-================================================== */
 export async function loadAuthModal() {
   if (modalLoaded) return;
 
@@ -17,32 +15,24 @@ export async function loadAuthModal() {
   document.body.insertAdjacentHTML("beforeend", html);
   modal = document.getElementById("auth-modal");
 
+  // 👁️ init password toggles INSIDE modal
+  initPasswordToggles(modal);
+
   bindUI();
   modalLoaded = true;
 }
 
-/* ==================================================
-   OPEN MODAL (ALWAYS SAFE)
-================================================== */
 export async function openAuthModal() {
-  // ensure modal is loaded
   if (!modalLoaded) {
     await loadAuthModal();
   }
-
   modal.classList.remove("hidden");
 }
 
-/* ==================================================
-   CLOSE
-================================================== */
 function closeAuthModal() {
   modal.classList.add("hidden");
 }
 
-/* ==================================================
-   UI BINDINGS
-================================================== */
 function bindUI() {
   const closeBtn = modal.querySelector(".auth-close");
   const backdrop = modal.querySelector(".auth-backdrop");
@@ -54,7 +44,6 @@ function bindUI() {
 
   closeBtn.onclick = backdrop.onclick = closeAuthModal;
 
-  // Tabs
   tabs.forEach(tab => {
     tab.onclick = () => {
       tabs.forEach(t => t.classList.remove("active"));
@@ -76,9 +65,6 @@ function bindUI() {
   registerForm.onsubmit = e => submitAuth(e, "/users/register");
 }
 
-/* ==================================================
-   SUBMIT
-================================================== */
 async function submitAuth(e, endpoint) {
   e.preventDefault();
 
@@ -111,12 +97,9 @@ async function submitAuth(e, endpoint) {
     return;
   }
 
-  // refresh auth state
   Auth.checked = false;
   await Auth.init();
 
   closeAuthModal();
-
-  // notify app (header, buttons, etc)
   window.dispatchEvent(new Event("auth:changed"));
 }

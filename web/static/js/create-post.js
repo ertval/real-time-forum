@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // 🔐 AUTH GUARD (modal for guests)
+    // AUTH GUARD (modal for guests)
     const allowed = await Auth.requireOrPrompt();
     if (!allowed) return;
 
