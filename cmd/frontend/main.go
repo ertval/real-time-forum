@@ -3,6 +3,7 @@ package main
 
 import (
 	"forum/internal/handlers"
+	"forum/web/startupcheck"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -72,6 +73,34 @@ func main() {
 		}
 		http.ServeFile(w, r, "./web/templates/home.html")
 	})
+
+	cfg := startupcheck.Config{
+		WebRoot: "web",
+
+		CriticalHTML: []string{
+			"templates/home.html",
+			"templates/login.html",
+			"templates/register.html",
+			"templates/create-post.html",
+			"templates/forgot-password.html",
+			"templates/my-posts.html",
+			"templates/my-liked-posts.html",
+			"templates/view-post.html",
+			"static/partials/header.html",
+			"errors/error.html",
+		},
+
+		JSDirs: []string{
+			"static/js",
+		},
+
+		MinJSFiles:   0,  // disabled
+		ExactJSFiles: 20, // enforced
+	}
+
+	if err := startupcheck.ValidateFiles(cfg); err != nil {
+		log.Fatal(err)
+	}
 
 	log.Println("Frontend running at http://localhost:3000")
 	log.Fatal(http.ListenAndServe(":3000", mux))
