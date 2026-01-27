@@ -1,3 +1,4 @@
+// web/static/js/reactions.js
 import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
 
@@ -16,7 +17,7 @@ export function initReactions() {
       e.preventDefault();
       e.stopPropagation();
 
-      // Guest → auth modal
+      // guest → auth modal
       const allowed = await Auth.requireOrPrompt();
       if (!allowed) return;
 

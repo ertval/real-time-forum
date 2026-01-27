@@ -4,9 +4,12 @@ import { Auth } from "./auth.js";
 export async function initHeader() {
   await Auth.init();
 
+  setupForumLogo();
+
   const greetingEl = document.getElementById("greeting");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
+  const createPostBtn = document.getElementById("create-post-btn");
 
   const authedOnlyEls = [
     document.getElementById("my-posts-btn"),
@@ -19,23 +22,35 @@ export async function initHeader() {
   const username = Auth.user?.username ?? "User";
 
   // TEXT
-  greetingEl.textContent = isAuthed
-    ? `Hello, ${username}`
-    : "Hello, Guest";
+  greetingEl.textContent = isAuthed ? `Hello, ${username}` : "Hello, Guest";
 
   // VISIBILITY
   greetingEl.style.display = "block";
   loginBtn.style.display = isAuthed ? "none" : "inline-flex";
   logoutBtn.style.display = isAuthed ? "inline-flex" : "none";
 
-  for (const el of authedOnlyEls) {
-    el.style.display = isAuthed ? "inline-flex" : "none";
-  }
-}
+  setAuthedOnlyVisibility(authedOnlyEls, isAuthed);
 
-// ==================================================
-// HELPERS
-// ==================================================
+  // LOGOUT
+  if (isAuthed) {
+    bindLogout(logoutBtn);
+  }
+
+  // CREATE POST (guest -> modal, authed -> go)
+  if (createPostBtn && !createPostBtn.dataset.bound) {
+    createPostBtn.dataset.bound = "1";
+
+    createPostBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      const allowed = await Auth.requireOrPrompt();
+      if (!allowed) return;
+
+      window.location.assign("/create-post");
+    });
+  }
+
+}
 
 function setAuthedOnlyVisibility(elements, isAuthed) {
   const displayValue = isAuthed ? "inline-flex" : "none";
@@ -62,7 +77,7 @@ function setupForumLogo() {
 // LOGOUT
 // --------------------------------------------------
 function bindLogout(logoutBtn) {
-  if (logoutBtn.dataset.bound) return;
+  if (!logoutBtn || logoutBtn.dataset.bound) return;
   logoutBtn.dataset.bound = "1";
 
   logoutBtn.addEventListener("click", async (e) => {

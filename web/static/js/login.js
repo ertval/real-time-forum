@@ -9,7 +9,6 @@ import { initPasswordToggles } from "./password-toggle.js";
 
   if (!form || !identifierEl || !passwordEl || !errorEl) return;
 
-  // init password eye
   initPasswordToggles(document);
 
   const submitBtn = form.querySelector('button[type="submit"]');
@@ -59,6 +58,12 @@ import { initPasswordToggles } from "./password-toggle.js";
               ? "Invalid credentials."
               : "Login failed.")
         );
+        return;
+      }
+
+      // iframe → notify parent
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage("auth:success", "*");
         return;
       }
 

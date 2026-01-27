@@ -1,10 +1,9 @@
 // web/static/js/auth-modal.js
-import { API_BASE } from "./utils.js";
-import { Auth } from "./auth.js";
-import { initPasswordToggles } from "./password-toggle.js";
 
 let modalLoaded = false;
 let modal = null;
+let frame = null;
+let isOpen = false;
 
 export async function loadAuthModal() {
   if (modalLoaded) return;
@@ -13,93 +12,37 @@ export async function loadAuthModal() {
   const html = await res.text();
 
   document.body.insertAdjacentHTML("beforeend", html);
+
   modal = document.getElementById("auth-modal");
+  frame = document.getElementById("auth-frame");
 
-  // 👁️ init password toggles INSIDE modal
-  initPasswordToggles(modal);
+  modal.querySelector(".auth-close").onclick =
+  modal.querySelector(".auth-backdrop").onclick =
+    closeAuthModal;
 
-  bindUI();
   modalLoaded = true;
 }
 
-export async function openAuthModal() {
+export async function openAuthModal(path = "/login") {
+  if (isOpen) return;
+
   if (!modalLoaded) {
     await loadAuthModal();
   }
+
+  // load correct page (login / register)
+  frame.src = path;
+
   modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+
+  isOpen = true;
 }
 
-function closeAuthModal() {
+export function closeAuthModal() {
+  if (!modal) return;
+
   modal.classList.add("hidden");
-}
-
-function bindUI() {
-  const closeBtn = modal.querySelector(".auth-close");
-  const backdrop = modal.querySelector(".auth-backdrop");
-
-  const tabs = modal.querySelectorAll(".auth-tab");
-  const loginForm = modal.querySelector("#auth-login");
-  const registerForm = modal.querySelector("#auth-register");
-  const errorEl = modal.querySelector(".auth-error");
-
-  closeBtn.onclick = backdrop.onclick = closeAuthModal;
-
-  tabs.forEach(tab => {
-    tab.onclick = () => {
-      tabs.forEach(t => t.classList.remove("active"));
-      tab.classList.add("active");
-
-      errorEl.classList.add("hidden");
-
-      if (tab.dataset.tab === "login") {
-        loginForm.classList.remove("hidden");
-        registerForm.classList.add("hidden");
-      } else {
-        registerForm.classList.remove("hidden");
-        loginForm.classList.add("hidden");
-      }
-    };
-  });
-
-  loginForm.onsubmit = e => submitAuth(e, "/users/login");
-  registerForm.onsubmit = e => submitAuth(e, "/users/register");
-}
-
-async function submitAuth(e, endpoint) {
-  e.preventDefault();
-
-  const form = e.target;
-  const errorEl = modal.querySelector(".auth-error");
-  const payload = Object.fromEntries(new FormData(form));
-
-  if (endpoint.includes("register")) {
-    if (payload.password !== payload.confirm_password) {
-      errorEl.textContent = "Passwords do not match";
-      errorEl.classList.remove("hidden");
-      return;
-    }
-    delete payload.confirm_password;
-  }
-
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    errorEl.textContent =
-      endpoint.includes("login")
-        ? "Invalid credentials"
-        : "Registration failed";
-    errorEl.classList.remove("hidden");
-    return;
-  }
-
-  Auth.checked = false;
-  await Auth.init();
-
-  closeAuthModal();
-  window.dispatchEvent(new Event("auth:changed"));
+  document.body.style.overflow = "";
+  isOpen = false;
 }
