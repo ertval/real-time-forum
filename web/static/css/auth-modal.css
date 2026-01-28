@@ -1,3 +1,5 @@
+/* web/static/css/auth-modal.css */
+
 /* =========================
    AUTH MODAL OVERLAY
 ========================= */
@@ -10,10 +12,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
-.auth-modal.hidden {
-  display: none;
+.auth-modal.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 /* =========================
@@ -23,8 +32,7 @@
 .auth-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
 }
 
 /* =========================
@@ -37,7 +45,8 @@
 
   width: 100%;
   max-width: 460px;
-  height: 730px;  /* Fixed height to prevent internal scrolling */
+  height: 730px; /* Increase ONLY if form grows (prevents iframe scroll) */
+
   background: transparent;
   border-radius: 16px;
 
@@ -45,7 +54,7 @@
     0 24px 48px rgba(0, 0, 0, 0.28),
     0 10px 20px rgba(0, 0, 0, 0.18);
 
-  overflow: hidden;          
+  overflow: hidden;
 }
 
 /* =========================
@@ -61,7 +70,9 @@
   background: #fff;
 
   display: block;
-  overflow: hidden;           
+
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 /* =========================
@@ -70,7 +81,7 @@
 
 .auth-close {
   position: absolute;
-  top: 12px;                  
+  top: 12px;
   right: 12px;
   z-index: 10;
 

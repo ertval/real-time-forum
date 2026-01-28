@@ -30,19 +30,23 @@ export async function openAuthModal(path = "/login") {
     await loadAuthModal();
   }
 
-  // load correct page (login / register)
+  // prepare iframe BEFORE showing modal
+  frame.style.opacity = "0";
   frame.src = path;
 
-  modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden";
+  frame.onload = () => {
+    frame.style.opacity = "1";
+    modal.classList.add("visible");
+  };
 
+  document.body.style.overflow = "hidden";
   isOpen = true;
 }
 
 export function closeAuthModal() {
   if (!modal) return;
 
-  modal.classList.add("hidden");
+  modal.classList.remove("visible");
   document.body.style.overflow = "";
   isOpen = false;
 }
