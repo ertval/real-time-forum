@@ -43,8 +43,8 @@ func TestPublicPostsList(t *testing.T) {
 	// Seed categories
 	// -------------------------
 	_, _ = db.Exec(`
-        INSERT INTO categories (name, slug)
-        VALUES ('Tech', 'tech'), ('Fun', 'fun');
+        INSERT INTO categories (name)
+        VALUES ('Tech'), ('Fun');
     `)
 
 	// Attach categories to post
