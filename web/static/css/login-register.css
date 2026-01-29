@@ -1,137 +1,77 @@
+/* web/static/css/login-register.css */
 
 .login .login-card {
-    width: 100%;
-    max-width: 460px;
+  width: 100%;
+  max-width: 460px;
 }
 
 .login .login-title {
-    text-align: center;
-    margin-bottom: 8px;
+  text-align: center;
+  margin-bottom: 8px;
 }
 
 .login .login-subtitle {
-    text-align: center;
-    margin-bottom: 22px;
-}
-
-.login .password-input-wrap {
-    position: relative;
-}
-
-/* Password field with icon */
-.login .password-field {
-    position: relative;
-}
-
-.login .password-input-wrap .input {
-    padding-right: 40px;
-}
-
-.login .password-toggle {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: #94a3b8;
-    padding: 0;
+  text-align: center;
+  margin-bottom: 22px;
 }
 
 /* Remember / forgot row */
 .login .login-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
 }
 
 /* Footer */
 .login .login-footer {
-    text-align: center;
-    margin-top: 18px;
+  text-align: center;
+  margin-top: 18px;
 }
 
 .login .login-error {
-    display: none;
-    margin: 10px 0 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #dc2626;
+  display: none;
+  margin: 10px 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.login .guest-login {
+  margin-top: 14px;
+  text-align: center;
 }
 
 /* ---------- Auth shared layout ---------- */
 
 .auth .auth-card {
-    width: 100%;
-    max-width: 460px;
+  width: 100%;
+  max-width: 460px;
 }
 
 .auth .auth-title {
-    text-align: center;
-    margin-bottom: 8px;
+  text-align: center;
+  margin-bottom: 8px;
 }
 
 .auth .auth-subtitle {
-    text-align: center;
-    margin-bottom: 22px;
+  text-align: center;
+  margin-bottom: 22px;
 }
 
 .auth .auth-footer {
-    text-align: center;
-    margin-top: 18px;
-    margin-bottom: 10px;
-}
-
-.login .guest-login {
-    margin-top: 14px;
-    text-align: center;
+  text-align: center;
+  margin-top: 18px;
+  margin-bottom: 10px;
 }
 
 /* Subtle secondary button */
 .btn-ghost {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 .btn-ghost:hover {
-    background: var(--surface-muted);
-}
-
-/* ---------- Password field (shared) ---------- */
-
-.auth .password-field {
-    position: relative;
-}
-
-.auth .password-input-wrap {
-    position: relative;
-}
-
-.auth .password-input-wrap .input {
-    padding-right: 40px;
-}
-
-.auth .password-input-wrap .password-toggle {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: #94a3b8;
-    padding: 0;
-}
-
-.auth .auth-error {
-    display: none;
-    margin: 10px 0 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #dc2626;
+  background: var(--surface-muted);
 }
