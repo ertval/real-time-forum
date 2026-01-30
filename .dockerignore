@@ -1,22 +1,27 @@
-# Build artifacts
+# .dockerignore
+# Go build artifacts
 bin/
 *.exe
 *.out
 *.log
 
-# IDE / system files
+# IDE / editor files
 .vscode/
 .idea/
 .DS_Store
 
-# Git
+# Git metadata
 .git/
 .gitignore
 
-# Web frontend (not needed in backend container)
+# Local SQLite data (must NOT be baked into the image)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Frontend (not needed for backend image)
 web/
 
-# DB files (mounted by volume)
-*.db
-*.db-wal
-*.db-shm
+# Build outputs
+forum-backend
+forum-frontend
