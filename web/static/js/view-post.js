@@ -3,9 +3,9 @@
 import {
   renderPostCard,
   loadPostCommentsPreview,
-  initReactions,
 } from "./posts.js";
 
+import { initReactions } from "./reactions.js";
 import { API_BASE } from "./utils.js";
 
 /* ==================================================
@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const result = await loadAndRenderPost(postId, container);
   if (!result) return;
 
-  const { article, categoryId } = result;
+  const { categoryId } = result;
 
   // reactions AFTER DOM is ready
   initReactions();
@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 /* ==================================================
    LOAD + RENDER SINGLE POST
-   Returns { article, categoryId } | null
+   Returns { categoryId } | null
 ================================================== */
 
 async function loadAndRenderPost(postId, container) {
@@ -75,7 +75,7 @@ async function loadAndRenderPost(postId, container) {
         ? post.categories[0].id
         : null;
 
-    return { article, categoryId };
+    return { categoryId };
   } catch (err) {
     console.error("Failed to load post:", err);
     container.innerHTML = `<p class="muted">Failed to load post.</p>`;
