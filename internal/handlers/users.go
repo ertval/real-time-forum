@@ -54,7 +54,7 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
 		log.Printf("failed to load user: %v", err)
-		writeHandlerError(w, r, err, "user not found")
+		WriteError(w, r, NewError("NOT_FOUND", "user not found", http.StatusNotFound))
 		return
 	}
 
