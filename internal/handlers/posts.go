@@ -449,6 +449,10 @@ func (p *PostsHandler) handleReaction(
 		targetReaction,
 		targetType,
 	)
+	if errors.Is(err, repository.ErrNotFound) {
+		WriteError(w, r, NewError("NOT_FOUND", "target not found", http.StatusNotFound))
+
+	}
 	if err != nil {
 		log.Printf("ToggleReaction failed: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error toggling reaction", http.StatusInternalServerError))
