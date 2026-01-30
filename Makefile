@@ -2,43 +2,33 @@
 # 🗨️ Forum Project - Makefile
 # -----------------------------------------------------
 
-APP_NAME        = forum
-
-# Binaries
-BACKEND_BIN     = forum-backend
-FRONTEND_BIN    = forum-frontend
-
-# Packages
-BACKEND_PKG     = ./cmd/backend
-FRONTEND_PKG    = ./cmd/frontend
-
-# Legacy compatibility
-BINARY_NAME     = $(BACKEND_BIN)
-MAIN_FILE       = $(BACKEND_PKG)
-
-DB_FILE         = internal/db/forum.db
-PORT            = 8080
-
-DOCKER_IMAGE    = forum-app
-CONTAINER_NAME  = forum_app
-
-# Default target
-.PHONY: all
-all: run-backend
+APP_NAME = forum
 
 # -----------------------------------------------------
-# 🧱 Build & Run (Local)
+# 📦 Binaries
+# -----------------------------------------------------
+
+BACKEND_BIN  = forum-backend
+FRONTEND_BIN = forum-frontend
+
+BACKEND_PKG  = ./cmd/backend
+FRONTEND_PKG = ./cmd/frontend
+
+PORT = 8080
+
+# -----------------------------------------------------
+# 🧱 Build & Run (Local – Go)
 # -----------------------------------------------------
 
 build-backend:
 	@echo "🔧 Building backend..."
 	@go build -o $(BACKEND_BIN) $(BACKEND_PKG)
-	@echo "✅ Backend build complete: ./$(BACKEND_BIN)"
+	@echo "✅ Backend build complete"
 
 build-frontend:
 	@echo "🔧 Building frontend..."
 	@go build -o $(FRONTEND_BIN) $(FRONTEND_PKG)
-	@echo "✅ Frontend build complete: ./$(FRONTEND_BIN)"
+	@echo "✅ Frontend build complete"
 
 build-all: build-backend build-frontend
 
@@ -48,46 +38,24 @@ run-backend:
 
 run-frontend:
 	@echo "🚀 Starting frontend server on http://localhost:3000 ..."
-	@go run $(FRONTEND_PKG) &
-	@sleep 1
-	@$(MAKE) open-browser
+	@go run $(FRONTEND_PKG)
 
 run-all:
-	@echo "🔥 Starting backend & frontend servers..."
+	@echo "🔥 Starting backend & frontend..."
 	@go run $(BACKEND_PKG) &
-	@go run $(FRONTEND_PKG) &
-	@sleep 1
-	@$(MAKE) open-browser
-
-run: run-backend
+	@go run $(FRONTEND_PKG)
 
 # -----------------------------------------------------
-# 🛑 Stop Processes
+# 🛑 Stop Local Processes
 # -----------------------------------------------------
 
 stop-backend:
-	@echo "🛑 Stopping backend..."
-	@pkill -f "$(BACKEND_PKG)" 2>/dev/null || echo "Backend not running."
+	@pkill -f "$(BACKEND_PKG)" 2>/dev/null || true
 
 stop-frontend:
-	@echo "🛑 Stopping frontend..."
-	@pkill -f "$(FRONTEND_PKG)" 2>/dev/null || echo "Frontend not running."
+	@pkill -f "$(FRONTEND_PKG)" 2>/dev/null || true
 
 stop-all: stop-backend stop-frontend
-
-# -----------------------------------------------------
-# 🧹 Clean & Reset
-# -----------------------------------------------------
-
-clean:
-	@echo "🧹 Cleaning binaries..."
-	@rm -f $(BACKEND_BIN) $(FRONTEND_BIN)
-
-clean-all: clean docker-clean
-
-reset-db:
-	@echo "🗑️ Resetting database..."
-	@rm -f $(DB_FILE) $(DB_FILE)-wal $(DB_FILE)-shm
 
 # -----------------------------------------------------
 # 🧪 Code Quality
@@ -106,32 +74,75 @@ deps:
 	@go mod tidy
 
 # -----------------------------------------------------
-# 🐳 Docker (Backend Only)
+# 🐳 Docker (Backend Only – Production)
 # -----------------------------------------------------
 
-DOCKERFILE ?= Dockerfile.dev
+IMAGE      = forum
+CONTAINER  = forum_app
+PORT       = 8080
+
+# -----------------------------------------------------
+# Build & Run
+# -----------------------------------------------------
 
 docker-build:
-	@docker build -f $(DOCKERFILE) -t $(DOCKER_IMAGE) .
+	@echo "🐳 Building Docker image..."
+	docker image build -t $(IMAGE) .
 
 docker-run:
-	@docker run --rm -p $(PORT):8080 \
-		--name $(CONTAINER_NAME) \
-		-v $(PWD)/internal/db:/app/internal/db \
-		$(DOCKER_IMAGE)
+	@echo "🚀 Running Docker container..."
+	docker container run -d \
+		-p $(PORT):8080 \
+		-v forum-data:/data \
+		--name $(CONTAINER) \
+		$(IMAGE)
 
-docker-up:
-	@docker compose up --build
-
-docker-down:
-	@docker compose down
-
-docker-clean:
-	-@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
-	-@docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
+docker-restart:
+	@echo "🔄 Restarting container..."
+	docker restart $(CONTAINER)
 
 # -----------------------------------------------------
-# 🌐 Browser Helper
+# Stop & Remove
+# -----------------------------------------------------
+
+docker-stop:
+	@echo "🛑 Stopping container..."
+	-@docker stop $(CONTAINER) 2>/dev/null || true
+	-@docker rm $(CONTAINER) 2>/dev/null || true
+
+# -----------------------------------------------------
+# Inspection & Logs
+# -----------------------------------------------------
+
+docker-ps:
+	docker ps -a
+
+docker-images:
+	docker images
+
+docker-logs:
+	docker logs $(CONTAINER)
+
+docker-logs-follow:
+	docker logs -f $(CONTAINER)
+
+docker-inspect:
+	docker inspect $(CONTAINER)
+
+# -----------------------------------------------------
+# Cleanup (Project-scoped, SAFE)
+# -----------------------------------------------------
+
+docker-clean-images:
+	@echo "🧹 Removing Forum image..."
+	-@docker rmi -f $(IMAGE) 2>/dev/null || true
+
+docker-clean-all: docker-stop docker-clean-images
+	@echo "✅ Forum Docker cleanup complete"
+
+
+# -----------------------------------------------------
+# 🌐 Browser Helper (Frontend)
 # -----------------------------------------------------
 
 open-browser:

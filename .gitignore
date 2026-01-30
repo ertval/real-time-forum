@@ -1,3 +1,4 @@
+# .gitignore
 # Go build artifacts
 bin/
 *.exe
@@ -11,11 +12,10 @@ bin/
 # System files
 .DS_Store
 
-# Database files
-internal/db/forum.db
-*.db
-*.db-wal
-*.db-shm 
+# SQLite local data
+data/*.db
+data/*.db-wal
+data/*.db-shm
 
 # Build binaries
 forum-backend
