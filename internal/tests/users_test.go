@@ -11,6 +11,10 @@ import (
 	"testing"
 )
 
+/*----------
+  REGISTER
+-----------*/
+
 func TestUserRegistration(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
@@ -32,7 +36,7 @@ func TestUserRegistration(t *testing.T) {
 	if !ok {
 		t.Errorf("expected id in response")
 	}
-	// Login the user
+	// Login
 	loginBody := `{"username":"newuser","password":"password123"}`
 	req = httptest.NewRequest("POST", "/api/v1/users/login", bytes.NewBufferString(loginBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -71,7 +75,10 @@ func TestUserRegistration(t *testing.T) {
 		{`{"username":"ab","email":"test@example.com","password":"password123"}`, "short username"},
 		{`{"username":"newuser2","email":"test@example.com","password":"123"}`, "weak password"},
 		{`{"username":"newuser2","email":"invalid","password":"password123"}`, "invalid email"},
+		{`{"username":"user@name","email":"user2@example.com","password":"password123"}`, "username contains @"},
+		{`{"username":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","email":"longuser@example.com","password":"password123"}`, "username too long"},
 		{`{"username":"testuser","email":"dup@example.com","password":"password123"}`, "duplicate username"},
+		{`{"username":"otheruser","email":"new@example.com","password":"password123"}`, "duplicate email"},
 	}
 	for _, tc := range invalidCases {
 		req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(tc.body))
@@ -84,7 +91,11 @@ func TestUserRegistration(t *testing.T) {
 	}
 }
 
-func TestUserAuthFlow(t *testing.T) {
+/*----------
+   LOGIN
+-----------*/
+
+func TestUserLoginByUsername(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 	r := router.NewRouter(db)
@@ -151,6 +162,120 @@ func TestUserAuthFlow(t *testing.T) {
 	}
 }
 
+func TestUserLoginByEmail(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	// Register
+	regBody := `{"username":"emailuser","email":"emailuser@example.com","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("register failed: %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	// Login by email
+	loginBody := `{"email":"emailuser@example.com","password":"password123"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login by email failed: %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	// Extract session cookie
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatalf("expected Set-Cookie on login")
+	}
+	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
+
+	// Verifies session works
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected /me to succeed after email login, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestUserLogin_WrongPassword(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	// Register
+	regBody := `{"username":"wrongpassuser","email":"wrongpass@example.com","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("register failed: %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	// Login with wrong password
+	loginBody := `{"username":"wrongpassuser","password":"wrongpassword"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for wrong password, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	if rec.Header().Get("Set-Cookie") != "" {
+		t.Fatalf("did not expect Set-Cookie on failed login")
+	}
+}
+
+func TestUserLogin_NonExistentUsername(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	// Login with user that does NOT exist
+	loginBody := `{"username":"doesnotexist","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for non-existent user, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	if rec.Header().Get("Set-Cookie") != "" {
+		t.Fatalf("did not expect Set-Cookie on failed login")
+	}
+}
+
+func TestUserLogin_NonExistentEmail(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	loginBody := `{"email":"ghost@example.com","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for non-existent email, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+/*---------
+   LOGOUT
+-----------*/
+
 func TestUserLogout(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
@@ -178,7 +303,6 @@ func TestUserLogout(t *testing.T) {
 		t.Fatalf("expected 200 logout, got %d", w.Code)
 	}
 
-	// Try calling /me → should fail
 	req2 := httptest.NewRequest("GET", "/api/v1/users/me", nil)
 	req2.Header.Set("Cookie", "session_token="+token)
 	w2 := httptest.NewRecorder()
@@ -186,5 +310,69 @@ func TestUserLogout(t *testing.T) {
 
 	if w2.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 after logout, got %d", w2.Code)
+	}
+}
+
+/*----------------
+ INVALID /ME CALL
+------------------*/
+
+func TestUserMe_NoCookie(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without auth, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestUserMe_InvalidCookie(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil)
+	req.Header.Set("Cookie", "session_token=invalidtoken123")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 with invalid cookie, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+/*-------------------
+ GET NONEXISTENT USER
+---------------------*/
+
+func TestUserGet_NonExistent(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	// Register + login
+	regBody := `{"username":"exists","email":"exists@example.com","password":"password123"}`
+	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
+
+	loginBody := `{"username":"exists","password":"password123"}`
+	rec, _ := doRequest(t, h, http.MethodPost, "/api/v1/users/login", []byte(loginBody))
+
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatalf("expected cookie on login")
+	}
+	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
+
+	// Request non-existent user
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/9999", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec2 := httptest.NewRecorder()
+	h.ServeHTTP(rec2, req)
+
+	if rec2.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for non-existent user, got %d body=%s",
+			rec2.Code, rec2.Body.String())
 	}
 }
