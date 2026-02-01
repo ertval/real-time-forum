@@ -4,6 +4,7 @@ package tests
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"testing"
 )
 
@@ -73,10 +74,10 @@ func TestCategoriesGet(t *testing.T) {
 
 	env := decodeEnvelope(t, rec.Body.Bytes())
 
-	var cat map[string]any
-	json.Unmarshal(env.Data, &cat)
+	var fetched categoryDTO
+	json.Unmarshal(env.Data, &fetched)
 
-	if cat["name"] != "Seed Category" {
-		t.Fatalf("expected Seed Category, got %v", cat["name"])
+	if fetched.Name != "New Category" {
+		t.Fatalf("expected name 'New Category', got %q", fetched.Name)
 	}
 }
