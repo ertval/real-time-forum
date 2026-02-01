@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	db "forum/internal/db"
+	"forum/internal/handlers"
 	"forum/internal/router"
 	"net/http"
 	"net/http/httptest"
@@ -118,10 +119,13 @@ type apiEnvelope struct {
 	Error *apiError       `json:"error,omitempty"`
 }
 
+// ------------------------------------------------------------
+// setupTestDBForCategories — schema + seed
+// ------------------------------------------------------------
 func setupTestDBForCategories(t *testing.T) *sql.DB {
 	t.Helper()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	dbConn, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
@@ -132,12 +136,11 @@ func setupTestDBForCategories(t *testing.T) *sql.DB {
 		t.Fatalf("failed to read schema: %v", err)
 	}
 
-	if _, err := db.Exec(string(schemaBytes)); err != nil {
+	if _, err := dbConn.Exec(string(schemaBytes)); err != nil {
 		t.Fatalf("failed to exec schema: %v", err)
 	}
 
-	// Seed one category
-	_, err = db.Exec(`
+	_, err = dbConn.Exec(`
 		INSERT INTO categories (id, name, created_at)
 		VALUES (1, 'Seed Category', datetime('now'))
 	`)
@@ -145,18 +148,42 @@ func setupTestDBForCategories(t *testing.T) *sql.DB {
 		t.Fatalf("failed to seed category: %v", err)
 	}
 
-	return db
+	return dbConn
 }
 
+// ------------------------------------------------------------
+// newCategoryAPI — CLEAN handler wiring (NO router)
+// ------------------------------------------------------------
 func newCategoryAPI(t *testing.T) (http.Handler, *sql.DB) {
+	t.Helper()
+
 	db := setupTestDBForCategories(t)
-	h := router.NewRouter(db)
-	return h, db
+
+	categories := handlers.NewCategoriesHandler(db)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/categories", categories.HandleCategories)
+	mux.HandleFunc("/api/v1/categories/", categories.HandleCategory)
+
+	return mux, db
 }
 
-func doReq(t *testing.T, h http.Handler, method, path string, body []byte) *httptest.ResponseRecorder {
+// ------------------------------------------------------------
+// doReq helper
+// ------------------------------------------------------------
+func doReq(
+	t *testing.T,
+	h http.Handler,
+	method, path string,
+	body []byte,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
 	req := httptest.NewRequest(method, path, bytes.NewReader(body))
+	req = req.WithContext(context.Background())
+
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
+
 	return rec
 }

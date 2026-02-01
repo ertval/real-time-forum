@@ -1,3 +1,4 @@
+// internal/db/categories.go
 package db
 
 import (
