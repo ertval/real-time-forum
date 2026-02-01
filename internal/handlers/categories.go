@@ -1,3 +1,4 @@
+// internal/handlers/categories.go
 package handlers
 
 import (
