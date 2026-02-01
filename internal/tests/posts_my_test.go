@@ -87,18 +87,6 @@ func TestAPIMyPostsList(t *testing.T) {
 	}
 }
 
-// --------------------------------------------------
-// Helpers
-// --------------------------------------------------
-
-func extractToken(t *testing.T, rec *httptest.ResponseRecorder) string {
-	setCookie := rec.Header().Get("Set-Cookie")
-	if setCookie == "" {
-		t.Fatal("expected Set-Cookie header")
-	}
-	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-}
-
 func TestGuestCannotListMyPosts(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
@@ -111,4 +99,16 @@ func TestGuestCannotListMyPosts(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", w.Code)
 	}
+}
+
+// --------------------------------------------------
+// Helpers
+// --------------------------------------------------
+
+func extractToken(t *testing.T, rec *httptest.ResponseRecorder) string {
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatal("expected Set-Cookie header")
+	}
+	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
 }

@@ -158,6 +158,17 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for _, cid := range req.CategoryIDs {
+		if cid <= 0 {
+			WriteError(w, r, NewError(
+				"BAD_REQUEST",
+				"at least one valid category is required",
+				http.StatusBadRequest,
+			))
+			return
+		}
+	}
+
 	status := "published"
 	if strings.ToLower(req.Status) == "draft" {
 		status = "draft"
