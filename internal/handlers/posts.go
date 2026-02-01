@@ -296,19 +296,7 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 		return
 	}
 
-	authorID, err := repository.GetPostAuthorID(r.Context(), p.conn, postID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			notFound(w, r)
-			return
-		}
-		log.Printf("failed to load post author: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading post", http.StatusInternalServerError))
-		return
-	}
-
-	if authorID != userID {
-		WriteError(w, r, NewError("FORBIDDEN", "not allowed", http.StatusForbidden))
+	if !p.requirePostAuthor(w, r, postID, userID) {
 		return
 	}
 
@@ -391,7 +379,12 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 }
 
 func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID int64) {
-	if _, ok := requireUserID(w, r); !ok {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	if !p.requirePostAuthor(w, r, postID, userID) {
 		return
 	}
 
