@@ -74,8 +74,9 @@ func TestAPIPostsCreate(t *testing.T) {
 	token := strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
 
 	payload := map[string]any{
-		"title": "API Test Post",
-		"body":  "Body from API test",
+		"title":        "API Test Post",
+		"body":         "Body from API test",
+		"category_ids": []int64{1},
 	}
 	bodyBytes, _ := json.Marshal(payload)
 
@@ -189,9 +190,18 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 	var post map[string]any
 	json.Unmarshal(env.Data, &post)
 
-	categoryIDs := post["category_ids"].([]any)
-	if len(categoryIDs) != 2 {
-		t.Fatalf("expected 2 categories, got %d", len(categoryIDs))
+	raw, ok := post["categories"]
+	if !ok || raw == nil {
+		t.Fatalf("expected category_ids in response, got: %v", post)
+	}
+
+	cats, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("expected categories to be array, got %T (%v)", raw, raw)
+	}
+
+	if len(cats) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(cats))
 	}
 }
 
@@ -216,7 +226,7 @@ func TestAPIPostsFilterByCategory(t *testing.T) {
 // LIST LIKED POSTS (AUTH REQUIRED)
 // ------------------------------------------------------------
 
-func TestAPILikedPosts_RequiresAuth(t *testing.T) {
+func TestAPIPostsLiked_RequiresAuth(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -227,7 +237,7 @@ func TestAPILikedPosts_RequiresAuth(t *testing.T) {
 	}
 }
 
-func TestAPILikedPosts_ReturnsOnlyLikedPosts(t *testing.T) {
+func TestAPIPostsLiked_ReturnsOnlyLikedPosts(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -283,7 +293,7 @@ func TestAPILikedPosts_ReturnsOnlyLikedPosts(t *testing.T) {
 	}
 }
 
-func TestAPILikedPosts_UnlikeRemovesPost(t *testing.T) {
+func TestAPIPostsLiked_UnlikeRemovesPost(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -324,7 +334,7 @@ func TestAPILikedPosts_UnlikeRemovesPost(t *testing.T) {
 	}
 }
 
-func TestAPILikedPosts_DislikeDoesNotCount(t *testing.T) {
+func TestAPIPostsLiked_DislikeDoesNotCount(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
