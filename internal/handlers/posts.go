@@ -153,6 +153,11 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if strings.TrimSpace(req.Body) == "" {
+		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
+		return
+	}
+
 	status := "published"
 	if strings.ToLower(req.Status) == "draft" {
 		status = "draft"
@@ -286,7 +291,24 @@ func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID in
 }
 
 func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID int64) {
-	if _, ok := requireUserID(w, r); !ok {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	authorID, err := repository.GetPostAuthorID(r.Context(), p.conn, postID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			notFound(w, r)
+			return
+		}
+		log.Printf("failed to load post author: %v", err)
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading post", http.StatusInternalServerError))
+		return
+	}
+
+	if authorID != userID {
+		WriteError(w, r, NewError("FORBIDDEN", "not allowed", http.StatusForbidden))
 		return
 	}
 
@@ -298,6 +320,16 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+		return
+	}
+
+	if req.Title != nil && strings.TrimSpace(*req.Title) == "" {
+		WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
+		return
+	}
+
+	if req.Body != nil && strings.TrimSpace(*req.Body) == "" {
+		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 		return
 	}
 
@@ -326,7 +358,7 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 			status,
 		); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				notFound(w, r)
+				WriteError(w, r, NewError("NOT_FOUND", "error updating post", http.StatusNotFound))
 				return
 			}
 			log.Printf("failed to update post status: %v", err)
@@ -346,6 +378,10 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 			postID,
 			repository.UpdatePostInput{Title: req.Title, Body: req.Body},
 		); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				WriteError(w, r, NewError("NOT_FOUND", "error updating post", http.StatusNotFound))
+				return
+			}
 			log.Printf("failed to update post: %v", err)
 			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
 			return
