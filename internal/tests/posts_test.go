@@ -221,12 +221,16 @@ func TestAPIPostsLiked_ReturnsOnlyLikedPosts(t *testing.T) {
 	}
 
 	// list liked posts
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/liked", nil)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
-	posts := decodePostsList(t, body)
+	posts := decodePostsList(t, rec.Body.Bytes())
 
 	if len(posts) != 1 {
 		t.Fatalf("expected 1 liked post, got %d", len(posts))
@@ -269,12 +273,16 @@ func TestAPIPostsLiked_UnlikeRemovesPost(t *testing.T) {
 	}
 
 	// list liked posts
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/liked", nil)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
-	posts := decodePostsList(t, body)
+	posts := decodePostsList(t, rec.Body.Bytes())
 	if len(posts) != 0 {
 		t.Fatalf("expected 0 liked posts, got %d", len(posts))
 	}
@@ -303,12 +311,16 @@ func TestAPIPostsLiked_DislikeDoesNotCount(t *testing.T) {
 	}
 
 	// list liked posts
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/liked", nil)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
-	posts := decodePostsList(t, body)
+	posts := decodePostsList(t, rec.Body.Bytes())
 	if len(posts) != 0 {
 		t.Fatalf("disliked post must not appear in liked posts, got %d", len(posts))
 	}

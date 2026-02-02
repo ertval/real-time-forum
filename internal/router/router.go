@@ -44,21 +44,27 @@ func NewRouter(database *sql.DB) http.Handler {
 	// ---------------------------------------------------------
 	// CATEGORIES (PUBLIC)
 	// ---------------------------------------------------------
-	mux.Handle(
-		apiPrefix+"/categories",
-		middleware.AllowMethods(
-			http.HandlerFunc(categories.HandleCategories),
-			http.MethodGet,
-		),
-	)
+	mux.HandleFunc(apiPrefix+"/categories", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			categories.HandleCategories(w, r)
+		case http.MethodPost:
+			auth(http.HandlerFunc(categories.HandleCategories)).ServeHTTP(w, r)
+		default:
+			handlers.MethodNotAllowed(w, r)
+		}
+	})
 
-	mux.Handle(
-		apiPrefix+"/categories/",
-		middleware.AllowMethods(
-			http.HandlerFunc(categories.HandleCategory),
-			http.MethodGet,
-		),
-	)
+	mux.HandleFunc(apiPrefix+"/categories/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			categories.HandleCategory(w, r)
+		case http.MethodPatch, http.MethodDelete:
+			auth(http.HandlerFunc(categories.HandleCategory)).ServeHTTP(w, r)
+		default:
+			handlers.MethodNotAllowed(w, r)
+		}
+	})
 
 	mux.Handle(
 		apiPrefix+"/categories/view",

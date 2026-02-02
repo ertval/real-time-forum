@@ -34,8 +34,9 @@ func TestAPIMyPostsList(t *testing.T) {
 	// USER A creates 2 posts
 	createPost := func(token, title string) {
 		payload := map[string]any{
-			"title": title,
-			"body":  "body",
+			"title":        title,
+			"body":         "body",
+			"category_ids": []int64{1},
 		}
 		b, _ := json.Marshal(payload)
 
