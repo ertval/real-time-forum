@@ -136,6 +136,18 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	return post, nil
 }
 
+func GetPostAuthorID(ctx context.Context, db *sql.DB, postID int64) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	var authorID int64
+	err := db.QueryRowContext(ctx, `SELECT author_id FROM posts WHERE id = ?`, postID).Scan(&authorID)
+	if err != nil {
+		return 0, err // sql.ErrNoRows propagates
+	}
+	return authorID, nil
+}
+
 /* ============================================================
    CREATE POST (TRANSACTIONAL)
    ============================================================ */

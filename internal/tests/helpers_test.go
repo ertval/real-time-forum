@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -186,4 +187,12 @@ func doReq(
 	h.ServeHTTP(rec, req)
 
 	return rec
+}
+
+func extractToken(t *testing.T, rec *httptest.ResponseRecorder) string {
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatal("expected Set-Cookie header")
+	}
+	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
 }

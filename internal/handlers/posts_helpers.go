@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"database/sql"
 	"errors"
+	repository "forum/internal/db"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -40,4 +43,32 @@ func parsePostStatusFilter(r *http.Request) (*string, error) {
 	default:
 		return nil, errors.New("invalid status filter")
 	}
+}
+
+func (p *PostsHandler) requirePostAuthor(w http.ResponseWriter, r *http.Request, postID int64, userID int64) bool {
+	authorID, err := repository.GetPostAuthorID(r.Context(), p.conn, postID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			notFound(w, r)
+			return false
+		}
+		log.Printf("failed to load post author: %v", err)
+		WriteError(w, r, NewError(
+			"INTERNAL_SERVER_ERROR",
+			"error loading post",
+			http.StatusInternalServerError,
+		))
+		return false
+	}
+
+	if authorID != userID {
+		WriteError(w, r, NewError(
+			"FORBIDDEN",
+			"not allowed",
+			http.StatusForbidden,
+		))
+		return false
+	}
+
+	return true
 }
