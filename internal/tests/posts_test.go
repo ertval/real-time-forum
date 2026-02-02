@@ -19,11 +19,10 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 
 	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	// create a post so we know its ID (and don't depend on seed post #1)
 	postID := createPostAndGetID(t, h, token, map[string]any{
 		"title":        "Cats Post",
 		"body":         "Body",
-		"category_ids": []int64{1}, // ensures post exists and is published
+		"category_ids": []int64{1},
 	})
 
 	// seed extra category and attach it
@@ -63,7 +62,7 @@ func TestAPIPostGet_NotFound(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
-	// pick an id that won't exist (test DB is tiny)
+	// pick an id that won't exist in test DB
 	const missingID = 9999
 
 	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", missingID), nil)
@@ -183,9 +182,9 @@ func TestAPIPostsFilterByCategory(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// LIST LIKED POSTS (AUTH REQUIRED)
-// ------------------------------------------------------------
+/*----------------------------------
+   LIST LIKED POSTS (AUTH REQUIRED)
+----------------------------------*/
 
 func TestAPIPostsLiked_RequiresAuth(t *testing.T) {
 	h, db := newTestAPI(t)
@@ -287,7 +286,7 @@ func TestAPIPostsLiked_DislikeDoesNotCount(t *testing.T) {
 
 	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	// Create a post to dislike deterministically
+	// Create a post to dislike
 	postID := createPostAndGetID(t, h, token, map[string]any{
 		"title":        "Disliked Post",
 		"body":         "Body",
@@ -517,7 +516,7 @@ func TestAPIPostsList_Bounds(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
-	seedPosts(t, db, 1, 150) // ensure there are more than 100 posts total
+	seedPosts(t, db, 1, 110) // ensure there are more than 100 posts total
 
 	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=1000", nil)
 	if w.Code != http.StatusOK {
@@ -631,7 +630,7 @@ func TestAPIPostsList_AttachesReactionsCounts(t *testing.T) {
 	}
 	postID, _ := res.LastInsertId()
 
-	// Create two users for reactions (or use existing seed users if you prefer)
+	// Create two users for reactions
 	_, err = db.Exec(`
 		INSERT INTO users (username, email, password_hash, is_active, created_at, updated_at)
 		VALUES
