@@ -19,10 +19,11 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 
 	token := loginAndGetToken(t, h, "testuser", "password123")
 
+	// create a post so we know its ID (and don't depend on seed post #1)
 	postID := createPostAndGetID(t, h, token, map[string]any{
 		"title":        "Cats Post",
 		"body":         "Body",
-		"category_ids": []int64{1},
+		"category_ids": []int64{1}, // ensures post exists and is published
 	})
 
 	// seed extra category and attach it
