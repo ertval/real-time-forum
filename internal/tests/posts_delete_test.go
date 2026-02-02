@@ -2,7 +2,6 @@ package tests
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -93,17 +92,5 @@ func TestAPIPostDelete_OnlyAuthorCanDelete(t *testing.T) {
 	}
 
 	// Post must still exist
-	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), nil)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected post to still exist, got %d body=%s", w.Code, string(body))
-	}
-}
-
-func countPostCategoriesForPostID(t *testing.T, db *sql.DB, postID int64) int {
-	t.Helper()
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM post_categories WHERE post_id = ?`, postID).Scan(&n); err != nil {
-		t.Fatalf("count post_categories: %v", err)
-	}
-	return n
+	_ = getPost(t, h, postID)
 }

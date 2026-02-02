@@ -1,11 +1,8 @@
 package tests
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -24,19 +21,11 @@ func TestAPIPostUpdate_OnlyAuthorCanUpdate(t *testing.T) {
 	})
 
 	// Register + login User B
-	regBody := `{"username":"otheruser","email":"other@example.com","password":"password123"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("register other user failed: %d body=%s", rec.Code, rec.Body.String())
-	}
-
+	registerUser(t, h, "otheruser", "other@example.com", "password123")
 	tokenB := loginAndGetToken(t, h, "otheruser", "password123")
 
 	// User B attempts to update User A's post
-	rec = patchPost(t, h, tokenB, postID, map[string]any{
+	rec := patchPost(t, h, tokenB, postID, map[string]any{
 		"title": "Hacked Title",
 	})
 
@@ -54,160 +43,103 @@ func TestAPIPostUpdate_OnlyAuthorCanUpdate(t *testing.T) {
 	}
 }
 
-func TestAPIPostUpdate_TitleOnly(t *testing.T) {
+func TestAPIPostUpdate_Content(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
 	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	postID := createPostAndGetID(t, h, token, map[string]any{
-		"title":        "Original Title",
-		"body":         "Original Body",
-		"category_ids": []int64{1},
-	})
-
-	rec := patchPost(t, h, token, postID, map[string]any{
-		"title": "Updated Title",
-	})
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	cases := []struct {
+		name         string
+		patch        map[string]any
+		wantTitle    string
+		wantBody     string
+		initialTitle string
+		initialBody  string
+	}{
+		{
+			name:         "title only",
+			patch:        map[string]any{"title": "Updated Title"},
+			initialTitle: "Original Title",
+			initialBody:  "Original Body",
+			wantTitle:    "Updated Title",
+			wantBody:     "Original Body",
+		},
+		{
+			name:         "body only",
+			patch:        map[string]any{"body": "Updated Body"},
+			initialTitle: "Original Title",
+			initialBody:  "Original Body",
+			wantTitle:    "Original Title",
+			wantBody:     "Updated Body",
+		},
+		{
+			name:         "title and body",
+			patch:        map[string]any{"title": "Updated Title", "body": "Updated Body"},
+			initialTitle: "Original Title",
+			initialBody:  "Original Body",
+			wantTitle:    "Updated Title",
+			wantBody:     "Updated Body",
+		},
 	}
 
-	post := getPost(t, h, postID)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			postID := createPostAndGetID(t, h, token, map[string]any{
+				"title":        tc.initialTitle,
+				"body":         tc.initialBody,
+				"category_ids": []int64{1},
+			})
 
-	if post["title"] != "Updated Title" {
-		t.Fatalf("expected updated title, got %v", post["title"])
-	}
-	if post["body"] != "Original Body" {
-		t.Fatalf("expected body unchanged, got %v", post["body"])
+			rec := patchPost(t, h, token, postID, tc.patch)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+			}
+
+			post := getPost(t, h, postID)
+			if post["title"] != tc.wantTitle {
+				t.Fatalf("expected title %q, got %v", tc.wantTitle, post["title"])
+			}
+			if post["body"] != tc.wantBody {
+				t.Fatalf("expected body %q, got %v", tc.wantBody, post["body"])
+			}
+		})
 	}
 }
 
-func TestAPIPostUpdate_BodyOnly(t *testing.T) {
+func TestAPIPostUpdate_Validation(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
 	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	postID := createPostAndGetID(t, h, token, map[string]any{
-		"title":        "Original Title",
-		"body":         "Original Body",
-		"category_ids": []int64{1},
-	})
-
-	rec := patchPost(t, h, token, postID, map[string]any{
-		"body": "Updated Body",
-	})
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	cases := []struct {
+		name  string
+		patch map[string]any
+	}{
+		{name: "empty title", patch: map[string]any{"title": ""}},
+		{name: "empty body", patch: map[string]any{"body": ""}},
+		{name: "no fields", patch: map[string]any{}},
 	}
 
-	post := getPost(t, h, postID)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			postID := createPostAndGetID(t, h, token, map[string]any{
+				"title":        "Valid Title",
+				"body":         "Valid Body",
+				"category_ids": []int64{1},
+			})
+			rec := patchPost(t, h, token, postID, tc.patch)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+			}
 
-	if post["title"] != "Original Title" {
-		t.Fatalf("expected title unchanged, got %v", post["title"])
-	}
-	if post["body"] != "Updated Body" {
-		t.Fatalf("expected updated body, got %v", post["body"])
-	}
-}
-
-func TestAPIPostUpdate_TitleAndBody(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	token := loginAndGetToken(t, h, "testuser", "password123")
-
-	postID := createPostAndGetID(t, h, token, map[string]any{
-		"title":        "Original Title",
-		"body":         "Original Body",
-		"category_ids": []int64{1},
-	})
-
-	rec := patchPost(t, h, token, postID, map[string]any{
-		"title": "Updated Title",
-		"body":  "Updated Body",
-	})
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
-	}
-
-	post := getPost(t, h, postID)
-
-	if post["title"] != "Updated Title" {
-		t.Fatalf("expected updated title, got %v", post["title"])
-	}
-	if post["body"] != "Updated Body" {
-		t.Fatalf("expected updated body, got %v", post["body"])
-	}
-}
-
-func TestAPIPostUpdate_EmptyTitle(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	token := loginAndGetToken(t, h, "testuser", "password123")
-
-	postID := createPostAndGetID(t, h, token, map[string]any{
-		"title":        "Valid Title",
-		"body":         "Valid Body",
-		"category_ids": []int64{1},
-	})
-
-	rec := patchPost(t, h, token, postID, map[string]any{
-		"title": "",
-	})
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
-	}
-}
-
-func TestAPIPostUpdate_EmptyBody(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	token := loginAndGetToken(t, h, "testuser", "password123")
-
-	postID := createPostAndGetID(t, h, token, map[string]any{
-		"title":        "Valid Title",
-		"body":         "Valid Body",
-		"category_ids": []int64{1},
-	})
-
-	rec := patchPost(t, h, token, postID, map[string]any{
-		"body": "",
-	})
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
-	}
-}
-
-func TestAPIPostUpdate_NoFields(t *testing.T) {
-	h, db := newTestAPI(t)
-	defer db.Close()
-
-	token := loginAndGetToken(t, h, "testuser", "password123")
-
-	postID := createPostAndGetID(t, h, token, map[string]any{
-		"title":        "Original Title",
-		"body":         "Original Body",
-		"category_ids": []int64{1},
-	})
-
-	rec := patchPost(t, h, token, postID, map[string]any{})
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
-	}
-
-	post := getPost(t, h, postID)
-	if post["title"] != "Original Title" || post["body"] != "Original Body" {
-		t.Fatalf("post should be unchanged, got %v", post)
+			// Ensure unchanged for all invalid update attempts.
+			post := getPost(t, h, postID)
+			if post["title"] != "Valid Title" || post["body"] != "Valid Body" {
+				t.Fatalf("post should be unchanged, got %v", post)
+			}
+		})
 	}
 }
 
@@ -296,76 +228,4 @@ func TestAPIPostUpdate_UpdatedAtIsSet(t *testing.T) {
 		t.Fatalf("expected updated_at to change after update, before=%q after=%q",
 			updatedAtBefore, updatedAtAfter)
 	}
-}
-
-/*---------
-  HELPERS
----------*/
-
-func createPostAndGetID(t *testing.T, h http.Handler, token string, payload map[string]any) int64 {
-	t.Helper()
-
-	rec := createPostRequest(t, h, token, payload)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
-	}
-
-	var env apiEnvelope
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
-		t.Fatalf("unmarshal env: %v", err)
-	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-
-	var post map[string]any
-	if err := json.Unmarshal(env.Data, &post); err != nil {
-		t.Fatalf("unmarshal post: %v", err)
-	}
-
-	idAny, ok := post["id"]
-	if !ok {
-		t.Fatalf("expected id in create response, post=%v", post)
-	}
-	return int64(idAny.(float64))
-}
-
-func patchPost(t *testing.T, h http.Handler, token string, postID int64, payload map[string]any) *httptest.ResponseRecorder {
-	t.Helper()
-
-	bodyBytes, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("marshal payload: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/posts/%d", postID), bytes.NewReader(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", "session_token="+token)
-
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	return rec
-}
-
-func getPost(t *testing.T, h http.Handler, postID int64) map[string]any {
-	t.Helper()
-
-	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), nil)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
-	}
-
-	var env apiEnvelope
-	if err := json.Unmarshal(body, &env); err != nil {
-		t.Fatalf("unmarshal env: %v", err)
-	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-
-	var post map[string]any
-	if err := json.Unmarshal(env.Data, &post); err != nil {
-		t.Fatalf("unmarshal post: %v", err)
-	}
-	return post
 }

@@ -100,15 +100,3 @@ func TestGuestCannotListMyPosts(t *testing.T) {
 		t.Fatalf("expected 401, got %d", w.Code)
 	}
 }
-
-// --------------------------------------------------
-// Helpers
-// --------------------------------------------------
-
-func extractToken(t *testing.T, rec *httptest.ResponseRecorder) string {
-	setCookie := rec.Header().Get("Set-Cookie")
-	if setCookie == "" {
-		t.Fatal("expected Set-Cookie header")
-	}
-	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
-}

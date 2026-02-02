@@ -1,14 +1,12 @@
 package tests
 
 import (
-	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
+	"time"
 )
 
 /*------------
@@ -19,31 +17,36 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	// create a post so we know its ID (and don't depend on seed post #1)
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Cats Post",
+		"body":         "Body",
+		"category_ids": []int64{1}, // ensures post exists and is published
+	})
+
+	// seed extra category and attach it
 	_, err := db.Exec(`
 		INSERT INTO categories (id, name, created_at)
 		VALUES (2, 'Extra', strftime('%Y-%m-%dT%H:%M:%SZ','now'));
-
-		INSERT INTO post_categories (post_id, category_id) VALUES (1, 1);
-		INSERT INTO post_categories (post_id, category_id) VALUES (1, 2);
 	`)
 	if err != nil {
-		t.Fatalf("seed error: %v", err)
+		t.Fatalf("seed category: %v", err)
 	}
 
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/1", nil)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
+	_, err = db.Exec(`
+		INSERT INTO post_categories (post_id, category_id) VALUES (?, 2);
+	`, postID)
+	if err != nil {
+		t.Fatalf("seed post_categories: %v", err)
 	}
 
-	var env apiEnvelope
-	json.Unmarshal(body, &env)
-
-	var post map[string]any
-	json.Unmarshal(env.Data, &post)
+	post := getPost(t, h, postID)
 
 	raw, ok := post["categories"]
 	if !ok || raw == nil {
-		t.Fatalf("expected category_ids in response, got: %v", post)
+		t.Fatalf("expected categories in response, got: %v", post)
 	}
 
 	cats, ok := raw.([]any)
@@ -199,55 +202,39 @@ func TestAPIPostsLiked_ReturnsOnlyLikedPosts(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
-	// login as seed user
-	loginBody := `{"username":"testuser","password":"password123"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
-	req.Header.Set("Content-Type", "application/json")
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	// Create a post and get ID
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Liked Post",
+		"body":         "Body",
+		"category_ids": []int64{1},
+	})
+
+	// like it
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/posts/%d/like", postID), nil)
+	req.Header.Set("Cookie", "session_token="+token)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("login failed: %d", rec.Code)
-	}
-
-	token := strings.Split(strings.Split(rec.Header().Get("Set-Cookie"), ";")[0], "=")[1]
-
-	// like post id=1
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
-	req.Header.Set("Cookie", "session_token="+token)
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("like failed: %d", rec.Code)
+		t.Fatalf("like failed: %d body=%s", rec.Code, rec.Body.String())
 	}
 
 	// list liked posts
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
-	req.Header.Set("Cookie", "session_token="+token)
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/liked", nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
 	}
 
-	var env apiEnvelope
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
-		t.Fatalf("unmarshal env: %v", err)
-	}
-
-	var posts []map[string]any
-	if err := json.Unmarshal(env.Data, &posts); err != nil {
-		t.Fatalf("unmarshal posts: %v", err)
-	}
+	posts := decodePostsList(t, body)
 
 	if len(posts) != 1 {
 		t.Fatalf("expected 1 liked post, got %d", len(posts))
 	}
 
-	if int64(posts[0]["id"].(float64)) != 1 {
-		t.Fatalf("expected post id=1")
+	if int64(posts[0]["id"].(float64)) != postID {
+		t.Fatalf("expected post id=%d, got %v", postID, posts[0]["id"])
 	}
 }
 
@@ -255,38 +242,40 @@ func TestAPIPostsLiked_UnlikeRemovesPost(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
-	loginBody := `{"username":"testuser","password":"password123"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	token := strings.Split(strings.Split(rec.Header().Get("Set-Cookie"), ";")[0], "=")[1]
+	// Create a post we can like/unlike deterministically
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Toggle Like Post",
+		"body":         "Body",
+		"category_ids": []int64{1},
+	})
 
 	// like
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/posts/%d/like", postID), nil)
 	req.Header.Set("Cookie", "session_token="+token)
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("like failed: %d body=%s", rec.Code, rec.Body.String())
+	}
 
-	// unlike
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/like", nil)
+	// unlike (toggle)
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/posts/%d/like", postID), nil)
 	req.Header.Set("Cookie", "session_token="+token)
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unlike failed: %d body=%s", rec.Code, rec.Body.String())
+	}
 
 	// list liked posts
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
-	req.Header.Set("Cookie", "session_token="+token)
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
+	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/liked", nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
+	}
 
-	var env apiEnvelope
-	json.Unmarshal(rec.Body.Bytes(), &env)
-
-	var posts []any
-	json.Unmarshal(env.Data, &posts)
-
+	posts := decodePostsList(t, body)
 	if len(posts) != 0 {
 		t.Fatalf("expected 0 liked posts, got %d", len(posts))
 	}
@@ -296,34 +285,33 @@ func TestAPIPostsLiked_DislikeDoesNotCount(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
-	loginBody := `{"username":"testuser","password":"password123"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	token := strings.Split(strings.Split(rec.Header().Get("Set-Cookie"), ";")[0], "=")[1]
+	// Create a post to dislike deterministically
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Disliked Post",
+		"body":         "Body",
+		"category_ids": []int64{1},
+	})
 
 	// dislike post
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/posts/1/dislike", nil)
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/posts/%d/dislike", postID), nil)
 	req.Header.Set("Cookie", "session_token="+token)
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("dislike failed: %d body=%s", rec.Code, rec.Body.String())
+	}
 
 	// list liked posts
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/liked", nil)
-	req.Header.Set("Cookie", "session_token="+token)
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
+	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/liked", nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
+	}
 
-	var env apiEnvelope
-	json.Unmarshal(rec.Body.Bytes(), &env)
-
-	var posts []any
-	json.Unmarshal(env.Data, &posts)
-
+	posts := decodePostsList(t, body)
 	if len(posts) != 0 {
-		t.Fatalf("disliked post must not appear in liked posts")
+		t.Fatalf("disliked post must not appear in liked posts, got %d", len(posts))
 	}
 }
 
@@ -355,6 +343,96 @@ func TestAPIPostsList(t *testing.T) {
 	}
 	if len(posts) == 0 {
 		t.Errorf("expected at least 1 post from seed data, got 0")
+	}
+}
+
+func TestPublicPostsList(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	// Seed user with unique username + email
+	username := fmt.Sprintf("user_%d", time.Now().UnixNano())
+	email := fmt.Sprintf("%s@example.com", username)
+
+	res, err := db.Exec(`
+        INSERT INTO users (username, email, password_hash)
+        VALUES (?, ?, 'x');
+    `, username, email)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+	userID, _ := res.LastInsertId()
+
+	// Seed post
+	res, err = db.Exec(`
+        INSERT INTO posts (author_id, title, body, status)
+        VALUES (?, 'Seed Post', 'Seed post body', 'published');
+    `, userID)
+	if err != nil {
+		t.Fatalf("failed to insert post: %v", err)
+	}
+	postID, _ := res.LastInsertId()
+
+	// Seed categories
+	_, _ = db.Exec(`
+        INSERT INTO categories (name)
+        VALUES ('Tech'), ('Fun');
+    `)
+
+	// Attach categories to post
+	_, _ = db.Exec(`
+        INSERT INTO post_categories (post_id, category_id)
+        VALUES (?, 1), (?, 2);
+    `, postID, postID)
+
+	// Seed reactions (1 like, 1 dislike)
+	_, _ = db.Exec(`INSERT INTO reactions (user_id, post_id, value) VALUES (?, ?, 1);`, userID, postID)
+	_, _ = db.Exec(`INSERT INTO reactions (user_id, post_id, value) VALUES (999, ?, -1);`, postID)
+
+	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts/public?page=1&per_page=5", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, string(body))
+	}
+
+	var env apiEnvelope
+	if err := json.Unmarshal(body, &env); err != nil {
+		t.Fatalf("failed to unmarshal envelope: %v\nraw: %s", err, string(body))
+	}
+
+	var posts []map[string]any
+	if err := json.Unmarshal(env.Data, &posts); err != nil {
+		t.Fatalf("failed to decode posts array: %v\nraw: %s", err, string(env.Data))
+	}
+
+	if len(posts) == 0 {
+		t.Fatalf("expected at least 1 post, got 0\nraw: %s", string(env.Data))
+	}
+
+	// Find the correct post (the one created in this test)
+	var found map[string]any
+	for _, p := range posts {
+		if p["author"] == username {
+			found = p
+			break
+		}
+	}
+
+	if found == nil {
+		t.Fatalf("expected to find post from user %s\nraw: %s", username, string(env.Data))
+	}
+
+	// Validations
+	if found["likes"].(float64) != 1 {
+		t.Errorf("expected 1 like, got %v", found["likes"])
+	}
+
+	if found["dislikes"].(float64) != 1 {
+		t.Errorf("expected 1 dislike, got %v", found["dislikes"])
+	}
+
+	if found["author"] != username {
+		t.Errorf("expected author '%s', got %v", username, found["author"])
 	}
 }
 
@@ -615,60 +693,4 @@ func TestAPIPostsList_AttachesReactionsCounts(t *testing.T) {
 	if likes != 1 || dislikes != 1 {
 		t.Fatalf("expected likes=1 dislikes=1, got likes=%d dislikes=%d post=%v", likes, dislikes, got)
 	}
-}
-
-/*---------
-  HELPERS
------------*/
-
-func seedPosts(t *testing.T, db *sql.DB, authorID int64, n int) {
-	t.Helper()
-
-	for i := 0; i < n; i++ {
-		_, err := db.Exec(`
-			INSERT INTO posts (author_id, title, body, status, created_at, updated_at)
-			VALUES (?, ?, ?, 'published', datetime('now', ?), datetime('now', ?))
-		`, authorID, "Post "+fmt.Sprint(i), "Body "+fmt.Sprint(i), fmt.Sprintf("-%d seconds", i), fmt.Sprintf("-%d seconds", i))
-		if err != nil {
-			t.Fatalf("seed posts: %v", err)
-		}
-	}
-}
-
-func decodePostsList(t *testing.T, body []byte) []map[string]any {
-	t.Helper()
-
-	var env apiEnvelope
-	if err := json.Unmarshal(body, &env); err != nil {
-		t.Fatalf("unmarshal envelope: %v", err)
-	}
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-
-	var posts []map[string]any
-	if err := json.Unmarshal(env.Data, &posts); err != nil {
-		t.Fatalf("unmarshal posts: %v", err)
-	}
-	return posts
-}
-
-func loginAndGetToken(t *testing.T, h http.Handler, username, password string) string {
-	t.Helper()
-
-	loginBody := fmt.Sprintf(`{"username":%q,"password":%q}`, username, password)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewBufferString(loginBody))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("login failed: %d body=%s", rec.Code, rec.Body.String())
-	}
-
-	setCookie := rec.Header().Get("Set-Cookie")
-	if setCookie == "" {
-		t.Fatalf("expected Set-Cookie header on login")
-	}
-	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
 }
