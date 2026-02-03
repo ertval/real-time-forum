@@ -7,19 +7,18 @@ import (
 	"testing"
 )
 
-// ============================================================
-// DTOs
-// ============================================================
+/* ------------
+     DTOs
+-------------*/
 
 type categoryDTO struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
 }
 
-// ============================================================
-// Helpers
-// ============================================================
-
+/*--------------
+    Helpers
+--------------*/
 func decodeEnvelope(t *testing.T, body []byte) apiEnvelope {
 	t.Helper()
 
@@ -35,9 +34,9 @@ func decodeEnvelope(t *testing.T, body []byte) apiEnvelope {
 	return env
 }
 
-// ============================================================
-// Tests
-// ============================================================
+/*------------
+    Tests
+------------*/
 
 func TestCategoriesList(t *testing.T) {
 	h, db := newCategoryAPI(t)

@@ -16,9 +16,9 @@ import (
 	"testing"
 )
 
-// ------------------------------------------------------------
-// setupTestDB — Creates full schema + seeds user/category/post
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+ setupTestDB — Creates full schema + seeds user/category/post
+-------------------------------------------------------------*/
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -40,9 +40,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to exec schema: %v", err)
 	}
 
-	// -------------------------
-	// SEED USER (correct bcrypt)
-	// -------------------------
+	/* -------------------------
+	  SEED USER (correct bcrypt)
+	---------------------------*/
 	_, err = db.CreateUser(context.Background(), dbConn, db.CreateUserRequest{
 		Username: "testuser",
 		Email:    "test@example.com",
@@ -52,9 +52,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to seed test user: %v", err)
 	}
 
-	// -------------------------
-	// SEED CATEGORY
-	// -------------------------
+	/* -----------------
+	   SEED CATEGORY
+	------------------*/
 	_, err = dbConn.Exec(`
 		INSERT INTO categories (id, name, created_at)
 		VALUES (
@@ -67,9 +67,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to seed category: %v", err)
 	}
 
-	// -------------------------
-	// SEED POST
-	// -------------------------
+	/* --------------
+	    SEED POST
+	---------------*/
 	_, err = dbConn.Exec(`
 		INSERT INTO posts (id, author_id, title, body, status, created_at, updated_at)
 		VALUES (
@@ -120,9 +120,9 @@ type apiEnvelope struct {
 	Error *apiError       `json:"error,omitempty"`
 }
 
-// ------------------------------------------------------------
-// setupTestDBForCategories — schema + seed
-// ------------------------------------------------------------
+/* ---------------------------------------------
+   setupTestDBForCategories — schema + seed
+----------------------------------------------*/
 func setupTestDBForCategories(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -152,9 +152,9 @@ func setupTestDBForCategories(t *testing.T) *sql.DB {
 	return dbConn
 }
 
-// ------------------------------------------------------------
-// newCategoryAPI — CLEAN handler wiring (NO router)
-// ------------------------------------------------------------
+/* ----------------------------------------------------
+   newCategoryAPI — CLEAN handler wiring (NO router)
+-----------------------------------------------------*/
 func newCategoryAPI(t *testing.T) (http.Handler, *sql.DB) {
 	t.Helper()
 
@@ -169,9 +169,9 @@ func newCategoryAPI(t *testing.T) (http.Handler, *sql.DB) {
 	return mux, db
 }
 
-// ------------------------------------------------------------
-// doReq helper
-// ------------------------------------------------------------
+/* -----------------
+   doReq helper
+------------------*/
 func doReq(
 	t *testing.T,
 	h http.Handler,

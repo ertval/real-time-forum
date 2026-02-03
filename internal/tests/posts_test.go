@@ -248,7 +248,7 @@ func TestAPIPostsLiked_UnlikeRemovesPost(t *testing.T) {
 
 	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	// Create a post we can like/unlike deterministically
+	// Create a post that can be liked/unliked deterministically
 	postID := createPostAndGetID(t, h, token, map[string]any{
 		"title":        "Toggle Like Post",
 		"body":         "Body",
