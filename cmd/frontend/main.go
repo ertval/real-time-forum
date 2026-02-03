@@ -13,9 +13,9 @@ import (
 func main() {
 	mux := http.NewServeMux()
 
-	// ---------------------------------------------------------
-	// Static assets (/static/*)
-	// ---------------------------------------------------------
+	/* ----------------------------
+	   Static assets (/static/*)
+	------------------------------*/
 	mux.Handle(
 		"/static/",
 		http.StripPrefix(
@@ -23,9 +23,9 @@ func main() {
 			http.FileServer(http.Dir("./web/static")),
 		),
 	)
-	// ---------------------------------------------------------
-	// Error assets (/errors/*)
-	// ---------------------------------------------------------
+	/*-----------------------------
+	  Error assets (/errors/*)
+	-----------------------------*/
 	mux.Handle(
 		"/errors/",
 		http.StripPrefix(
@@ -47,9 +47,9 @@ func main() {
 		apiProxy.ServeHTTP(w, r)
 	}))
 
-	// ---------------------------------------------------------
-	// Pages (HTML templates)
-	// ---------------------------------------------------------
+	/* --------------------------
+	   Pages (HTML templates)
+	---------------------------*/
 
 	mux.HandleFunc("/create-post", serveTemplate("./web/templates/create-post.html"))
 	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgot-password.html"))
