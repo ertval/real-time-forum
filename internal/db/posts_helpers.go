@@ -1,3 +1,4 @@
+//Internal/db/posts_helpers.go
 package db
 
 import (
@@ -6,9 +7,9 @@ import (
 	"fmt"
 )
 
-// ============================================================
-// COUNT POSTS (PUBLISHED ONLY)
-// ============================================================
+/*-------------------------------
+  COUNT POSTS (PUBLISHED ONLY)
+-------------------------------*/
 
 func countPosts(ctx context.Context, db *sql.DB) (int, error) {
 	var total int
@@ -22,9 +23,9 @@ func countPosts(ctx context.Context, db *sql.DB) (int, error) {
 	return total, nil
 }
 
-// ============================================================
-// FETCH POSTS (PUBLISHED ONLY)
-// ============================================================
+/*-------------------------------
+  FETCH POSTS (PUBLISHED ONLY)
+-------------------------------*/
 
 func fetchPosts(
 	ctx context.Context,
@@ -79,9 +80,9 @@ func fetchPosts(
 	return posts, nil
 }
 
-// ============================================================
-// ATTACH CATEGORIES (ID + NAME ONLY)
-// ============================================================
+/*------------------------------------
+  ATTACH CATEGORIES (ID + NAME ONLY)
+------------------------------------*/
 
 func attachPostCategories(ctx context.Context, db *sql.DB, posts []Post) error {
 	for i := range posts {
@@ -128,9 +129,9 @@ func getCategoriesByPostID(
 	return categories, nil
 }
 
-/* ============================================================
-   ATTACH REACTIONS
-   ============================================================ */
+/*-------------------
+  ATTACH REACTIONS
+-------------------*/
 
 func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post) error {
 	for i := range posts {

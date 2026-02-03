@@ -8,11 +8,9 @@ import (
 	"time"
 )
 
-//
-// ─────────────────────────────────────────────────────────────
-//  MODELS
-// ─────────────────────────────────────────────────────────────
-//
+/*---------
+  MODELS
+---------*/
 
 type PublicPost struct {
 	ID         int64    `json:"id"`
@@ -36,11 +34,9 @@ type ListPublicPostsResult struct {
 	Total int          `json:"total"`
 }
 
-//
-// ─────────────────────────────────────────────────────────────
-//  SQL CONSTANTS
-// ─────────────────────────────────────────────────────────────
-//
+/*------------------
+  SQL CONSTRAINTS
+------------------*/
 
 const sqlListPublicPosts = `
 SELECT 
@@ -84,11 +80,9 @@ const sqlCountPublishedPosts = `
 SELECT COUNT(*) FROM posts WHERE status = 'published'
 `
 
-//
-// ─────────────────────────────────────────────────────────────
-//  MAIN FUNCTION
-// ─────────────────────────────────────────────────────────────
-//
+/*----------------
+  FAIN FUNCTION
+----------------*/
 
 func ListPublicPosts(
 	ctx context.Context,
@@ -96,7 +90,7 @@ func ListPublicPosts(
 	p ListPublicPostsParams,
 ) (ListPublicPostsResult, error) {
 
-	// Pagination defaults (consistency with rest of DB layer)
+	// Pagination defaults
 	if p.Page < 1 {
 		p.Page = 1
 	}

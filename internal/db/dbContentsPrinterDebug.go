@@ -8,7 +8,7 @@ import (
 )
 
 // NOTE:
-// This file is a DEBUG / DEVELOPMENT utility.
+// This file is a DEBUG / DEVELOPMENT utility ONLY.
 // It is NOT used by handlers, middleware, or production flow.
 
 // PrintDBContents prints basic database contents for debugging purposes.
@@ -39,9 +39,9 @@ func PrintDBContents(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-// ---------------------------------------------------------
-// USERS
-// ---------------------------------------------------------
+/*--------
+  USERS
+--------*/
 
 func printUsers(ctx context.Context, db *sql.DB) error {
 	rows, err := db.QueryContext(ctx,
@@ -69,9 +69,9 @@ func printUsers(ctx context.Context, db *sql.DB) error {
 	return rows.Err()
 }
 
-// ---------------------------------------------------------
-// POSTS
-// ---------------------------------------------------------
+/*--------
+  POSTS
+--------*/
 
 func printPosts(ctx context.Context, db *sql.DB) error {
 	rows, err := db.QueryContext(ctx,
@@ -98,9 +98,9 @@ func printPosts(ctx context.Context, db *sql.DB) error {
 	return rows.Err()
 }
 
-// ---------------------------------------------------------
-// CATEGORIES
-// ---------------------------------------------------------
+/*------------
+  CATEGORIES
+------------*/
 
 func printCategories(ctx context.Context, db *sql.DB) error {
 	rows, err := db.QueryContext(ctx,
@@ -126,9 +126,9 @@ func printCategories(ctx context.Context, db *sql.DB) error {
 	return rows.Err()
 }
 
-// ---------------------------------------------------------
-// COMMENTS
-// ---------------------------------------------------------
+/*----------
+  COMMENTS
+----------*/
 
 func printComments(ctx context.Context, db *sql.DB) error {
 	rows, err := db.QueryContext(ctx,
@@ -155,9 +155,9 @@ func printComments(ctx context.Context, db *sql.DB) error {
 	return rows.Err()
 }
 
-// ---------------------------------------------------------
-// REACTIONS
-// ---------------------------------------------------------
+/*-----------
+  REACTIONS
+-----------*/
 
 func printReactions(ctx context.Context, db *sql.DB) error {
 	rows, err := db.QueryContext(ctx,
@@ -184,9 +184,9 @@ func printReactions(ctx context.Context, db *sql.DB) error {
 	return rows.Err()
 }
 
-// ---------------------------------------------------------
-// SESSIONS
-// ---------------------------------------------------------
+/*----------
+  SESSIONS
+----------*/
 
 func printSessions(ctx context.Context, db *sql.DB) error {
 	rows, err := db.QueryContext(ctx,

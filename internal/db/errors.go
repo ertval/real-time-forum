@@ -1,3 +1,4 @@
+//Internal/db/errors.go
 package db
 
 import (
@@ -6,9 +7,9 @@ import (
 	"strings"
 )
 
-// ------------------------------------------------------------
-// DOMAIN / DATABASE ERROR SENTINELS
-// ------------------------------------------------------------
+/*-----------------------------------
+  DOMAIN / DATABASE ERROR SENTINELS
+-----------------------------------*/
 // These errors are used across the db layer and can be matched
 // using errors.Is(...) from callers (handlers, services, etc).
 
@@ -22,9 +23,9 @@ var (
 	ErrInvalidCredentials = errors.New("invalid username/email or password")
 )
 
-// ------------------------------------------------------------
-// ERROR WRAPPING
-// ------------------------------------------------------------
+/*----------------
+  ERROR WRAPPING
+----------------*/
 
 // WrapError adds context while preserving the original error.
 // Logging is intentionally NOT done here to avoid double-logging.
@@ -36,9 +37,9 @@ func WrapError(context string, err error) error {
 	return fmt.Errorf("%s: %w", context, err)
 }
 
-// ------------------------------------------------------------
-// SQLITE ERROR CLASSIFICATION
-// ------------------------------------------------------------
+/*------------------------------
+  SQLITE ERROR CLASSIFICATION
+------------------------------*/
 
 // Converts SQLite-specific error messages into domain errors.
 // This keeps vendor-specific logic isolated inside the db layer.

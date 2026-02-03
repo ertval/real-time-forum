@@ -1,3 +1,4 @@
+//Internal/db/users.go
 package db
 
 import (
@@ -39,9 +40,9 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// ---------------------------------------------------------
-// PUBLIC API
-// ---------------------------------------------------------
+/*------------
+  PUBLIC API
+------------*/
 
 func CreateUser(
 	ctx context.Context,
@@ -117,10 +118,9 @@ func GetUser(
 	return user, nil
 }
 
-//
-// ---------------------------------------------------------
-// HELPERS
-// ---------------------------------------------------------
+/*---------
+  HELPERS
+----------*/
 
 func validateCreateUser(req CreateUserRequest) error {
 	switch {
