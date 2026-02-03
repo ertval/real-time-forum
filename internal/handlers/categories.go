@@ -20,9 +20,9 @@ func NewCategoriesHandler(database *sql.DB) *CategoriesHandler {
 	return &CategoriesHandler{conn: database}
 }
 
-// ============================================================
-// HandleCategories: /api/v1/categories
-// ============================================================
+/*--------------------------------------
+  HandleCategories: /api/v1/categories
+--------------------------------------*/
 
 func (c *CategoriesHandler) HandleCategories(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -35,9 +35,9 @@ func (c *CategoriesHandler) HandleCategories(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// ------------------------------------------------------------
-// Internal helpers
-// ------------------------------------------------------------
+/*------------------
+  INTERNAL HELPERS
+------------------*/
 
 func resolveCategoryID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := parseID(r.URL.Path, "/api/v1/categories/")
@@ -52,9 +52,9 @@ func resolveCategoryID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return id, true
 }
 
-// ------------------------------------------------------------
-// LIST CATEGORIES
-// ------------------------------------------------------------
+/*-----------------
+  LIST CATEGORIES
+-----------------*/
 
 func (c *CategoriesHandler) listCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := repository.ListCategories(r.Context(), c.conn)
@@ -67,9 +67,9 @@ func (c *CategoriesHandler) listCategories(w http.ResponseWriter, r *http.Reques
 	WriteOK(w, categories, nil)
 }
 
-// ------------------------------------------------------------
-// CREATE CATEGORY
-// ------------------------------------------------------------
+/*------------------
+  CREATE CATEGORY
+------------------*/
 
 func (c *CategoriesHandler) createCategory(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -115,9 +115,9 @@ func (c *CategoriesHandler) createCategory(w http.ResponseWriter, r *http.Reques
 	WriteCreated(w, category)
 }
 
-// ============================================================
-// HandleCategory: /api/v1/categories/{id}
-// ============================================================
+/*-----------------------------------------
+  HandleCategory: /api/v1/categories/{id}
+-----------------------------------------*/
 
 func (c *CategoriesHandler) HandleCategory(w http.ResponseWriter, r *http.Request) {
 	id, ok := resolveCategoryID(w, r)
@@ -137,9 +137,9 @@ func (c *CategoriesHandler) HandleCategory(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// ------------------------------------------------------------
-// GET CATEGORY
-// ------------------------------------------------------------
+/*--------------
+  GET CATEGORY
+--------------*/
 
 func (c *CategoriesHandler) getCategory(w http.ResponseWriter, r *http.Request, id int64) {
 	category, err := repository.GetCategory(r.Context(), c.conn, id)
@@ -157,9 +157,9 @@ func (c *CategoriesHandler) getCategory(w http.ResponseWriter, r *http.Request, 
 	WriteOK(w, category, nil)
 }
 
-// ------------------------------------------------------------
-// UPDATE CATEGORY (PATCH)
-// ------------------------------------------------------------
+/*------------------
+  UPDATE CATEGORY
+------------------*/
 
 func (c *CategoriesHandler) updateCategory(w http.ResponseWriter, r *http.Request, id int64) {
 	var req struct {
@@ -214,9 +214,9 @@ func (c *CategoriesHandler) updateCategory(w http.ResponseWriter, r *http.Reques
 	WriteOK(w, category, nil)
 }
 
-// ------------------------------------------------------------
-// DELETE CATEGORY
-// ------------------------------------------------------------
+/*------------------
+  DELETE CATEGORY
+------------------*/
 
 func (c *CategoriesHandler) deleteCategory(w http.ResponseWriter, r *http.Request, id int64) {
 	if err := repository.DeleteCategory(r.Context(), c.conn, id); err != nil {
@@ -233,10 +233,10 @@ func (c *CategoriesHandler) deleteCategory(w http.ResponseWriter, r *http.Reques
 	WriteNoContent(w)
 }
 
-// ============================================================
-// LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
-// GET /api/v1/categories/view
-// ============================================================
+/*--------------------------------------------
+  LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
+  GET /api/v1/categories/view
+--------------------------------------------*/
 
 func (c *CategoriesHandler) ListCategoriesWithPosts(
 	w http.ResponseWriter,

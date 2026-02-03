@@ -1,3 +1,4 @@
+//web/static/js/category.js
 import { API_BASE } from "./utils.js";
 
 /* =========================

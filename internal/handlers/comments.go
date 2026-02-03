@@ -1,3 +1,4 @@
+//Internal/handlers/comments.go
 package handlers
 
 import (
@@ -10,9 +11,9 @@ import (
 	"strings"
 )
 
-// ============================================================
-// HandleComment: /api/v1/comment/{id}
-// ============================================================
+/*-------------------------------------
+  HandleComment: /api/v1/comment/{id}
+-------------------------------------*/
 
 func (p *PostsHandler) HandleComment(w http.ResponseWriter, r *http.Request) {
 	commentID, action, ok := resolveCommentRoute(w, r)

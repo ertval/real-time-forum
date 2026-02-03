@@ -1,3 +1,4 @@
+//Internal/db/errors.go
 package handlers
 
 import (

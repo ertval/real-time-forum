@@ -1,3 +1,4 @@
+//web/static/js/my-liked-posts.js
 import { API_BASE, getPaginationFromURL } from "./utils.js";
 import { renderPostCard, loadPostCommentsPreview } from "./posts.js";
 import { initReactions } from "./reactions.js";

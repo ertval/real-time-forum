@@ -1,4 +1,4 @@
-// /internal/handlers/response.go
+//internal/handlers/response.go
 package handlers
 
 import (
@@ -39,9 +39,8 @@ type Meta struct {
 	Pagination *PaginationMeta `json:"pagination,omitempty"`
 }
 
-/*
-PaginationMeta describes pagination information for list endpoints.
-*/
+
+//PaginationMeta describes pagination information for list endpoints.
 type PaginationMeta struct {
 	Page       int `json:"page"`
 	PerPage    int `json:"per_page"`
@@ -55,9 +54,9 @@ type ErrorPageData struct {
 	Message string
 }
 
-/* ------------------------------------------------------------
+/* -------------------
    SUCCESS RESPONSES
------------------------------------------------------------- */
+--------------------*/
 
 // WriteOK writes a 200 OK response with optional metadata.
 func WriteOK(w http.ResponseWriter, data any, meta *Meta) {
@@ -84,9 +83,9 @@ func WriteNoContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-/* ------------------------------------------------------------
+/* ------------------
    ERROR RESPONSES
------------------------------------------------------------- */
+-------------------*/
 
 func WriteError(w http.ResponseWriter, r *http.Request, err *APIError) {
 	acceptsHTML := strings.Contains(r.Header.Get("Accept"), "text/html")
@@ -130,9 +129,9 @@ func NewError(code, message string, status int) *APIError {
 	}
 }
 
-/* ------------------------------------------------------------
+/* -----------------------
    INTERNAL JSON WRITER
------------------------------------------------------------- */
+------------------------*/
 
 func writeJSON(w http.ResponseWriter, status int, body *APIResponse) {
 	w.Header().Set("Content-Type", "application/json")
@@ -140,9 +139,9 @@ func writeJSON(w http.ResponseWriter, status int, body *APIResponse) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-/* ------------------------------------------------------------
+/* ----------
    HELPERS
------------------------------------------------------------- */
+-----------*/
 
 func statusTitle(code int) string {
 	switch code {
