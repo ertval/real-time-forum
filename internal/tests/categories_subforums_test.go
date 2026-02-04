@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// ------------------------------------------------------------
-// LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
-// ------------------------------------------------------------
+/* ----------------------------------------------
+   LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
+-----------------------------------------------*/
 
 func TestAPICategoriesWithPosts(t *testing.T) {
 	h, db := newTestAPI(t)

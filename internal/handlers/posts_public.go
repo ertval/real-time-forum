@@ -1,4 +1,4 @@
-// /internal/handlers/posts_public.go
+//internal/handlers/posts_public.go
 package handlers
 
 import (
@@ -8,9 +8,9 @@ import (
 	repository "forum/internal/db"
 )
 
-// ============================================================
-// PUBLIC POSTS
-// ============================================================
+/*--------------
+  PUBLIC POSTS
+--------------*/
 
 // PublicList handles:
 // GET /api/v1/posts/public
@@ -23,9 +23,9 @@ func (p *PostsHandler) PublicList(w http.ResponseWriter, r *http.Request) {
 	p.publicListPosts(w, r)
 }
 
-// ------------------------------------------------------------
-// Internal helpers
-// ------------------------------------------------------------
+/*------------------
+  INTERNAL HELPERS
+------------------*/
 
 func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
@@ -50,9 +50,9 @@ func (p *PostsHandler) publicListPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ------------------------------------------------------------
-	// Build pagination metadata
-	// ------------------------------------------------------------
+	/*---------------------------
+	  Build pagination metadata
+	-----------------–---------*/
 
 	totalPages := 0
 	if perPage > 0 {

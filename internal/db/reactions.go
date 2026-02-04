@@ -79,9 +79,9 @@ func ToggleReaction(
 	return newValue, nil
 }
 
-// ============================================================
-// HELPERS (TX SAFE)
-// ============================================================
+/*-------------------
+  HELPERS (TX SAFE)
+-------------------*/
 
 func getReactionValueTx(
 	ctx context.Context,

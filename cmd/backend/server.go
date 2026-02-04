@@ -1,3 +1,4 @@
+// cmd/backend/server.go
 package main
 
 import (
@@ -14,17 +15,17 @@ import (
 const addr = ":8080"
 
 func Start() {
-	// ---------------------------------------------------------
-	// Resolve DB path (local & Docker)
-	// ---------------------------------------------------------
+	/* ------------------------------------
+	   Resolve DB path (local & Docker)
+	 -------------------------------------*/
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
 		dbPath = "./data/forum.db"
 	}
 
-	// ---------------------------------------------------------
-	// Initialize database
-	// ---------------------------------------------------------
+	/* ----------------------------
+	  Initialize database
+	 -----------------------------*/
 	database, err := db.InitDB(dbPath)
 	if err != nil {
 		log.Fatal(err)
@@ -33,9 +34,9 @@ func Start() {
 
 	log.Println("Database initialized at", dbPath)
 
-	// ---------------------------------------------------------
-	// Background session cleanup
-	// ---------------------------------------------------------
+	/* ----------------------------
+	   Background session cleanup
+	-----------------------------*/
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		defer ticker.Stop()
@@ -47,9 +48,9 @@ func Start() {
 		}
 	}()
 
-	// ---------------------------------------------------------
-	// HTTP server
-	// ---------------------------------------------------------
+	/* ----------------------------
+	   HTTP server
+	-----------------------------*/
 	handler := router.NewRouter(database)
 	log.Println("Server running on http://localhost" + addr)
 

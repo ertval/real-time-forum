@@ -1,3 +1,4 @@
+//web/static/js/my-posts-page.js
 function buildStatusFilter() {
     const label = document.createElement("label");
     label.className = "muted";

@@ -28,7 +28,7 @@ func TestAPIPostsReactionToggle_LikeThenUnlike(t *testing.T) {
 
 	token := registerAndLogin(t, h)
 
-	// 1) like
+	// like
 	r1 := doPostReaction(t, h, token, "/api/v1/posts/1/like")
 	if r1.PostID != 1 {
 		t.Fatalf("expected post_id=1 got %d", r1.PostID)
@@ -40,7 +40,7 @@ func TestAPIPostsReactionToggle_LikeThenUnlike(t *testing.T) {
 		t.Fatalf("expected likes=1 dislikes=0 got likes=%d dislikes=%d", r1.LikesCount, r1.DislikesCount)
 	}
 
-	// 2) unlike (toggle off)
+	// unlike (toggle off)
 	r2 := doPostReaction(t, h, token, "/api/v1/posts/1/like")
 	if r2.Reaction != 0 {
 		t.Fatalf("expected reaction=0 after unlike, got %d", r2.Reaction)
@@ -56,7 +56,7 @@ func TestAPIPostsReactionToggle_DislikeThenUndislike(t *testing.T) {
 
 	token := registerAndLogin(t, h)
 
-	// 1) dislike
+	// dislike
 	r1 := doPostReaction(t, h, token, "/api/v1/posts/1/dislike")
 	if r1.PostID != 1 {
 		t.Fatalf("expected post_id=1 got %d", r1.PostID)
@@ -68,7 +68,7 @@ func TestAPIPostsReactionToggle_DislikeThenUndislike(t *testing.T) {
 		t.Fatalf("expected likes=0 dislikes=1 got likes=%d dislikes=%d", r1.LikesCount, r1.DislikesCount)
 	}
 
-	// 2) undislike (toggle off)
+	// undislike (toggle off)
 	r2 := doPostReaction(t, h, token, "/api/v1/posts/1/dislike")
 	if r2.Reaction != 0 {
 		t.Fatalf("expected reaction=0 after undislike, got %d", r2.Reaction)
@@ -122,7 +122,7 @@ func TestAPICommentsReactionToggle_LikeThenUnlike(t *testing.T) {
 	token := registerAndLogin(t, h)
 	commentID := createComment(t, h, token, 1, "hello comment")
 
-	// 1) like
+	// like
 	r1 := doPostReaction(t, h, token, fmt.Sprintf("/api/v1/comments/%d/like", commentID))
 	if r1.CommentID != commentID {
 		t.Fatalf("expected comment_id=%d got %d", commentID, r1.CommentID)
@@ -134,7 +134,7 @@ func TestAPICommentsReactionToggle_LikeThenUnlike(t *testing.T) {
 		t.Fatalf("expected likes=1 dislikes=0 got likes=%d dislikes=%d", r1.LikesCount, r1.DislikesCount)
 	}
 
-	// 2) unlike (toggle off)
+	// unlike (toggle off)
 	r2 := doPostReaction(t, h, token, fmt.Sprintf("/api/v1/comments/%d/like", commentID))
 	if r2.Reaction != 0 {
 		t.Fatalf("expected reaction=0 after unlike, got %d", r2.Reaction)
@@ -151,7 +151,7 @@ func TestAPICommentsReactionToggle_DislikeThenUndislike(t *testing.T) {
 	token := registerAndLogin(t, h)
 	commentID := createComment(t, h, token, 1, "hello comment")
 
-	// 1) dislike
+	// dislike
 	r1 := doPostReaction(t, h, token, fmt.Sprintf("/api/v1/comments/%d/dislike", commentID))
 	if r1.CommentID != commentID {
 		t.Fatalf("expected comment_id=%d got %d", commentID, r1.CommentID)
@@ -163,7 +163,7 @@ func TestAPICommentsReactionToggle_DislikeThenUndislike(t *testing.T) {
 		t.Fatalf("expected likes=0 dislikes=1 got likes=%d dislikes=%d", r1.LikesCount, r1.DislikesCount)
 	}
 
-	// 2) undislike (toggle off)
+	// undislike (toggle off)
 	r2 := doPostReaction(t, h, token, fmt.Sprintf("/api/v1/comments/%d/dislike", commentID))
 	if r2.Reaction != 0 {
 		t.Fatalf("expected reaction=0 after undislike, got %d", r2.Reaction)
@@ -399,7 +399,6 @@ func createComment(t *testing.T, h http.Handler, token string, postID int64, bod
 		t.Fatalf("unmarshal envelope: %v body=%s", err, rec.Body.String())
 	}
 
-	// Adjust this struct if your API returns a different shape.
 	var resp struct {
 		ID int64 `json:"id"`
 	}

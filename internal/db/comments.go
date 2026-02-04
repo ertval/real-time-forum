@@ -1,3 +1,4 @@
+//Internal/db/comments.go
 package db
 
 import (
@@ -8,9 +9,9 @@ import (
 	"time"
 )
 
-// ---------------------------------------------------------
-// DATA STRUCTURES
-// ---------------------------------------------------------
+/*-----------------
+  DATA STRUCTURES
+-----------------*/
 
 type Comment struct {
 	ID              int64  `json:"id"`
@@ -36,9 +37,9 @@ type ListCommentsResult struct {
 	Total    int
 }
 
-// ---------------------------------------------------------
-// LIST COMMENTS (ORCHESTRATOR)
-// ---------------------------------------------------------
+/*-----------------
+  LIST COMMENTS
+-----------------*/
 
 func ListCommentsByPost(
 	ctx context.Context,
@@ -71,9 +72,9 @@ func ListCommentsByPost(
 	}, nil
 }
 
-// ---------------------------------------------------------
-// CREATE COMMENT
-// ---------------------------------------------------------
+/*----------------
+  CREATE COMMENT
+----------------*/
 
 type CreateCommentInput struct {
 	PostID          int64
@@ -118,9 +119,9 @@ func CreateComment(
 	return id, nil
 }
 
-// ---------------------------------------------------------
-// GET COMMENT
-// ---------------------------------------------------------
+/*-------------
+  GET COMMENT
+-------------*/
 
 func GetCommentWithAuthor(
 	ctx context.Context,
@@ -179,9 +180,9 @@ func GetCommentWithAuthor(
 	return comment, nil
 }
 
-// ---------------------------------------------------------
-// UPDATE COMMENT
-// ---------------------------------------------------------
+/*----------------
+  UPDATE COMMENT
+----------------*/
 
 type UpdateCommentInput struct {
 	Body *string
@@ -212,9 +213,9 @@ func UpdateComment(ctx context.Context, db *sql.DB, id int64, in UpdateCommentIn
 	return err
 }
 
-// ------------------------------------------------------------
-// DELETE COMMENT
-// ------------------------------------------------------------
+/*----------------
+  DELETE COMMENT
+----------------*/
 
 func DeleteComment(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -224,9 +225,9 @@ func DeleteComment(ctx context.Context, db *sql.DB, id int64) error {
 	return err
 }
 
-// ------------------------------------------------------------
-// HELPERS
-// ------------------------------------------------------------
+/*---------
+  HELPERS
+---------*/
 
 func ensurePostExists(ctx context.Context, db *sql.DB, postID int64) error {
 	var exists bool

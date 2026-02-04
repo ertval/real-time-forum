@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-// ============================================================
-// MODELS
-// ============================================================
+/*------------
+   MODELS
+------------*/
 
 // Category represents a forum category.
 type Category struct {
@@ -28,9 +28,9 @@ type CategoryWithPosts struct {
 
 const categoryTimeout = 2 * time.Second
 
-// ============================================================
-// LIST CATEGORIES
-// ============================================================
+/*-----------------
+  LIST CATEGORIES
+-----------------*/
 
 func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -67,9 +67,9 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]Category, error) {
 	return categories, nil
 }
 
-// ============================================================
-// GET CATEGORY
-// ============================================================
+/*----------------
+   GET CATEGORY
+----------------*/
 
 func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -94,9 +94,9 @@ func GetCategory(ctx context.Context, db *sql.DB, id int64) (Category, error) {
 	return category, nil
 }
 
-// ============================================================
-// CREATE CATEGORY
-// ============================================================
+/*------------------
+  CREATE CATEGORY
+------------------*/
 
 func CreateCategory(ctx context.Context, db *sql.DB, name string) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -118,9 +118,9 @@ func CreateCategory(ctx context.Context, db *sql.DB, name string) (int64, error)
 	return id, nil
 }
 
-// ============================================================
-// UPDATE CATEGORY
-// ============================================================
+/*------------------
+  UPDATE CATEGORY
+------------------*/
 
 func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -143,9 +143,9 @@ func UpdateCategoryName(ctx context.Context, db *sql.DB, id int64, name string) 
 	return nil
 }
 
-// ============================================================
-// DELETE CATEGORY
-// ============================================================
+/*------------------
+  DELETE CATEGORY
+------------------*/
 
 func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
@@ -167,9 +167,10 @@ func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
 	return nil
 }
 
-// ============================================================
-// LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
-// ============================================================
+/*--------------------------------------------
+  LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
+--------------------------------------------*/
+
 
 func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPosts, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
