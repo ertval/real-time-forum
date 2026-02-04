@@ -1,14 +1,14 @@
 // web/static/js/utils.js
 
-// --------------------------------------------------
-// API
-// --------------------------------------------------
+/*------
+  API
+------*/
 
 export const API_BASE = "/api/v1";
 
-// --------------------------------------------------
-// DATE FORMATTER
-// --------------------------------------------------
+/*----------------
+  DATE FORMATTER
+----------------*/
 
 export function formatCreatedAt(iso) {
   if (!iso) return "";
@@ -30,10 +30,6 @@ export function formatCreatedAt(iso) {
   return `${year}-${month}-${day}, ${hours}:${minutes} ${ampm}`;
 }
 
-// --------------------------------------------------
-// SAFE TEXT
-// --------------------------------------------------
-
 export function escapeHTML(str) {
   if (!str) return "";
   const div = document.createElement("div");
@@ -41,9 +37,9 @@ export function escapeHTML(str) {
   return div.innerHTML;
 }
 
-// --------------------------------------------------
-// USERNAME HELPER
-// --------------------------------------------------
+/*------------------
+  USERNAME HELPEPR
+------------------*/
 
 export function resolveUsername(obj) {
   return (
@@ -53,9 +49,9 @@ export function resolveUsername(obj) {
   );
 }
 
-/* =========================
-   Pagination (read only for now)
-========================= */
+/*-------------
+  PAGINATION
+-------------*/
 
 export function getPaginationFromURL() {
   const params = new URLSearchParams(window.location.search);

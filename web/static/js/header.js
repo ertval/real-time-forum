@@ -59,9 +59,9 @@ function setAuthedOnlyVisibility(elements, isAuthed) {
   }
 }
 
-// --------------------------------------------------
-// FORUM LOGO → /
-// --------------------------------------------------
+/*---------------------------
+  FORUM LOGO POINTING TO /
+---------------------------*/
 function setupForumLogo() {
   const forumTitle = document.getElementById("forum-title");
   if (!forumTitle) return;
@@ -73,9 +73,9 @@ function setupForumLogo() {
   });
 }
 
-// --------------------------------------------------
-// LOGOUT
-// --------------------------------------------------
+/*--------
+  LOGOUT
+--------*/
 function bindLogout(logoutBtn) {
   if (!logoutBtn || logoutBtn.dataset.bound) return;
   logoutBtn.dataset.bound = "1";

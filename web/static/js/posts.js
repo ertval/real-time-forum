@@ -9,9 +9,9 @@ import {
 
 import { Auth } from "./auth.js";
 
-/* ==================================================
-   POST CARD
-================================================== */
+/*-----------
+  POST CARD
+-----------*/
 
 export function renderPostCard(
   post,
@@ -64,9 +64,9 @@ export function renderPostCard(
   return article;
 }
 
-/* ==================================================
-   COMMENTS
-================================================== */
+/*----------
+  COMMENTS
+----------*/
 
 export async function loadPostCommentsPreview(postId, article) {
   const container = article.querySelector("[data-comments]");
@@ -125,9 +125,9 @@ function renderComment(comment) {
   return div;
 }
 
-/* ==================================================
-   COMMENT FORM (GUEST-AWARE)
-================================================== */
+/*--------------
+  COMMENT FORM
+--------------*/
 
 function maybeRenderCommentForm(container, postId) {
   const form = document.createElement("form");
@@ -188,9 +188,9 @@ function maybeRenderCommentForm(container, postId) {
   container.appendChild(form);
 }
 
-/* ==================================================
-   REACTIONS TEMPLATE
-================================================== */
+/*--------------------
+  REACTIONS TEMPLATE
+--------------------*/
 
 export function reactionTemplate(item, isComment = false) {
   const idAttr = isComment
@@ -209,9 +209,9 @@ export function reactionTemplate(item, isComment = false) {
   `;
 }
 
-/* ==================================================
-   HELPERS
-================================================== */
+/*---------
+  HELPERS
+---------*/
 
 function extractArray(payload) {
   if (Array.isArray(payload)) return payload;

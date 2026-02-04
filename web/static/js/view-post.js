@@ -8,9 +8,9 @@ import {
 import { initReactions } from "./reactions.js";
 import { API_BASE } from "./utils.js";
 
-/* ==================================================
-   HELPERS
-================================================== */
+/*---------
+  HELPERS
+---------*/
 
 function getPostIdFromURL() {
   const parts = window.location.pathname.split("/");
@@ -18,9 +18,9 @@ function getPostIdFromURL() {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
-/* ==================================================
-   INIT
-================================================== */
+/*------
+  INIT
+------*/
 
 document.addEventListener("DOMContentLoaded", async () => {
   const postId = getPostIdFromURL();
@@ -43,10 +43,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-/* ==================================================
-   LOAD + RENDER SINGLE POST
-   Returns { categoryId } | null
-================================================== */
+/*-------------------------------
+  LOAD + RENDER SINGLE POST
+  Returns { categoryId } | null
+-------------------------------*/
 
 async function loadAndRenderPost(postId, container) {
   try {
@@ -83,9 +83,9 @@ async function loadAndRenderPost(postId, container) {
   }
 }
 
-/* ==================================================
-   POST NAVIGATION (CATEGORY-AWARE)
-================================================== */
+/*-------------------------------------
+  POST NAVIGATION (BASED ON CATEGORY)
+-------------------------------------*/
 
 async function initPostNavigation(postId, categoryId) {
   const prevBtn = document.getElementById("post-prev");
@@ -123,9 +123,9 @@ async function initPostNavigation(postId, categoryId) {
       };
     }
 
-    /* =========================
-       KEYBOARD NAVIGATION
-    ========================= */
+    /*---------------------
+      KEYBOARD NAVIGATION
+    ---------------------*/
 
     document.addEventListener("keydown", (e) => {
       const tag = e.target.tagName;

@@ -10,7 +10,7 @@ let deleteBound = false;
 function start() {
     initStatusFilterUI();
     initStatusToggle();
-    initDeletePost(); // if you added delete
+    initDeletePost();
     boot().catch((err) => {
         console.error("My Posts boot failed:", err);
         showMessage("Failed to load your posts.");
@@ -20,7 +20,7 @@ function start() {
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start);
 } else {
-    start(); // DOM already loaded (your current situation)
+    start();
 }
 
 function getStatusFilterFromURL() {
@@ -222,9 +222,9 @@ function initDeletePost() {
     );
 }
 
-/* =========================
-   API
-========================= */
+/*------
+  API
+------*/
 
 async function fetchMyPosts({ page, perPage, status }) {
     const url = new URL(`${API_BASE}/posts/mine`, window.location.origin);
@@ -258,9 +258,9 @@ async function fetchMyPosts({ page, perPage, status }) {
     return { posts, meta };
 }
 
-/* =========================
-   UX helpers
-========================= */
+/*------------
+  UX HELPERS
+------------*/
 
 function showMessage(text) {
     const empty = document.getElementById("posts-empty");
@@ -272,9 +272,9 @@ function showMessage(text) {
     }
 }
 
-/* =========================
-   Concurrency helper
-========================= */
+/*--------------------
+  CONCURENCY HELPERS
+--------------------*/
 
 async function runWithConcurrencyLimit(tasks, limit = 4) {
     const queue = tasks.slice();

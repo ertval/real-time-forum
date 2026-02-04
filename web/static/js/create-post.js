@@ -4,9 +4,9 @@ import { Auth } from "./auth.js";
 
 const MANUAL_DRAFT_KEY = "manual_draft_saved";
 
-/* =========================
-   LOAD CATEGORIES
-========================= */
+/*-----------------
+  LOAD CATEGORIES
+-----------------*/
 
 async function loadCategories() {
   try {
@@ -55,9 +55,9 @@ function getSelectedCategoryIds() {
   ).map((el) => Number(el.value));
 }
 
-/* =========================
-   AUTOSAVE
-========================= */
+/*----------
+  AUTOSAVE
+----------*/
 
 let draftTimer = null;
 let autosaveEnabled = true;
@@ -88,9 +88,9 @@ function saveDraft() {
   );
 }
 
-/* =========================
-   RESTORE DRAFT
-========================= */
+/*---------------
+  RESTORE DRAFT
+---------------*/
 
 async function restoreDraftIfExists() {
   if (localStorage.getItem(MANUAL_DRAFT_KEY)) return;
@@ -113,9 +113,9 @@ async function restoreDraftIfExists() {
   } catch {}
 }
 
-/* =========================
-   MAIN
-========================= */
+/*-------
+  MAIN
+-------*/
 
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("create-post-form");

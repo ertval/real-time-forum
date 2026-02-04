@@ -61,9 +61,9 @@ async function boot() {
     initReactions();
 }
 
-/* =========================
-   API
-========================= */
+/*-----
+  API
+-----*/
 
 async function fetchLikedPosts({ page, perPage }) {
     const url = new URL(`${API_BASE}/posts/liked`, window.location.origin);
@@ -92,9 +92,9 @@ async function fetchLikedPosts({ page, perPage }) {
     return { posts, meta };
 }
 
-/* =========================
-   UX helpers
-========================= */
+/*------------
+  UX HELPERS
+------------*/
 
 function showMessage(text) {
     const empty = document.getElementById("posts-empty");
@@ -106,9 +106,9 @@ function showMessage(text) {
     }
 }
 
-/* =========================
-   Concurrency helper
-========================= */
+/*-------------------
+  CONCURENCY HELPER
+-------------------*/
 
 async function runWithConcurrencyLimit(tasks, limit = 4) {
     const queue = tasks.slice();
