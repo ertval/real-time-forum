@@ -7,9 +7,9 @@ import (
 	"fmt"
 )
 
-// ------------------------------------------------------------
-// COMMENTS HELPERS (PRIVATE)
-// ------------------------------------------------------------
+/*------------------
+  COMMENTS HELPERS
+------------------*/
 
 // Normalize pagination for comments
 func normalizeCommentsPagination(params *ListCommentsParams) {

@@ -85,7 +85,7 @@ func TestCreateGetUpdateDeleteComment(t *testing.T) {
 		t.Fatalf("expected non-zero commentID")
 	}
 
-	// GET (hydrated)
+	// GET
 	c, err := repository.GetCommentWithAuthor(ctx, db, commentID)
 	if err != nil {
 		t.Fatalf("GetCommentWithAuthor: %v", err)

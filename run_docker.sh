@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
+echo "🛑 Stopping existing container (if any)..."
+make docker-stop || true
+
 echo "🐳 Building Docker image..."
 make docker-build
 
 echo "🚀 Starting Docker container..."
-make docker-up
+make docker-run
 
 URL="http://localhost:8080"
 echo "🌍 Opening browser at $URL"
@@ -18,8 +21,4 @@ elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
     start "$URL"
 fi
 
-echo "📜 Streaming container logs (Ctrl + C to stop)..."
-
-trap "echo '🛑 Stopping containers...'; make docker-down" INT TERM
-
-docker compose logs -f
+echo "📜 Container is running. Use 'docker ps -a' to verify."

@@ -1,4 +1,4 @@
-// internal/handlers/posts.go
+//internal/handlers/posts.go
 package handlers
 
 import (
@@ -26,9 +26,9 @@ const (
 	ReactionTargetComment = "comment"
 )
 
-// ============================================================
-// HandlePosts: /api/v1/posts
-// ============================================================
+/*----------------------------
+  HandlePosts: /api/v1/posts
+----------------------------*/
 
 func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -41,9 +41,9 @@ func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ============================================================
-// LIST POSTS
-// ============================================================
+/*------------
+  LIST POSTS
+------------*/
 
 func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
@@ -126,9 +126,9 @@ func (p *PostsHandler) ListPublicPosts(w http.ResponseWriter, r *http.Request) {
 	p.listPosts(w, r)
 }
 
-// ============================================================
-// CREATE POST
-// ============================================================
+/*-------------
+  CREATE POST
+-------------*/
 
 func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)
@@ -151,6 +151,22 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(req.Title) == "" {
 		WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
 		return
+	}
+
+	if strings.TrimSpace(req.Body) == "" {
+		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
+		return
+	}
+
+	for _, cid := range req.CategoryIDs {
+		if cid <= 0 {
+			WriteError(w, r, NewError(
+				"BAD_REQUEST",
+				"at least one valid category is required",
+				http.StatusBadRequest,
+			))
+			return
+		}
 	}
 
 	status := "published"
@@ -207,9 +223,9 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 	WriteCreated(w, post)
 }
 
-// ============================================================
-// HandlePost: /api/v1/posts/{id}
-// ============================================================
+/*--------------------------------
+  HandlePost: /api/v1/posts/{id}
+--------------------------------*/
 
 func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 	postID, action, ok := resolvePostRoute(w, r)
@@ -267,10 +283,9 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ============================================================
-// POST ACTIONS
-// ============================================================
-
+/*-------------
+ POST ACTIONS
+-------------*/
 func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID int64) {
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
@@ -286,7 +301,12 @@ func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID in
 }
 
 func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID int64) {
-	if _, ok := requireUserID(w, r); !ok {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	if !p.requirePostAuthor(w, r, postID, userID) {
 		return
 	}
 
@@ -298,6 +318,16 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+		return
+	}
+
+	if req.Title != nil && strings.TrimSpace(*req.Title) == "" {
+		WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
+		return
+	}
+
+	if req.Body != nil && strings.TrimSpace(*req.Body) == "" {
+		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 		return
 	}
 
@@ -326,7 +356,7 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 			status,
 		); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				notFound(w, r)
+				WriteError(w, r, NewError("NOT_FOUND", "error updating post", http.StatusNotFound))
 				return
 			}
 			log.Printf("failed to update post status: %v", err)
@@ -346,6 +376,10 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 			postID,
 			repository.UpdatePostInput{Title: req.Title, Body: req.Body},
 		); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				WriteError(w, r, NewError("NOT_FOUND", "error updating post", http.StatusNotFound))
+				return
+			}
 			log.Printf("failed to update post: %v", err)
 			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
 			return
@@ -355,7 +389,12 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 }
 
 func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID int64) {
-	if _, ok := requireUserID(w, r); !ok {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	if !p.requirePostAuthor(w, r, postID, userID) {
 		return
 	}
 
@@ -372,9 +411,9 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	WriteNoContent(w)
 }
 
-// ============================================================
-// POST NAVIGATION (CATEGORY-AWARE)
-// ============================================================
+/*----------------------------------
+  POST NAVIGATION (CATEGORY AWARE)
+----------------------------------*/
 
 // GET /api/v1/posts/{id}/nav?category_id=3
 func (p *PostsHandler) getPostNavigation(
@@ -425,9 +464,9 @@ func (p *PostsHandler) getPostNavigation(
 	}, nil)
 }
 
-// ============================================================
-// REACTIONS
-// ============================================================
+/*------------
+  REACTIONS
+------------*/
 
 func (p *PostsHandler) handleReaction(
 	w http.ResponseWriter,
@@ -449,6 +488,10 @@ func (p *PostsHandler) handleReaction(
 		targetReaction,
 		targetType,
 	)
+	if errors.Is(err, repository.ErrNotFound) {
+		WriteError(w, r, NewError("NOT_FOUND", "target not found", http.StatusNotFound))
+
+	}
 	if err != nil {
 		log.Printf("ToggleReaction failed: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error toggling reaction", http.StatusInternalServerError))
@@ -486,9 +529,9 @@ func (p *PostsHandler) handleReaction(
 	}, nil)
 }
 
-// ============================================================
-// COMMENTS
-// ============================================================
+/*----------
+  COMMENTS
+----------*/
 
 func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, postID int64) {
 	page, perPage := sanitizePagination(r)
@@ -598,9 +641,9 @@ func (p *PostsHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	p.createComment(w, r, postID)
 }
 
-// ============================================================
-// MY POSTS
-// ============================================================
+/*----------
+  MY POSTS
+----------*/
 
 func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)

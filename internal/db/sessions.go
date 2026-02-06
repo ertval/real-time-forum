@@ -1,5 +1,4 @@
 // internal/db/sessions.go
-
 package db
 
 import (
@@ -33,9 +32,9 @@ type SessionData struct {
 	SessionVersion int
 }
 
-// ============================================================
-// PUBLIC API
-// ============================================================
+/*------------
+  PUBLIC API
+------------*/
 
 func CreateSession(
 	ctx context.Context,
@@ -126,9 +125,9 @@ func InvalidateSessionByToken(
 	return nil
 }
 
-// ============================================================
-// HELPERS (TX SAFE)
-// ============================================================
+/*-------------------
+  HELPERS (TX SAFE)
+-------------------*/
 
 func invalidateUserSessionsTx(
 	ctx context.Context,

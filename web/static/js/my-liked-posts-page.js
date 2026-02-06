@@ -1,3 +1,4 @@
+//web/static/js/my-liked-posts-page.js
 import { API_BASE } from "./utils.js";
 
 async function loadHeader() {

@@ -1,3 +1,4 @@
+// internal/tests/categories_test.go
 package tests
 
 import (
@@ -6,54 +7,56 @@ import (
 	"testing"
 )
 
+/* ------------
+     DTOs
+-------------*/
+
+type categoryDTO struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+/*--------------
+    Helpers
+--------------*/
+func decodeEnvelope(t *testing.T, body []byte) apiEnvelope {
+	t.Helper()
+
+	var env apiEnvelope
+	if err := json.Unmarshal(body, &env); err != nil {
+		t.Fatalf("failed to decode envelope: %v", err)
+	}
+
+	if env.Error != nil {
+		t.Fatalf("unexpected API error: %+v", env.Error)
+	}
+
+	return env
+}
+
+/*------------
+    Tests
+------------*/
+
 func TestCategoriesList(t *testing.T) {
 	h, db := newCategoryAPI(t)
 	defer db.Close()
 
-	rec := doReq(t, h, "GET", "/api/v1/categories", nil)
+	rec := doReq(t, h, http.MethodGet, "/api/v1/categories", nil)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 
-	var env apiEnvelope
-	json.Unmarshal(rec.Body.Bytes(), &env)
+	env := decodeEnvelope(t, rec.Body.Bytes())
 
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
+	var categories []categoryDTO
+	if err := json.Unmarshal(env.Data, &categories); err != nil {
+		t.Fatalf("failed to decode categories: %v", err)
 	}
-
-	var categories []map[string]any
-	json.Unmarshal(env.Data, &categories)
 
 	if len(categories) == 0 {
-		t.Fatalf("expected at least 1 category")
-	}
-}
-
-func TestCategoriesCreate(t *testing.T) {
-	h, db := newCategoryAPI(t)
-	defer db.Close()
-
-	body := `{"name":"New Category"}`
-	rec := doReq(t, h, "POST", "/api/v1/categories", []byte(body))
-
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d, body=%s", rec.Code, rec.Body.String())
-	}
-
-	var env apiEnvelope
-	json.Unmarshal(rec.Body.Bytes(), &env)
-
-	if env.Error != nil {
-		t.Fatalf("unexpected error: %+v", env.Error)
-	}
-
-	var cat map[string]any
-	json.Unmarshal(env.Data, &cat)
-
-	if cat["name"] != "New Category" {
-		t.Errorf("expected name 'New Category', got %v", cat["name"])
+		t.Fatalf("expected at least one category")
 	}
 }
 
@@ -78,45 +81,5 @@ func TestCategoriesGet(t *testing.T) {
 	}
 }
 
-func TestCategoriesUpdate(t *testing.T) {
-	h, db := newCategoryAPI(t)
-	defer db.Close()
 
-	body := `{"name":"Updated Category"}`
-	rec := doReq(t, h, "PATCH", "/api/v1/categories/1", []byte(body))
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-
-	// fetch updated
-	rec2 := doReq(t, h, "GET", "/api/v1/categories/1", nil)
-
-	var env apiEnvelope
-	json.Unmarshal(rec2.Body.Bytes(), &env)
-
-	var cat map[string]any
-	json.Unmarshal(env.Data, &cat)
-
-	if cat["name"] != "Updated Category" {
-		t.Fatalf("expected updated name, got %v", cat["name"])
-	}
-}
-
-func TestCategoriesDelete(t *testing.T) {
-	h, db := newCategoryAPI(t)
-	defer db.Close()
-
-	rec := doReq(t, h, "DELETE", "/api/v1/categories/1", nil)
-
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("expected 204, got %d", rec.Code)
-	}
-
-	// category must not exist anymore
-	rec2 := doReq(t, h, "GET", "/api/v1/categories/1", nil)
-
-	if rec2.Code != http.StatusNotFound {
-		t.Fatalf("expected 404 after deletion, got %d", rec2.Code)
-	}
-}

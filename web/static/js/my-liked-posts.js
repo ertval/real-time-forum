@@ -1,5 +1,7 @@
+//web/static/js/my-liked-posts.js
 import { API_BASE, getPaginationFromURL } from "./utils.js";
-import { renderPostCard, loadPostCommentsPreview, initReactions } from "./posts.js";
+import { renderPostCard, loadPostCommentsPreview } from "./posts.js";
+import { initReactions } from "./reactions.js";
 
 function start() {
     boot().catch((err) => {
@@ -59,9 +61,9 @@ async function boot() {
     initReactions();
 }
 
-/* =========================
-   API
-========================= */
+/*-----
+  API
+-----*/
 
 async function fetchLikedPosts({ page, perPage }) {
     const url = new URL(`${API_BASE}/posts/liked`, window.location.origin);
@@ -90,9 +92,9 @@ async function fetchLikedPosts({ page, perPage }) {
     return { posts, meta };
 }
 
-/* =========================
-   UX helpers
-========================= */
+/*------------
+  UX HELPERS
+------------*/
 
 function showMessage(text) {
     const empty = document.getElementById("posts-empty");
@@ -104,9 +106,9 @@ function showMessage(text) {
     }
 }
 
-/* =========================
-   Concurrency helper
-========================= */
+/*-------------------
+  CONCURENCY HELPER
+-------------------*/
 
 async function runWithConcurrencyLimit(tasks, limit = 4) {
     const queue = tasks.slice();

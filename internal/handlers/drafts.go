@@ -1,5 +1,4 @@
-// internal/handlers/drafts.go
-
+//internal/handlers/drafts.go
 package handlers
 
 import (

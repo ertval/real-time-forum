@@ -1,0 +1,12 @@
+// Docker
+
+docker image build -t forum .
+docker images
+
+docker container run -d \
+  -p 8080:8080 \
+  -v forum-data:/data \
+  --name forum_app \
+  forum
+
+docker ps -a

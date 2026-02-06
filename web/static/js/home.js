@@ -3,16 +3,17 @@
 import {
   renderPostCard,
   loadPostCommentsPreview,
-  initReactions,
 } from "./posts.js";
+
+import { initReactions } from "./reactions.js";
 
 import { API_BASE } from "./utils.js";
 import { initCategoryFilter } from "./category.js";
 import { createPagination } from "./pagination.js";
 
-/* =========================
-   URL STATE
-========================= */
+/*-----------
+  URL STATE
+-----------*/
 
 function getQueryState() {
   const params = new URLSearchParams(window.location.search);
@@ -34,9 +35,9 @@ function setQueryState({ page, perPage, categoryId }) {
   history.pushState(null, "", `?${params.toString()}`);
 }
 
-/* =========================
-   POSTS
-========================= */
+/*--------
+  POSTS
+--------*/
 
 async function loadPosts({ page, perPage, categoryId }) {
   const url = new URL(`${API_BASE}/posts`, window.location.origin);
@@ -94,9 +95,9 @@ async function renderPosts(state, pager, paginationEl) {
 }
 
 
-/* =========================
-   INIT
-========================= */
+/*------
+  INIT
+------*/
 
 document.addEventListener("DOMContentLoaded", async () => {
   const paginationEl = document.getElementById("pagination");

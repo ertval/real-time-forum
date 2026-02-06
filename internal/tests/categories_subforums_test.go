@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// ------------------------------------------------------------
-// LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
-// ------------------------------------------------------------
+/* ----------------------------------------------
+   LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
+-----------------------------------------------*/
 
 func TestAPICategoriesWithPosts(t *testing.T) {
 	h, db := newTestAPI(t)
@@ -16,8 +16,8 @@ func TestAPICategoriesWithPosts(t *testing.T) {
 
 	// Seed extra category
 	_, err := db.Exec(`
-		INSERT INTO categories (id, name, slug, created_at)
-		VALUES (2, 'DevOps', 'devops', datetime('now'));
+		INSERT INTO categories (id, name, created_at)
+		VALUES (2, 'DevOps', datetime('now'));
 	`)
 	if err != nil {
 		t.Fatalf("seed category: %v", err)

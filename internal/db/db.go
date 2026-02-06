@@ -1,3 +1,4 @@
+// internal/db/db.go
 package db
 
 import (
@@ -8,19 +9,15 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// ============================================================
-// EMBEDDED FILES
-// ============================================================
+/*---------------
+  EMBEDED FILES
+---------------*/
 
 //go:embed forum_schema.sql
 var schemaFS embed.FS
 
 //go:embed seeds/categories.sql
 var categoriesSeed string
-
-// ============================================================
-// InitDB
-// ============================================================
 
 // InitDB opens/creates the SQLite database,
 // applies PRAGMA options via DSN,
@@ -45,9 +42,9 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		return nil, WrapError("ping database", err)
 	}
 
-	// ------------------------------------------------------------
-	// Load embedded schema
-	// ------------------------------------------------------------
+	/*----------------------
+	  LOAD EMBEDED SCHEMA
+	----------------------*/
 
 	schema, err := schemaFS.ReadFile("forum_schema.sql")
 	if err != nil {
@@ -60,9 +57,9 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		return nil, WrapError("apply schema", MapSQLError(err))
 	}
 
-	// ------------------------------------------------------------
-	// Seed categories (idempotent)
-	// ------------------------------------------------------------
+	/*-----------------
+	  SEED CATEGORIES
+	-----------------*/
 
 	if categoriesSeed != "" {
 		if _, err := db.Exec(categoriesSeed); err != nil {

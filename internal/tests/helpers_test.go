@@ -6,17 +6,19 @@ import (
 	"database/sql"
 	"encoding/json"
 	db "forum/internal/db"
+	"forum/internal/handlers"
 	"forum/internal/router"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
-// ------------------------------------------------------------
-// setupTestDB — Creates full schema + seeds user/category/post
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+ setupTestDB — Creates full schema + seeds user/category/post
+-------------------------------------------------------------*/
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -38,9 +40,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to exec schema: %v", err)
 	}
 
-	// -------------------------
-	// SEED USER (correct bcrypt)
-	// -------------------------
+	/* -------------------------
+	  SEED USER (correct bcrypt)
+	---------------------------*/
 	_, err = db.CreateUser(context.Background(), dbConn, db.CreateUserRequest{
 		Username: "testuser",
 		Email:    "test@example.com",
@@ -50,15 +52,14 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to seed test user: %v", err)
 	}
 
-	// -------------------------
-	// SEED CATEGORY
-	// -------------------------
+	/* -----------------
+	   SEED CATEGORY
+	------------------*/
 	_, err = dbConn.Exec(`
-		INSERT INTO categories (id, name, slug, created_at)
+		INSERT INTO categories (id, name, created_at)
 		VALUES (
 			1,
 			'Test Category',
-			'test-category',
 			strftime('%Y-%m-%dT%H:%M:%SZ','now')
 		)
 	`)
@@ -66,9 +67,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to seed category: %v", err)
 	}
 
-	// -------------------------
-	// SEED POST
-	// -------------------------
+	/* --------------
+	    SEED POST
+	---------------*/
 	_, err = dbConn.Exec(`
 		INSERT INTO posts (id, author_id, title, body, status, created_at, updated_at)
 		VALUES (
@@ -119,10 +120,13 @@ type apiEnvelope struct {
 	Error *apiError       `json:"error,omitempty"`
 }
 
+/* ---------------------------------------------
+   setupTestDBForCategories — schema + seed
+----------------------------------------------*/
 func setupTestDBForCategories(t *testing.T) *sql.DB {
 	t.Helper()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	dbConn, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
@@ -133,31 +137,62 @@ func setupTestDBForCategories(t *testing.T) *sql.DB {
 		t.Fatalf("failed to read schema: %v", err)
 	}
 
-	if _, err := db.Exec(string(schemaBytes)); err != nil {
+	if _, err := dbConn.Exec(string(schemaBytes)); err != nil {
 		t.Fatalf("failed to exec schema: %v", err)
 	}
 
-	// Seed one category
-	_, err = db.Exec(`
-		INSERT INTO categories (id, name, slug, created_at)
-		VALUES (1, 'Seed Category', 'seed-category', datetime('now'))
+	_, err = dbConn.Exec(`
+		INSERT INTO categories (id, name, created_at)
+		VALUES (1, 'Seed Category', datetime('now'))
 	`)
 	if err != nil {
 		t.Fatalf("failed to seed category: %v", err)
 	}
 
-	return db
+	return dbConn
 }
 
+/* ----------------------------------------------------
+   newCategoryAPI — CLEAN handler wiring (NO router)
+-----------------------------------------------------*/
 func newCategoryAPI(t *testing.T) (http.Handler, *sql.DB) {
+	t.Helper()
+
 	db := setupTestDBForCategories(t)
-	h := router.NewRouter(db)
-	return h, db
+
+	categories := handlers.NewCategoriesHandler(db)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/categories", categories.HandleCategories)
+	mux.HandleFunc("/api/v1/categories/", categories.HandleCategory)
+
+	return mux, db
 }
 
-func doReq(t *testing.T, h http.Handler, method, path string, body []byte) *httptest.ResponseRecorder {
+/* -----------------
+   doReq helper
+------------------*/
+func doReq(
+	t *testing.T,
+	h http.Handler,
+	method, path string,
+	body []byte,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
 	req := httptest.NewRequest(method, path, bytes.NewReader(body))
+	req = req.WithContext(context.Background())
+
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
+
 	return rec
+}
+
+func extractToken(t *testing.T, rec *httptest.ResponseRecorder) string {
+	setCookie := rec.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatal("expected Set-Cookie header")
+	}
+	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
 }

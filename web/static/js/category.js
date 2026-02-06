@@ -1,8 +1,9 @@
+//web/static/js/category.js
 import { API_BASE } from "./utils.js";
 
-/* =========================
-   URL HELPERS
-========================= */
+/*-------------
+  URL HELPERS
+-------------*/
 
 function getCategoryFromURL() {
   const params = new URLSearchParams(window.location.search);
@@ -21,9 +22,9 @@ function setCategoryToURL(categoryName) {
   history.pushState({}, "", url);
 }
 
-/* =========================
-   API
-========================= */
+/*------
+  API
+------*/
 
 async function loadCategories() {
   const res = await fetch(`${API_BASE}/categories`, {
@@ -37,9 +38,9 @@ async function loadCategories() {
   return Array.isArray(payload) ? payload : payload.data ?? [];
 }
 
-/* =========================
-   INIT CATEGORY FILTER
-========================= */
+/*----------------------
+  INIT CATEGORY FILTER
+----------------------*/
 
 export async function initCategoryFilter(onChange) {
   const select = document.getElementById("categoryFilter");

@@ -1,3 +1,4 @@
+//web/static/js/logout.js
 (() => {
     const btn = document.querySelector('[data-logout-button]');
 

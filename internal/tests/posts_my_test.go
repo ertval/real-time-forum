@@ -34,8 +34,9 @@ func TestAPIMyPostsList(t *testing.T) {
 	// USER A creates 2 posts
 	createPost := func(token, title string) {
 		payload := map[string]any{
-			"title": title,
-			"body":  "body",
+			"title":        title,
+			"body":         "body",
+			"category_ids": []int64{1},
 		}
 		b, _ := json.Marshal(payload)
 
@@ -85,18 +86,6 @@ func TestAPIMyPostsList(t *testing.T) {
 			t.Fatalf("found post from another user")
 		}
 	}
-}
-
-// --------------------------------------------------
-// Helpers
-// --------------------------------------------------
-
-func extractToken(t *testing.T, rec *httptest.ResponseRecorder) string {
-	setCookie := rec.Header().Get("Set-Cookie")
-	if setCookie == "" {
-		t.Fatal("expected Set-Cookie header")
-	}
-	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
 }
 
 func TestGuestCannotListMyPosts(t *testing.T) {

@@ -1,4 +1,4 @@
-// internal/handlers/users.go
+//internal/handlers/users.go
 package handlers
 
 import (
@@ -19,9 +19,9 @@ func NewUsersHandler(database *sql.DB) *UsersHandler {
 	return &UsersHandler{conn: database}
 }
 
-// ============================================================
-// Internal helpers
-// ============================================================
+/*------------------
+  INTERNAL HELPERS
+------------------*/
 
 func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := parseID(r.URL.Path, "/api/v1/users/")
@@ -36,9 +36,10 @@ func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return id, true
 }
 
-// ============================================================
-// HandleUser: /api/v1/users/{id}
-// ============================================================
+
+/*--------------------------------
+  HandleUser: /api/v1/users/{id}
+--------------------------------*/
 
 func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -54,17 +55,17 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
 		log.Printf("failed to load user: %v", err)
-		writeHandlerError(w, r, err, "user not found")
+		WriteError(w, r, NewError("NOT_FOUND", "user not found", http.StatusNotFound))
 		return
 	}
 
 	WriteOK(w, user, nil)
 }
 
-// ============================================================
-// REGISTER
-// POST /api/v1/users/register
-// ============================================================
+/*------------------------------
+  REGISTER
+  POST /api/v1/users/register
+------------------------------*/
 
 func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -99,10 +100,10 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ============================================================
-// LOGIN
-// POST /api/v1/users/login
-// ============================================================
+/*---------------------------
+  LOGIN
+  POST /api/v1/users/login
+---------------------------*/
 
 func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -157,10 +158,10 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 }
 
-// ============================================================
-// ME
-// GET /api/v1/users/me
-// ============================================================
+/*-----------------------
+  ME
+  GET /api/v1/users/me
+-----------------------*/
 
 func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, err := middleware.GetUserID(r.Context())
@@ -183,10 +184,10 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, user, nil)
 }
 
-// ============================================================
-// LOGOUT
-// POST /api/v1/users/logout
-// ============================================================
+/*---------------------------
+  LOGOUT
+  POST /api/v1/users/logout
+---------------------------*/
 
 func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

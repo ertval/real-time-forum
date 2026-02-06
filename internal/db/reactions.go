@@ -34,6 +34,26 @@ func ToggleReaction(
 	}
 	defer tx.Rollback()
 
+	// Check target exists
+	switch targetType {
+	case "post":
+		if err := tx.QueryRowContext(ctx, `SELECT 1 FROM posts WHERE id = ?`, objectID).Scan(new(int)); err != nil {
+			if err == sql.ErrNoRows {
+				return 0, ErrNotFound
+			}
+			return 0, fmt.Errorf("check post exists: %w", err)
+		}
+	case "comment":
+		if err := tx.QueryRowContext(ctx, `SELECT 1 FROM comments WHERE id = ?`, objectID).Scan(new(int)); err != nil {
+			if err == sql.ErrNoRows {
+				return 0, ErrNotFound
+			}
+			return 0, fmt.Errorf("check comment exists: %w", err)
+		}
+	default:
+		return 0, fmt.Errorf("invalid target type: %s", targetType)
+	}
+
 	current, err := getReactionValueTx(ctx, tx, userID, objectID, targetType)
 	if err != nil {
 		return 0, err
@@ -59,9 +79,9 @@ func ToggleReaction(
 	return newValue, nil
 }
 
-// ============================================================
-// HELPERS (TX SAFE)
-// ============================================================
+/*-------------------
+  HELPERS (TX SAFE)
+-------------------*/
 
 func getReactionValueTx(
 	ctx context.Context,

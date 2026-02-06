@@ -9,9 +9,9 @@ import {
 
 import { Auth } from "./auth.js";
 
-/* ==================================================
-   POST CARD
-================================================== */
+/*-----------
+  POST CARD
+-----------*/
 
 export function renderPostCard(
   post,
@@ -55,23 +55,18 @@ export function renderPostCard(
     });
   }
 
-  // Prevent bubbling
   article
     .querySelectorAll(".post-actions, .post-comments, button, textarea, form")
-    .forEach(el => el.addEventListener("click", e => e.stopPropagation()));
+    .forEach(el =>
+      el.addEventListener("click", e => e.stopPropagation())
+    );
 
   return article;
 }
 
-/* ==================================================
-   COMMENTS
-================================================== */
-
-function extractArray(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.data)) return payload.data;
-  return [];
-}
+/*----------
+  COMMENTS
+----------*/
 
 export async function loadPostCommentsPreview(postId, article) {
   const container = article.querySelector("[data-comments]");
@@ -101,6 +96,7 @@ export async function loadPostCommentsPreview(postId, article) {
     list.scrollTop = list.scrollHeight;
 
     maybeRenderCommentForm(container, postId);
+
   } catch (err) {
     console.error("Failed to load comments:", err);
   }
@@ -129,18 +125,14 @@ function renderComment(comment) {
   return div;
 }
 
-/* ==================================================
-   COMMENT FORM (AUTH-BASED)
-================================================== */
+/*--------------
+  COMMENT FORM
+--------------*/
 
 function maybeRenderCommentForm(container, postId) {
-  // Guest → do nothing (EXPECTED)
-  if (!Auth.isAuthenticated) return;
-
   const form = document.createElement("form");
   form.className = "comment-form";
-
-  form.setAttribute("novalidate", "novalidate");
+  form.noValidate = true;
 
   form.innerHTML = `
     <textarea placeholder="Write a comment..." rows="2"></textarea>
@@ -148,37 +140,27 @@ function maybeRenderCommentForm(container, postId) {
     <button class="btn btn-primary" type="submit">Comment</button>
   `;
 
-  ["click", "mousedown", "keydown", "submit"].forEach(evt => {
+  ["click", "mousedown", "keydown", "submit"].forEach(evt =>
     form.addEventListener(evt, e => {
       e.stopPropagation();
       if (evt === "submit") e.preventDefault();
-    });
-  });
+    })
+  );
 
   form.addEventListener("submit", async () => {
+    const allowed = await Auth.requireOrPrompt();
+    if (!allowed) return;
+
     const textarea = form.querySelector("textarea");
-
-    /* clears possible previous error as user types */
-    textarea.addEventListener("input", () => {
-      const errorEl = form.querySelector(".comment-error");
-      if (!errorEl) return;
-
-      if (textarea.value.trim()) {
-        errorEl.textContent = "";
-        errorEl.hidden = true;
-      }
-    });
-
     const errorEl = form.querySelector(".comment-error");
     const body = textarea.value.trim();
+
     if (!body) {
       errorEl.textContent = "Cannot submit an empty comment";
       errorEl.hidden = false;
-      textarea.focus();
       return;
     }
 
-    errorEl.textContent = "";
     errorEl.hidden = true;
 
     const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
@@ -191,29 +173,24 @@ function maybeRenderCommentForm(container, postId) {
       body: JSON.stringify({ body }),
     });
 
-    if (!res.ok) {
-      alert("You must be logged in to comment.");
-      return;
-    }
+    if (!res.ok) return;
 
     const payload = await res.json();
     const newComment = payload.data ?? payload;
 
     textarea.value = "";
 
-    const commentsList = container.querySelector(".comments-scroll");
-    if (!commentsList) return;
-
-    commentsList.appendChild(renderComment(newComment));
-    commentsList.scrollTop = commentsList.scrollHeight;
+    const list = container.querySelector(".comments-scroll");
+    list?.appendChild(renderComment(newComment));
+    list.scrollTop = list.scrollHeight;
   });
 
   container.appendChild(form);
 }
 
-/* ==================================================
-   REACTIONS
-================================================== */
+/*--------------------
+  REACTIONS TEMPLATE
+--------------------*/
 
 export function reactionTemplate(item, isComment = false) {
   const idAttr = isComment
@@ -232,63 +209,18 @@ export function reactionTemplate(item, isComment = false) {
   `;
 }
 
-export function initReactions() {
-  document.addEventListener(
-    "click",
-    async e => {
-      const btn = e.target.closest("[data-reaction]");
-      if (!btn) return;
+/*---------
+  HELPERS
+---------*/
 
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (!Auth.isAuthenticated) {
-        alert("You must be logged in to react.");
-        return;
-      }
-
-      const type = btn.dataset.reaction;
-      const postId = btn.dataset.postId;
-      const commentId = btn.dataset.commentId;
-
-      const url = postId
-        ? `${API_BASE}/posts/${postId}/${type}`
-        : `${API_BASE}/comments/${commentId}/${type}`;
-
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-
-        if (!res.ok) return;
-
-        const { data } = await res.json();
-
-        const container = btn.closest(
-          postId
-            ? `article[data-post-id="${postId}"]`
-            : `div[data-comment-id="${commentId}"]`
-        );
-
-        if (!container) return;
-
-        container.querySelector("[data-like-count]").textContent =
-          data.likes_count;
-        container.querySelector("[data-dislike-count]").textContent =
-          data.dislikes_count;
-      } catch (err) {
-        console.error("Reaction failed:", err);
-      }
-    },
-    true
-  );
+function extractArray(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload?.data && Array.isArray(payload.data)) return payload.data;
+  if (payload?.data?.data && Array.isArray(payload.data.data)) {
+    return payload.data.data;
+  }
+  return [];
 }
-
-/* ==================================================
-   HELPERS
-================================================== */
 
 function statusToggleTemplate(post) {
   if (!post.status) return "";
@@ -303,12 +235,9 @@ function statusToggleTemplate(post) {
 
 function renderCategories(categories = []) {
   if (!Array.isArray(categories) || categories.length === 0) return "";
-
   return `
     <div class="post-categories">
-      ${categories
-        .map(c => `<span class="category-badge">${c.name}</span>`)
-        .join("")}
+      ${categories.map(c => `<span class="category-badge">${c.name}</span>`).join("")}
     </div>
   `;
 }

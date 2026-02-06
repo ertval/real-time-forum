@@ -1,3 +1,4 @@
+//Internal/handlers/helpers.go
 package handlers
 
 import (
@@ -8,9 +9,9 @@ import (
 	"strings"
 )
 
-// ------------------------------------------------------------
-// REQUEST HELPERS
-// ------------------------------------------------------------
+/*-----------------
+  REQUEST HELPERS
+-----------------*/
 
 func sanitizePagination(r *http.Request) (page int, perPage int) {
 	page = atoiOrDefault(r.URL.Query().Get("page"), 1)
@@ -49,9 +50,9 @@ func buildPaginationInfo(page, perPage, total int, extra map[string]any) map[str
 	return paginationInfo
 }
 
-// ------------------------------------------------------------
-// GENERIC HELPERS
-// ------------------------------------------------------------
+/*-----------------
+  GENERIC HELPERS
+-----------------*/
 
 func atoiOrDefault(str string, def int) int {
 	if value, err := strconv.Atoi(str); err == nil {
@@ -65,9 +66,9 @@ func parseID(path, prefix string) (int64, error) {
 	return strconv.ParseInt(raw, 10, 64)
 }
 
-// ------------------------------------------------------------
-// AUTH HELPERS
-// ------------------------------------------------------------
+/*--------------
+  AUTH HELPERS
+--------------*/
 
 func requireUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	userID, err := middleware.GetUserID(r.Context())
@@ -78,9 +79,9 @@ func requireUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return userID, true
 }
 
-// ------------------------------------------------------------
-// RESPONSE HELPERS
-// ------------------------------------------------------------
+/*------------------
+  RESPONSE HELPERS
+------------------*/
 
 func MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	WriteError(w, r, NewError("METHOD_NOT_ALLOWED", "method not allowed", http.StatusMethodNotAllowed))
@@ -90,9 +91,9 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 	WriteError(w, r, NewError("NOT_FOUND", "route not found", http.StatusNotFound))
 }
 
-// ------------------------------------------------------------
-// STRING / DB HELPERS
-// ------------------------------------------------------------
+/*---------------------
+  STRING / DB HELPERS
+---------------------*/
 
 func slugify(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))

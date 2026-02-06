@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-/* ============================================================
-   MODEL
-   ============================================================ */
+/*-------
+  MODEL
+-------*/
 
 type Post struct {
 	ID         int64          `json:"id"`
@@ -32,9 +32,9 @@ type PostCategory struct {
 	Name string `json:"name"`
 }
 
-/* ============================================================
-   LIST POSTS
-   ============================================================ */
+/*------------
+  LIST POSTS
+------------*/
 
 type ListPostsParams struct {
 	Page    int
@@ -84,9 +84,9 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 	return ListPostsResult{Posts: posts, Total: total}, nil
 }
 
-/* ============================================================
-   GET POST
-   ============================================================ */
+/*----------
+  GET POST
+----------*/
 
 func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -119,7 +119,7 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 		return Post{}, err
 	}
 
-	// 👉 categories (ID + name)
+	// categories (ID + name)
 	categories, err := getCategoriesByPostID(ctx, db, id)
 	if err != nil {
 		return Post{}, err
@@ -136,9 +136,21 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	return post, nil
 }
 
-/* ============================================================
-   CREATE POST (TRANSACTIONAL)
-   ============================================================ */
+func GetPostAuthorID(ctx context.Context, db *sql.DB, postID int64) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	var authorID int64
+	err := db.QueryRowContext(ctx, `SELECT author_id FROM posts WHERE id = ?`, postID).Scan(&authorID)
+	if err != nil {
+		return 0, err // sql.ErrNoRows propagates
+	}
+	return authorID, nil
+}
+
+/*------------------------------
+  CREATE POST (TRANSACTIONAL)
+------------------------------*/
 
 func CreatePostWithCategories(
 	ctx context.Context,
@@ -186,9 +198,9 @@ func CreatePostWithCategories(
 	return postID, nil
 }
 
-/* ============================================================
-   UPDATE POST
-   ============================================================ */
+/*-------------
+  UPDATE POST
+-------------*/
 
 type UpdatePostInput struct {
 	Title *string
@@ -259,9 +271,9 @@ func UpdatePostStatus(ctx context.Context, db *sql.DB, postID, authorID int64, s
 	return nil
 }
 
-/* ============================================================
-   DELETE POST (TRANSACTIONAL)
-  ============================================================ */
+/*-----------------------------
+  DELETE POST (TRANSACTIONAL)
+-----------------------------*/
 
 func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -294,9 +306,9 @@ func DeletePost(ctx context.Context, db *sql.DB, id int64) error {
 	return tx.Commit()
 }
 
-/* ============================================================
-   LIST POSTS BY CATEGORY
-   ============================================================ */
+/*-------------------------
+  LIST POSTS BY CATEGORY
+-------------------------*/
 
 type ListPostsByCategoryParams struct {
 	CategoryID int64
@@ -392,9 +404,9 @@ func ListPostsByCategory(
 	return ListPostsByCategoryResult{Posts: posts, Total: total}, nil
 }
 
-/* ============================================================
-   LIST POSTS BY AUTHOR (MY POSTS)
-   ============================================================ */
+/*---------------------------------
+  LIST POSTS BY AUTHOR (MY POSTS)
+---------------------------------*/
 
 type ListPostsByAuthorParams struct {
 	AuthorID int64
@@ -501,9 +513,9 @@ func ListPostsByAuthor(
 	return ListPostsByAuthorResult{Posts: posts, Total: total}, nil
 }
 
-/* ============================================================
-   LIST POSTS LIKED BY USER
-   ============================================================ */
+/*---------------------------
+  LIST POSTS LIKED BY USER
+---------------------------*/
 
 type ListPostsLikedByUserParams struct {
 	UserID  int64
@@ -622,9 +634,9 @@ func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUs
 	return posts, nil
 }
 
-/* ============================================================
-   HELPERS (TX SAFE)
-   ============================================================ */
+/*--------------------
+  HELPERS (TX SAFE)
+--------------------*/
 
 func validateCategoriesTx(ctx context.Context, tx *sql.Tx, ids []int64) error {
 	if len(ids) == 0 {

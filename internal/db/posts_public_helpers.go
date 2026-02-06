@@ -1,3 +1,4 @@
+//Internal/db/posts_public_helpers.go
 package db
 
 import (
@@ -6,13 +7,11 @@ import (
 	"fmt"
 )
 
-//
-// ------------------------------------------------------------
-// PUBLIC POSTS HELPERS (PRIVATE)
-// ------------------------------------------------------------
+/*--------------------------------
+  PUBLIC POSTS HELPERS (PRIVATE)
+--------------------------------*/
 // These helpers are intentionally unexported.
 // They support ListPublicPosts orchestration only.
-// ------------------------------------------------------------
 
 // Load category names for a single post
 func loadCategoriesForPost(

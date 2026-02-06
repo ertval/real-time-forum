@@ -18,22 +18,22 @@ const (
 func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
 
-	// ---------------------------------------------------------
-	// HANDLERS
-	// ---------------------------------------------------------
+	/*-----------
+	  HANDLERS
+	-----------*/
 	health := handlers.NewHealthHandler()
 	posts := handlers.NewPostsHandler(database)
 	users := handlers.NewUsersHandler(database)
 	categories := handlers.NewCategoriesHandler(database)
 
-	// ---------------------------------------------------------
-	// MIDDLEWARE
-	// ---------------------------------------------------------
+	/*------------
+	  MIDDLEWARE
+	------------*/
 	auth := middleware.Auth(database)
 
-	// ---------------------------------------------------------
-	// HEALTH
-	// ---------------------------------------------------------
+	/*--------
+	  HEALTH
+	--------*/
 	mux.Handle(
 		apiPrefix+"/health",
 		middleware.AllowMethods(
@@ -41,9 +41,9 @@ func NewRouter(database *sql.DB) http.Handler {
 			http.MethodGet,
 		),
 	)
-	// ---------------------------------------------------------
-	// CATEGORIES (PUBLIC)
-	// ---------------------------------------------------------
+	/*---------------------
+	  CATEGORIES (PUBLIC)
+	---------------------*/
 	mux.Handle(
 		apiPrefix+"/categories",
 		middleware.AllowMethods(
@@ -68,9 +68,9 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	// ---------------------------------------------------------
-	// POSTS – PUBLIC COLLECTIONS
-	// ---------------------------------------------------------
+	/*----------------------------
+	  POSTS - PUBLIC COLLECTIONS
+	----------------------------*/
 
 	mux.Handle(
 		apiPrefix+"/posts/public",
@@ -80,9 +80,9 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	// ---------------------------------------------------------
-	// POSTS DRAFT (AUTOSAVE)
-	// ---------------------------------------------------------
+	/*------------------------
+	  POSTS DRAFT (AUTOSAVE)
+	------------------------*/
 	mux.Handle(
 		apiPrefix+"/posts/draft",
 		middleware.AllowMethods(
@@ -93,9 +93,9 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	// ---------------------------------------------------------
-	// POSTS COLLECTION
-	// ---------------------------------------------------------
+	/*-------------------
+	  POSTS COLLECETION
+	-------------------*/
 	// GET  /posts → list
 	// POST /posts → create (auth)
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
@@ -109,9 +109,9 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
-	// ---------------------------------------------------------
-	// POSTS ITEM + COMMENTS + REACTIONS
-	// ---------------------------------------------------------
+	/*------------------------------------
+	  POSTS ITEM + COMMENTS + REACTIONS)
+	------------------------------------*/
 	// Handles:
 	// GET    /posts/{id}
 	// PATCH  /posts/{id}
@@ -131,9 +131,9 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
-	// ---------------------------------------------------------
-	// USER POSTS
-	// ---------------------------------------------------------
+	/*-------------
+	  USER POSTS
+	-------------*/
 	mux.Handle(
 		apiPrefix+"/posts/mine",
 		middleware.AllowMethods(
@@ -150,9 +150,9 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	// ---------------------------------------------------------
-	// USERS
-	// ---------------------------------------------------------
+	/*---------
+	   USERS
+	---------*/
 	mux.Handle(
 		apiPrefix+"/users/register",
 		middleware.AllowMethods(
@@ -193,9 +193,9 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	// ---------------------------------------------------------
-	// COMMENTS ITEM + REACTIONS
-	// ---------------------------------------------------------
+	/*---------------------------
+	  COMMENTS ITEM + REACTIONS
+	---------------------------*/
 	// GET    /comments/{id}
 	// PATCH  /comments/{id}
 	// DELETE /comments/{id}
@@ -212,15 +212,15 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
-	// ---------------------------------------------------------
-	// API FALLBACK (JSON 404)
-	// ---------------------------------------------------------
+	/*-------------------------
+	  API FALLBACK (JSON 404)
+	-------------------------*/
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
 
-	// ---------------------------------------------------------
-	// GLOBAL MIDDLEWARE
-	// ---------------------------------------------------------
+	/*-------------------
+	  GLOBAL MIDDLEWARE
+	-------------------*/
 	return addMiddlewares(mux)
 }
 
