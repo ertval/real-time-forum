@@ -8,6 +8,12 @@
   gap: 40px;
 }
 
+#posts-output {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
 .post-header {
   display: flex;
   justify-content: space-between;
