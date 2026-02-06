@@ -22,6 +22,12 @@ func StartupCheckConfig() startupcheck.Config {
 			"static/js",
 		},
 
+		CriticalCSS: []string{
+			"static/css/base.css",
+			"static/css/home.css",
+			"static/css/posts.css",
+		},
+
 		MinJSFiles:   0,  // disabled
 		ExactJSFiles: 21, // enforced
 	}

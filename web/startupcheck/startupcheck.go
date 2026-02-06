@@ -14,6 +14,7 @@ type Config struct {
 	WebRoot string
 
 	CriticalHTML []string
+	CriticalCSS []string
 
 	JSDirs []string
 
@@ -31,6 +32,8 @@ func ValidateFiles(cfg Config) error {
 	if err != nil {
 		return err
 	}
+	cssCount, err := countCSSFiles(cfg)
+	if err != nil {return err}
 
 	//Enforce JS count rules if configured
 	if cfg.ExactJSFiles > 0 && jsCount != cfg.ExactJSFiles {
@@ -44,6 +47,12 @@ func ValidateFiles(cfg Config) error {
 	if len(cfg.CriticalHTML) > 0 && htmlCount != len(cfg.CriticalHTML) {
 		return fmt.Errorf("startupcheck: expected %d critical HTML files, found %d", len(cfg.CriticalHTML), htmlCount)
 	}
+	//Enforce CSS critical files
+	if len(cfg.CriticalCSS) > 0 && cssCount != len(cfg.CriticalCSS) {
+		return fmt.Errorf("startupcheck: expected %d critical CSS files, found %d",
+			len(cfg.CriticalCSS), cssCount)
+	}
+
 	return nil
 }
 
@@ -100,6 +109,25 @@ func countJSFiles(cfg Config) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("startupcheck: walking %q failed: %w", dirRel, err)
 		}
+	}
+	return count, nil
+}
+
+func countCSSFiles(cfg Config) (int, error) {
+	if cfg.WebRoot == "" {
+		return 0, errors.New("startupcheck: webroot not set")
+	}
+
+	count := 0
+	for _, rel := range cfg.CriticalCSS {
+		p := rel
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(cfg.WebRoot, rel)
+		}
+		if err := mustBeRegularFile(p); err != nil {
+			return count, fmt.Errorf("startupcheck: critical CSS check failed for %q: %w", rel, err)
+		}
+		count++
 	}
 	return count, nil
 }
