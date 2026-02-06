@@ -40,3 +40,7 @@
 .category-checkbox input {
   transform: translateY(1px);
 }
+
+#create-post-form textarea#body {
+    resize: none;
+}

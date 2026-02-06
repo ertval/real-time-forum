@@ -1,3 +1,4 @@
+//cmd/frontend/config/startupcheck.go
 package config
 
 import "forum/web/startupcheck"
