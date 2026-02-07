@@ -80,15 +80,23 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	/*------------------------
-	  POSTS DRAFT (AUTOSAVE)
-	------------------------*/
+	/*-------------
+	  POSTS DRAFT
+	-------------*/
 	mux.Handle(
 		apiPrefix+"/posts/draft",
 		middleware.AllowMethods(
 			auth(http.HandlerFunc(posts.HandleDraft)),
 			http.MethodGet,
 			http.MethodPost,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/posts/draft/",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(posts.HandleDraftByID)),
+			http.MethodPut,
 			http.MethodDelete,
 		),
 	)
