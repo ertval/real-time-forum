@@ -1,33 +1,43 @@
 // web/static/js/login.js
 import { initPasswordToggles } from "./password-toggle.js";
+import { uiNotify } from "./ui-messages.js";
 
 (() => {
   const form = document.querySelector("form");
   const identifierEl = document.getElementById("email");
   const passwordEl = document.getElementById("password");
-  const errorEl = document.getElementById("login-error");
 
-  if (!form || !identifierEl || !passwordEl || !errorEl) return;
+  if (!form || !identifierEl || !passwordEl) return;
 
   initPasswordToggles(document);
 
   const submitBtn = form.querySelector('button[type="submit"]');
   const LOGIN_API = form.getAttribute("action");
 
-  function showError(msg) {
-    errorEl.textContent = msg || "";
-    errorEl.style.display = msg ? "block" : "none";
+  function notify(message, type = "danger") {
+    // If inside iframe → delegate to parent
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "auth:notify",
+          payload: { message, level: type },
+        },
+        "*"
+      );
+    } else {
+      // Normal page
+      uiNotify(message, { type });
+    }
   }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    showError("");
 
     const identifier = identifierEl.value.trim();
     const password = passwordEl.value;
 
     if (!identifier || !password) {
-      showError("Email/username and password are required.");
+      notify("Email/username and password are required.", "warn");
       return;
     }
 
@@ -52,16 +62,19 @@ import { initPasswordToggles } from "./password-toggle.js";
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        showError(
+        notify(
           data?.error?.message ||
             (res.status === 401
               ? "Invalid credentials."
-              : "Login failed.")
+              : "Login failed. Please try again."),
+          "danger"
         );
         return;
       }
 
-      // iframe → notify parent
+      notify("Signed in successfully.", "success");
+
+      // iframe → parent handles success
       if (window.parent && window.parent !== window) {
         window.parent.postMessage("auth:success", "*");
         return;
@@ -69,7 +82,7 @@ import { initPasswordToggles } from "./password-toggle.js";
 
       window.location.assign("/");
     } catch {
-      showError("Network error. Please try again.");
+      notify("Network error. Please try again.", "danger");
     } finally {
       submitBtn.disabled = false;
     }
