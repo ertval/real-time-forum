@@ -1,0 +1,120 @@
+/* /web/static/css/ui-messages.css */
+
+/* Overlay */
+.ui-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.45);
+}
+
+/* Dialog */
+.ui-dialog {
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.25);
+  overflow: hidden;
+  transform: translateY(4px);
+}
+
+.ui-dialog__header {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ui-badge {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.ui-dialog__title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ui-dialog__body {
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(0,0,0,0.85);
+}
+
+.ui-dialog__footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ui-btn {
+  appearance: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-btn--ghost {
+  background: rgba(0,0,0,0.06);
+}
+
+.ui-btn--primary {
+  background: #1f6feb;
+  color: #fff;
+}
+
+/* Types */
+.ui-type-info    { background: #2f81f7; }
+.ui-type-success { background: #2da44e; }
+.ui-type-warn    { background: #bf8700; }
+.ui-type-danger  { background: #cf222e; }
+
+/* Toast area */
+.ui-toasts {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 9998;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 28px));
+}
+
+.ui-toast {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.18);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: stretch;
+}
+
+.ui-toast__bar { width: 10px; }
+.ui-toast__content {
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: rgba(0,0,0,0.85);
+  line-height: 1.35;
+}
+.ui-toast__close {
+  width: 42px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: rgba(0,0,0,0.55);
+}

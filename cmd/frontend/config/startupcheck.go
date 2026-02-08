@@ -1,4 +1,4 @@
-//cmd/frontend/config/startupcheck.go
+// cmd/frontend/config/startupcheck.go
 package config
 
 import "forum/web/startupcheck"
@@ -30,10 +30,9 @@ func StartupCheckConfig() startupcheck.Config {
 		},
 
 		MinJSFiles:   0,  // disabled
-		ExactJSFiles: 21, // enforced
+		ExactJSFiles: 22, // enforced
 	}
 }
-
 
 //HELPER
 func ValidateFrontendStartup() error {
