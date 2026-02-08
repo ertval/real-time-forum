@@ -12,49 +12,112 @@ type Draft struct {
 	Title     string `json:"title"`
 	Body      string `json:"body"`
 	UpdatedAt string `json:"updated_at"`
+	CategoryIDs []int64 `json:"category_ids"`
 }
 
-func DraftUpsert(
+func DraftCreate(
 	ctx context.Context,
 	db *sql.DB,
 	userID int64,
 	title, body string,
+	categoryIDs []int64,
 ) (int64, error) {
-
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	var id int64
-	err := db.QueryRowContext(ctx, `
-		SELECT id FROM posts
-		WHERE author_id = ? AND status = 'draft'
-		LIMIT 1
-	`, userID).Scan(&id)
-
-	if err == nil {
-		_, err = db.ExecContext(ctx, `
-			UPDATE posts
-			SET title = ?, body = ?, updated_at = datetime('now')
-			WHERE id = ?
-		`, title, body, id)
-		return id, err
-	}
-
-	if err != sql.ErrNoRows {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
 		return 0, err
 	}
+	defer tx.Rollback()
 
-	res, err := db.ExecContext(ctx, `
+	//Insert new draft post
+	res, err := tx.ExecContext(ctx, `
 		INSERT INTO posts (author_id, title, body, status)
 		VALUES (?, ?, ?, 'draft')
 	`, userID, title, body)
-
 	if err != nil {
 		return 0, err
 	}
 
-	return res.LastInsertId()
+	draftID, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	//insert category links
+	for _, cid := range categoryIDs {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO post_categories (post_id, category_id)
+			VALUES (?, ?)
+		`, draftID, cid)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return draftID, nil
 }
+
+func DraftUpdate(
+	ctx context.Context,
+	db *sql.DB,
+	userID, draftID int64,
+	title, body string,
+	categoryIDs []int64,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx, `
+		UPDATE posts
+		SET title = ?, body = ?, updated_at = datetime('now')
+		WHERE id = ? AND author_id = ? AND status = 'draft'
+	`, title, body, draftID, userID)
+	if err != nil {
+		return err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		//Not found, not owned by user, or not a draft anymore
+		return sql.ErrNoRows
+	}
+
+	//Replace category links
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM post_categories
+		WHERE post_id = ?
+	`, draftID)
+	if err != nil {
+		return err
+	}
+
+	for _, cid := range categoryIDs {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO post_categories (post_id, category_id)
+			VALUES (?, ?)
+		`, draftID, cid)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 
 func DraftGet(
 	ctx context.Context,
@@ -70,6 +133,7 @@ func DraftGet(
 		SELECT id, title, body, updated_at
 		FROM posts
 		WHERE author_id = ? AND status = 'draft'
+		ORDER BY updated_at DESC
 		LIMIT 1
 	`, userID).Scan(&d.ID, &d.Title, &d.Body, &d.UpdatedAt)
 
@@ -77,22 +141,53 @@ func DraftGet(
 		return nil, err
 	}
 
+	// Fetch category ids
+	rows, err := db.QueryContext(ctx, `
+		SELECT category_id
+		FROM post_categories
+		WHERE post_id = ?
+		ORDER BY category_id
+	`, d.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int64
+		if err := rows.Scan(&cid); err != nil {
+			return nil, err
+		}
+		d.CategoryIDs = append(d.CategoryIDs, cid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return &d, nil
 }
 
-func DraftDeleteByUser(
+func DraftDelete(
 	ctx context.Context,
 	db *sql.DB,
-	userID int64,
+	userID,
+	draftID int64,
 ) error {
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		DELETE FROM posts
-		WHERE author_id = ? AND status = 'draft'
-	`, userID)
+		WHERE id = ? AND author_id = ? AND status = 'draft'
+	`, draftID, userID)
 
-	return err
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

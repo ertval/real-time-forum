@@ -1,9 +1,7 @@
 // web/static/js/create-post.js
 import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
-
-const MANUAL_DRAFT_KEY = "manual_draft_saved";
-
+let currentDraftId = null;
 /*-----------------
   LOAD CATEGORIES
 -----------------*/
@@ -68,24 +66,42 @@ function scheduleDraftSave() {
   const title = document.getElementById("title")?.value.trim();
   if (!title) return;
 
-  localStorage.removeItem(MANUAL_DRAFT_KEY);
-
   clearTimeout(draftTimer);
   draftTimer = setTimeout(saveDraft, 1000);
 }
 
-function saveDraft() {
+async function saveDraft() {
   if (!autosaveEnabled) return;
 
   const title = document.getElementById("title")?.value.trim();
   const body = document.getElementById("body")?.value.trim();
+  const categoryIds = getSelectedCategoryIds();
 
-  if (!title) return;
+  if (!title || !body) return;
 
-  navigator.sendBeacon(
-    `${API_BASE}/posts/draft`,
-    JSON.stringify({ title, body })
-  );
+  // If a draft id already exists, update it
+  if (currentDraftId) {
+    await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, body, category_ids: categoryIds }),
+    });
+    return;
+  }
+
+  // Otherwise create a new draft and store the returned id
+  const res = await fetch(`${API_BASE}/posts/draft`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, body, category_ids: categoryIds }),
+  });
+
+  if (!res.ok) return;
+
+  const payload = await res.json().catch(() => null);
+  currentDraftId = payload?.data?.id ?? null;
 }
 
 /*---------------
@@ -93,7 +109,6 @@ function saveDraft() {
 ---------------*/
 
 async function restoreDraftIfExists() {
-  if (localStorage.getItem(MANUAL_DRAFT_KEY)) return;
 
   try {
     const res = await fetch(`${API_BASE}/posts/draft`, {
@@ -108,8 +123,10 @@ async function restoreDraftIfExists() {
     const ok = confirm("Unsaved draft found. Restore it?");
     if (!ok) return;
 
+    currentDraftId = data.id;
     document.getElementById("title").value = data.title || "";
     document.getElementById("body").value = data.body || "";
+    setSelectedCategoryIds(data.category_ids || []);
   } catch {}
 }
 
@@ -125,6 +142,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const bodyInput = document.getElementById("body");
 
   await renderCategoryCheckboxes();
+  const categoriesHost = document.getElementById("categoryCheckboxes");
+  categoriesHost?.addEventListener("change", scheduleDraftSave);
+
   await restoreDraftIfExists();
 
   titleInput.addEventListener("input", scheduleDraftSave);
@@ -151,14 +171,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (action === "draft") {
-      await fetch(`${API_BASE}/posts/draft`, {
-        method: "POST",
+      const url = currentDraftId
+          ? `${API_BASE}/posts/draft/${currentDraftId}`
+          : `${API_BASE}/posts/draft`;
+
+      const method = currentDraftId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body }),
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title, body, category_ids: categoryIds}),
       });
 
-      localStorage.setItem(MANUAL_DRAFT_KEY, "1");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        alert(payload?.error?.message || "Draft save failed");
+        return;
+      }
+
+      // If it was created, capture the id
+      if (!currentDraftId) {
+        const payload = await res.json().catch(() => null);
+        currentDraftId = payload?.data?.id ?? null;
+      }
+
       alert("Draft saved successfully");
       return;
     }
@@ -190,13 +227,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Failed to publish post");
       return;
     }
-
-    await fetch(`${API_BASE}/posts/draft`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-
-    localStorage.removeItem(MANUAL_DRAFT_KEY);
+    if (currentDraftId) {
+      await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+    }
     window.location.href = "/";
   });
 });
+
+
+function setSelectedCategoryIds(ids = []) {
+  const set = new Set((ids || []).map(Number));
+  document
+      .querySelectorAll("#categoryCheckboxes input[type='checkbox']")
+      .forEach((cb) => {
+        cb.checked = set.has(Number(cb.value));
+      });
+}
