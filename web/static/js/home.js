@@ -10,6 +10,7 @@ import { initReactions } from "./reactions.js";
 import { API_BASE } from "./utils.js";
 import { initCategoryFilter } from "./category.js";
 import { createPagination } from "./pagination.js";
+import { uiNotify } from "./ui-messages.js";
 
 /*-----------
   URL STATE
@@ -80,9 +81,7 @@ async function renderPosts(state, pager, paginationEl) {
     await loadPostCommentsPreview(post.id, card);
   }
 
-  if (state.perPage === 0) {
-    return;
-  }
+  if (state.perPage === 0) return;
 
   if (payload.meta && payload.meta.pagination) {
     const { page, total_pages } = payload.meta.pagination;
@@ -94,12 +93,23 @@ async function renderPosts(state, pager, paginationEl) {
   }
 }
 
-
 /*------
   INIT
 ------*/
 
 document.addEventListener("DOMContentLoaded", async () => {
+  if (sessionStorage.getItem("auth:login-success")) {
+    uiNotify("Signed in successfully.", { type: "success" });
+    sessionStorage.removeItem("auth:login-success");
+  }
+
+  if (sessionStorage.getItem("auth:register-success")) {
+    uiNotify("Account created successfully. You can now sign in.", {
+      type: "success",
+    });
+    sessionStorage.removeItem("auth:register-success");
+  }
+
   const paginationEl = document.getElementById("pagination");
   const prevBtn = document.getElementById("prevPage");
   const nextBtn = document.getElementById("nextPage");

@@ -47,8 +47,8 @@ import { uiNotify } from "./ui-messages.js";
       return;
     }
 
-    if (password.length < 6) {
-      notify("Password must be at least 6 characters.", "warn");
+    if (password.length < 8) {
+      notify("Password must be at least 8 characters long.", "warn");
       return;
     }
 
@@ -92,7 +92,6 @@ import { uiNotify } from "./ui-messages.js";
 
       // If inside iframe, let parent decide what to do next
       if (window.parent && window.parent !== window) {
-        // optional: parent can switch iframe to /login
         window.parent.postMessage(
           { type: "auth:registered" },
           "*"

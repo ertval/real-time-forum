@@ -180,6 +180,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       uiNotify("Title is required.", { type: "warn" });
       return;
     }
+    
+    if (!body) {
+      uiNotify("Post body is required.", { type: "warn" });
+      return;
+    }
 
     if (action === "draft") {
       const url = currentDraftId
