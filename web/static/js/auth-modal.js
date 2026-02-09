@@ -31,7 +31,6 @@ export async function openAuthModal(path = "/login") {
     await loadAuthModal();
   }
 
-  // prepare iframe before showing modal
   frame.style.opacity = "0";
   frame.src = path;
 
@@ -57,9 +56,9 @@ export function closeAuthModal() {
 ========================= */
 
 window.addEventListener("message", (event) => {
-  if (!event || !event.data) return;
+  if (!event?.data) return;
 
-  // Toast notifications from iframe
+  // Toasts from iframe
   if (event.data.type === "auth:notify") {
     const { message, level } = event.data.payload || {};
     if (message) {
@@ -71,12 +70,6 @@ window.addEventListener("message", (event) => {
   // Successful login
   if (event.data === "auth:success") {
     closeAuthModal();
-    window.location.reload();
-    return;
-  }
-
-  // Successful registration → switch to login inside modal
-  if (event.data?.type === "auth:registered") {
-    openAuthModal("/login");
+    window.location.href = "/";
   }
 });

@@ -15,7 +15,6 @@ import { uiNotify } from "./ui-messages.js";
   const LOGIN_API = form.getAttribute("action");
 
   function notify(message, type = "danger") {
-    // If inside iframe → delegate to parent
     if (window.parent && window.parent !== window) {
       window.parent.postMessage(
         {
@@ -25,7 +24,6 @@ import { uiNotify } from "./ui-messages.js";
         "*"
       );
     } else {
-      // Normal page
       uiNotify(message, { type });
     }
   }
@@ -72,15 +70,17 @@ import { uiNotify } from "./ui-messages.js";
         return;
       }
 
-      notify("Signed in successfully.", "success");
+      // ✅ IMPORTANT: store success flag
+      sessionStorage.setItem("auth:login-success", "1");
 
-      // iframe → parent handles success
+      // iframe → parent handles redirect
       if (window.parent && window.parent !== window) {
         window.parent.postMessage("auth:success", "*");
         return;
       }
 
-      window.location.assign("/");
+      // standalone login page
+      window.location.href = "/";
     } catch {
       notify("Network error. Please try again.", "danger");
     } finally {

@@ -98,16 +98,10 @@ async function renderPosts(state, pager, paginationEl) {
 ------*/
 
 document.addEventListener("DOMContentLoaded", async () => {
-  if (sessionStorage.getItem("auth:login-success")) {
-    uiNotify("Signed in successfully.", { type: "success" });
+  const loginSuccess = sessionStorage.getItem("auth:login-success");
+  if (loginSuccess) {
+    uiNotify("Welcome! You are now signed in.", { type: "success" });
     sessionStorage.removeItem("auth:login-success");
-  }
-
-  if (sessionStorage.getItem("auth:register-success")) {
-    uiNotify("Account created successfully. You can now sign in.", {
-      type: "success",
-    });
-    sessionStorage.removeItem("auth:register-success");
   }
 
   const paginationEl = document.getElementById("pagination");

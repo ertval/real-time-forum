@@ -13,13 +13,11 @@ import { uiNotify } from "./ui-messages.js";
 
   if (!usernameEl || !emailEl || !passwordEl || !confirmEl) return;
 
-  // init password eye toggles
   initPasswordToggles(document);
 
   const submitBtn = form.querySelector('button[type="submit"]');
 
   function notify(message, type = "danger") {
-    // If inside iframe → delegate to parent
     if (window.parent && window.parent !== window) {
       window.parent.postMessage(
         {
@@ -29,7 +27,6 @@ import { uiNotify } from "./ui-messages.js";
         "*"
       );
     } else {
-      // Normal page
       uiNotify(message, { type });
     }
   }
@@ -67,11 +64,7 @@ import { uiNotify } from "./ui-messages.js";
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-        }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const data = await res.json().catch(() => null);
@@ -85,21 +78,20 @@ import { uiNotify } from "./ui-messages.js";
         return;
       }
 
-      notify(
-        "Account created successfully. You can now sign in.",
-        "success"
-      );
+      // ✅ SUCCESS
+      notify("Account created successfully.", "success");
 
-      // If inside iframe, let parent decide what to do next
+      // store success for homepage toast
+      sessionStorage.setItem("auth:login-success", "1");
+
+      // iframe → parent handles redirect
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage(
-          { type: "auth:registered" },
-          "*"
-        );
+        window.parent.postMessage("auth:success", "*");
         return;
       }
 
-      window.location.assign("/login");
+      // normal page
+      window.location.assign("/");
     } catch {
       notify("Network error. Please try again.", "danger");
     } finally {
