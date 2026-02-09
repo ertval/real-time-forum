@@ -78,19 +78,13 @@ import { uiNotify } from "./ui-messages.js";
         return;
       }
 
-      // ✅ SUCCESS
-      notify("Account created successfully.", "success");
-
-      // store success for homepage toast
       sessionStorage.setItem("auth:login-success", "1");
 
-      // iframe → parent handles redirect
       if (window.parent && window.parent !== window) {
         window.parent.postMessage("auth:success", "*");
         return;
       }
 
-      // normal page
       window.location.assign("/");
     } catch {
       notify("Network error. Please try again.", "danger");
@@ -98,10 +92,4 @@ import { uiNotify } from "./ui-messages.js";
       submitBtn.disabled = false;
     }
   });
-
-  document
-    .getElementById("guest-login-btn")
-    ?.addEventListener("click", () => {
-      window.location.assign("/");
-    });
 })();

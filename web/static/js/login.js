@@ -6,10 +6,19 @@ import { uiNotify } from "./ui-messages.js";
   const form = document.querySelector("form");
   const identifierEl = document.getElementById("email");
   const passwordEl = document.getElementById("password");
+  const guestBtn = document.getElementById("guest-login-btn");
 
   if (!form || !identifierEl || !passwordEl) return;
 
   initPasswordToggles(document);
+
+  /* =========================
+     HIDE GUEST IN IFRAME
+  ========================= */
+
+  if (window.parent && window.parent !== window && guestBtn) {
+    guestBtn.closest(".guest-login")?.remove();
+  }
 
   const submitBtn = form.querySelector('button[type="submit"]');
   const LOGIN_API = form.getAttribute("action");
@@ -70,16 +79,13 @@ import { uiNotify } from "./ui-messages.js";
         return;
       }
 
-      // ✅ IMPORTANT: store success flag
       sessionStorage.setItem("auth:login-success", "1");
 
-      // iframe → parent handles redirect
       if (window.parent && window.parent !== window) {
         window.parent.postMessage("auth:success", "*");
         return;
       }
 
-      // standalone login page
       window.location.href = "/";
     } catch {
       notify("Network error. Please try again.", "danger");
@@ -88,9 +94,7 @@ import { uiNotify } from "./ui-messages.js";
     }
   });
 
-  document
-    .getElementById("guest-login-btn")
-    ?.addEventListener("click", () => {
-      window.location.assign("/");
-    });
+  guestBtn?.addEventListener("click", () => {
+    window.location.assign("/");
+  });
 })();
