@@ -1,5 +1,6 @@
 // web/static/js/register.js
 import { initPasswordToggles } from "./password-toggle.js";
+import { uiNotify } from "./ui-messages.js";
 
 (() => {
   const form = document.querySelector("form");
@@ -10,27 +11,28 @@ import { initPasswordToggles } from "./password-toggle.js";
   const passwordEl = document.getElementById("password");
   const confirmEl = document.getElementById("confirm_password");
 
-  // init password eye
+  if (!usernameEl || !emailEl || !passwordEl || !confirmEl) return;
+
   initPasswordToggles(document);
 
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  let errorEl = document.querySelector(".auth-error");
-  if (!errorEl) {
-    errorEl = document.createElement("div");
-    errorEl.className = "auth-error";
-    errorEl.setAttribute("role", "alert");
-    form.prepend(errorEl);
-  }
-
-  function showError(msg) {
-    errorEl.textContent = msg || "";
-    errorEl.style.display = msg ? "block" : "none";
+  function notify(message, type = "danger") {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "auth:notify",
+          payload: { message, level: type },
+        },
+        "*"
+      );
+    } else {
+      uiNotify(message, { type });
+    }
   }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    showError("");
 
     const username = usernameEl.value.trim();
     const email = emailEl.value.trim();
@@ -38,12 +40,17 @@ import { initPasswordToggles } from "./password-toggle.js";
     const confirm = confirmEl.value;
 
     if (!username || !email || !password || !confirm) {
-      showError("All fields are required.");
+      notify("All fields are required.", "warn");
+      return;
+    }
+
+    if (password.length < 8) {
+      notify("Password must be at least 8 characters long.", "warn");
       return;
     }
 
     if (password !== confirm) {
-      showError("Passwords do not match.");
+      notify("Passwords do not match.", "warn");
       return;
     }
 
@@ -57,31 +64,32 @@ import { initPasswordToggles } from "./password-toggle.js";
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-        }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        showError(data?.error?.message || "Registration failed.");
+        notify(
+          data?.error?.message ||
+            "Registration failed. Please try again.",
+          "danger"
+        );
         return;
       }
 
-      window.location.assign("/login");
+      sessionStorage.setItem("auth:login-success", "1");
+
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage("auth:success", "*");
+        return;
+      }
+
+      window.location.assign("/");
     } catch {
-      showError("Network error. Please try again.");
+      notify("Network error. Please try again.", "danger");
     } finally {
       submitBtn.disabled = false;
     }
   });
-
-  document
-    .getElementById("guest-login-btn")
-    ?.addEventListener("click", () => {
-      window.location.assign("/");
-    });
 })();

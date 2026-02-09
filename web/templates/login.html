@@ -1,112 +1,109 @@
-   <!-- web/templates/login.html -->
-   <!doctype html>
-    <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Sign In</title>
+<!-- web/templates/login.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign In</title>
 
-        <link rel="stylesheet" href="/static/css/base.css" />
-        <link rel="stylesheet" href="/static/css/login-register.css" />
-        <link rel="stylesheet" href="/static/css/components/password-field.css" />
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/login-register.css" />
+  <link rel="stylesheet" href="/static/css/components/password-field.css" />
+  <link rel="stylesheet" href="/static/css/ui-messages.css" />
 
-        <script src="/static/js/helpers.js" defer></script>
-        <script type="module" src="/static/js/login.js"></script>
+  <script src="/static/js/helpers.js" defer></script>
+  <script type="module" src="/static/js/ui-messages.js"></script>
+  <script type="module" src="/static/js/login.js"></script>
+</head>
 
-    </head>
-    <body class="login">
-    <main class="center-page">
-        <section
-        class="card card-pad login-card"
-        aria-labelledby="login-title"
+<body class="login">
+<main class="center-page">
+  <section class="card card-pad login-card" aria-labelledby="login-title">
+    <h1 id="login-title" class="login-title">Sign In</h1>
+
+    <p class="muted login-subtitle">
+      Enter your credentials to continue
+    </p>
+
+    <form action="/api/v1/users/login" method="post" novalidate>
+      <div class="field">
+        <label for="email" class="field-label">Email or username</label>
+        <input
+          id="email"
+          class="input"
+          type="text"
+          name="identifier"
+          autocomplete="username"
+          placeholder="Email or username"
+          required
+        />
+      </div>
+
+      <div class="field password-field">
+        <label for="password" class="field-label">Password</label>
+        <div class="password-input-wrap">
+          <input
+            id="password"
+            class="input"
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            placeholder="Password"
+            required
+          />
+
+          <button
+            type="button"
+            class="password-toggle"
+            aria-label="Show password"
+            title="Show password"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" type="submit">
+        Sign In
+      </button>
+
+      <div class="login-footer">
+        <span class="muted">Don't have an account? </span>
+        <a href="/register">Create one</a>
+      </div>
+
+      <div class="guest-login">
+        <button
+          type="button"
+          class="btn btn-ghost btn-full"
+          id="guest-login-btn"
         >
-        <h1 id="login-title" class="login-title">
-            Sign In
-        </h1>
-
-        <p class="muted login-subtitle">
-            Enter your credentials to continue
-        </p>
-
-            <form action="/api/v1/users/login" method="post" novalidate>
-                <div class="field">
-                    <label for="email" class="field-label">Email or username</label>
-                    <input
-                        id="email"
-                        class="input"
-                        type="text"
-                        name="identifier"
-                        autocomplete="username"
-                        placeholder="Email or username"
-                        required
-                    />
-                </div>
-
-                <div class="field password-field">
-                    <label for="password" class="field-label">Password</label>
-                    <div class="password-input-wrap">
-                        <input
-                            id="password"
-                            class="input"
-                            type="password"
-                            name="password"
-                            autocomplete="current-password"
-                            placeholder="Password"
-                            required
-                        />
-
-                        <button
-                            type="button"
-                            class="password-toggle"
-                            aria-label="Show password"
-                            title="Show password"
-                        >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path
-                                d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-                <div id="login-error" class="login-error" role="alert"></div>
-
-            <div class="login-row">
-            </div>
-
-                <button class="btn btn-primary btn-full" type="submit">
-                    Sign In
-                </button>
-
-                <div class="login-footer">
-                    <span class="muted">Don't have an account? </span>
-                    <a href="/register">Create one</a>
-                </div>
-
-                <!-- Continue as guest -->
-                <div class="guest-login">
-                    <button
-                            type="button"
-                            class="btn btn-ghost btn-full"
-                            id="guest-login-btn"
-                    >
-                        Continue as guest
-                    </button>
-                </div>
-            </form>
-        </section>
-    </main>
-    </body>
-    </html>
+          Continue as guest
+        </button>
+      </div>
+    </form>
+  </section>
+</main>
+</body>
+</html>

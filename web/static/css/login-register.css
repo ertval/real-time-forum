@@ -1,5 +1,7 @@
 /* web/static/css/login-register.css */
 
+/* ---------- Login ---------- */
+
 .login .login-card {
   width: 100%;
   max-width: 460px;
@@ -29,14 +31,7 @@
   margin-top: 18px;
 }
 
-.login .login-error {
-  display: none;
-  margin: 10px 0 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #dc2626;
-}
-
+/* Guest login */
 .login .guest-login {
   margin-top: 14px;
   text-align: center;
@@ -64,6 +59,8 @@
   margin-top: 18px;
   margin-bottom: 10px;
 }
+
+/* ---------- Buttons ---------- */
 
 /* Subtle secondary button */
 .btn-ghost {

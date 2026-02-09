@@ -1,4 +1,4 @@
-//internal/handlers/users.go
+// internal/handlers/users.go
 package handlers
 
 import (
@@ -35,7 +35,6 @@ func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	}
 	return id, true
 }
-
 
 /*--------------------------------
   HandleUser: /api/v1/users/{id}
@@ -83,7 +82,8 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := repository.CreateUser(r.Context(), u.conn, req)
+	// 1️⃣ Create user
+	userID, err := repository.CreateUser(r.Context(), u.conn, req)
 	if err != nil {
 		log.Printf("failed to create user: %v", err)
 		WriteError(w, r, NewError(
@@ -94,9 +94,33 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2️⃣ Create session (AUTO LOGIN)
+	session, err := repository.CreateSession(
+		r.Context(),
+		u.conn,
+		userID,
+		r.RemoteAddr,
+		r.UserAgent(),
+	)
+	if err != nil {
+		log.Printf("CreateSession ERROR: %+v\n", err)
+		writeHandlerError(w, r, err, "failed to create session")
+		return
+	}
+
+	// 3️⃣ Set cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    session.Token,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	// 4️⃣ Success
 	WriteCreated(w, map[string]any{
-		"id":      id,
-		"message": "user created",
+		"id":      userID,
+		"message": "user registered and logged in",
 	})
 }
 

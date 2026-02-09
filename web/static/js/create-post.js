@@ -1,7 +1,10 @@
 // web/static/js/create-post.js
 import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
+import { uiNotify, uiConfirm } from "./ui-messages.js";
+
 let currentDraftId = null;
+
 /*-----------------
   LOAD CATEGORIES
 -----------------*/
@@ -79,7 +82,6 @@ async function saveDraft() {
 
   if (!title || !body) return;
 
-  // If a draft id already exists, update it
   if (currentDraftId) {
     await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
       method: "PUT",
@@ -90,7 +92,6 @@ async function saveDraft() {
     return;
   }
 
-  // Otherwise create a new draft and store the returned id
   const res = await fetch(`${API_BASE}/posts/draft`, {
     method: "POST",
     credentials: "include",
@@ -109,7 +110,6 @@ async function saveDraft() {
 ---------------*/
 
 async function restoreDraftIfExists() {
-
   try {
     const res = await fetch(`${API_BASE}/posts/draft`, {
       credentials: "include",
@@ -120,13 +120,24 @@ async function restoreDraftIfExists() {
     const { data } = await res.json();
     if (!data) return;
 
-    const ok = confirm("Unsaved draft found. Restore it?");
-    if (!ok) return;
+    const restore = await uiConfirm(
+      "Unsaved draft found. Do you want to restore it?",
+      {
+        type: "warn",
+        title: "Draft detected",
+        okText: "Restore",
+        cancelText: "Discard",
+      }
+    );
+
+    if (!restore) return;
 
     currentDraftId = data.id;
     document.getElementById("title").value = data.title || "";
     document.getElementById("body").value = data.body || "";
     setSelectedCategoryIds(data.category_ids || []);
+
+    uiNotify("Draft restored successfully.", { type: "success" });
   } catch {}
 }
 
@@ -142,8 +153,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const bodyInput = document.getElementById("body");
 
   await renderCategoryCheckboxes();
-  const categoriesHost = document.getElementById("categoryCheckboxes");
-  categoriesHost?.addEventListener("change", scheduleDraftSave);
+  document
+    .getElementById("categoryCheckboxes")
+    ?.addEventListener("change", scheduleDraftSave);
 
   await restoreDraftIfExists();
 
@@ -156,7 +168,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // AUTH GUARD (modal for guests)
     const allowed = await Auth.requireOrPrompt();
     if (!allowed) return;
 
@@ -166,42 +177,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     const action = e.submitter?.value;
 
     if (!title) {
-      alert("Title is required");
+      uiNotify("Title is required.", { type: "warn" });
+      return;
+    }
+    
+    if (!body) {
+      uiNotify("Post body is required.", { type: "warn" });
       return;
     }
 
     if (action === "draft") {
       const url = currentDraftId
-          ? `${API_BASE}/posts/draft/${currentDraftId}`
-          : `${API_BASE}/posts/draft`;
+        ? `${API_BASE}/posts/draft/${currentDraftId}`
+        : `${API_BASE}/posts/draft`;
 
       const method = currentDraftId ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
         credentials: "include",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title, body, category_ids: categoryIds}),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body, category_ids: categoryIds }),
       });
 
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
-        alert(payload?.error?.message || "Draft save failed");
+        uiNotify(payload?.error?.message || "Draft save failed.", {
+          type: "danger",
+        });
         return;
       }
 
-      // If it was created, capture the id
       if (!currentDraftId) {
         const payload = await res.json().catch(() => null);
         currentDraftId = payload?.data?.id ?? null;
       }
 
-      alert("Draft saved successfully");
+      uiNotify("Draft saved successfully.", { type: "success" });
       return;
     }
 
     if (categoryIds.length === 0) {
-      alert("Select at least one category");
+      uiNotify("Select at least one category.", { type: "warn" });
       return;
     }
 
@@ -224,25 +241,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!res.ok) {
       autosaveEnabled = true;
-      alert("Failed to publish post");
+      uiNotify("Failed to publish post.", { type: "danger" });
       return;
     }
+
     if (currentDraftId) {
       await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
         method: "DELETE",
         credentials: "include",
       });
     }
+
     window.location.href = "/";
   });
 });
 
-
 function setSelectedCategoryIds(ids = []) {
   const set = new Set((ids || []).map(Number));
   document
-      .querySelectorAll("#categoryCheckboxes input[type='checkbox']")
-      .forEach((cb) => {
-        cb.checked = set.has(Number(cb.value));
-      });
+    .querySelectorAll("#categoryCheckboxes input[type='checkbox']")
+    .forEach((cb) => {
+      cb.checked = set.has(Number(cb.value));
+    });
 }

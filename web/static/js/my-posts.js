@@ -1,225 +1,221 @@
 // web/static/js/my-posts.js
-
 import { API_BASE, getPaginationFromURL } from "./utils.js";
 import { renderPostCard, loadPostCommentsPreview } from "./posts.js";
 import { initReactions } from "./reactions.js";
+import { uiNotify, uiConfirm } from "./ui-messages.js";
 
 let statusToggleBound = false;
 let deleteBound = false;
 
 function start() {
-    initStatusFilterUI();
-    initStatusToggle();
-    initDeletePost();
-    boot().catch((err) => {
-        console.error("My Posts boot failed:", err);
-        showMessage("Failed to load your posts.");
-    });
+  initStatusFilterUI();
+  initStatusToggle();
+  initDeletePost();
+  boot().catch(() => {
+    uiNotify("Failed to load your posts.", { type: "danger" });
+  });
 }
 
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start);
+  document.addEventListener("DOMContentLoaded", start);
 } else {
-    start();
+  start();
 }
 
 function getStatusFilterFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    const v = (params.get("status") || "all").toLowerCase();
-    return v === "draft" || v === "published" ? v : "all";
+  const params = new URLSearchParams(window.location.search);
+  const v = (params.get("status") || "all").toLowerCase();
+  return v === "draft" || v === "published" ? v : "all";
 }
 
 function setStatusFilterInURL(status) {
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+  params.set("page", "1");
 
-    // changing filter resets pagination
-    params.set("page", "1");
+  if (!status || status === "all") {
+    params.delete("status");
+  } else {
+    params.set("status", status);
+  }
 
-    if (!status || status === "all") {
-        params.delete("status");
-    } else {
-        params.set("status", status);
-    }
-
-    history.replaceState({}, "", url.toString());
+  history.replaceState({}, "", url.toString());
 }
 
 function initStatusFilterUI() {
-    const select = document.getElementById("status-filter");
-    if (!select) return;
+  const select = document.getElementById("status-filter");
+  if (!select) return;
 
-    select.value = getStatusFilterFromURL();
+  select.value = getStatusFilterFromURL();
 
-    // on change updates URL and re-runs boot()
-    select.addEventListener("change", () => {
-        const status = select.value;
-        setStatusFilterInURL(status);
-        boot().catch((err) => {
-            console.error("My Posts boot failed:", err);
-            showMessage("Failed to load your posts.");
-        });
+  select.addEventListener("change", () => {
+    setStatusFilterInURL(select.value);
+    boot().catch(() => {
+      uiNotify("Failed to load your posts.", { type: "danger" });
     });
+  });
 }
 
 async function boot() {
-    const output = document.getElementById("posts-output");
-    const empty = document.getElementById("posts-empty");
-    if (!output) return;
+  const output = document.getElementById("posts-output");
+  const empty = document.getElementById("posts-empty");
+  if (!output) return;
 
-    // reset UI
-    output.innerHTML = "";
-    if (empty) empty.hidden = true;
+  output.innerHTML = "";
+  if (empty) empty.hidden = true;
 
-    const { page, perPage } = getPaginationFromURL();
-    const status = getStatusFilterFromURL();
+  const { page, perPage } = getPaginationFromURL();
+  const status = getStatusFilterFromURL();
 
-    const { posts } = await fetchMyPosts({ page, perPage, status });
+  const { posts } = await fetchMyPosts({ page, perPage, status });
 
-    if (!posts.length) {
-        if (empty) empty.hidden = false;
-        return;
-    }
+  if (!posts.length) {
+    if (empty) empty.hidden = false;
+    return;
+  }
 
-    // Render post cards
-    const fragment = document.createDocumentFragment();
-    const articles = [];
+  const fragment = document.createDocumentFragment();
+  const articles = [];
 
-    for (const post of posts) {
-        const article = renderPostCard(post, { clickable: true, showStatusToggle: true, showDelete: true });
-        fragment.appendChild(article);
-        articles.push(article);
-    }
+  for (const post of posts) {
+    const article = renderPostCard(post, {
+      clickable: true,
+      showStatusToggle: true,
+      showDelete: true,
+    });
+    fragment.appendChild(article);
+    articles.push(article);
+  }
 
-    output.appendChild(fragment);
+  output.appendChild(fragment);
 
-    // Load comments preview
-    await runWithConcurrencyLimit(
-        articles.map((article) => async () => {
-            const postId = article.dataset.postId;
-            if (!postId) return;
-            await loadPostCommentsPreview(postId, article);
-        }),
-        4
-    );
+  await runWithConcurrencyLimit(
+    articles.map((article) => async () => {
+      const postId = article.dataset.postId;
+      if (postId) await loadPostCommentsPreview(postId, article);
+    }),
+    4
+  );
 
-    // Bind like/dislike click handler
-    initReactions();
-
-    // Bind draft/publish toggle handler (my-posts only)
-    initStatusToggle();
+  initReactions();
+  initStatusToggle();
 }
 
 function initStatusToggle() {
-    if (statusToggleBound) return;
-    statusToggleBound = true;
+  if (statusToggleBound) return;
+  statusToggleBound = true;
 
-    document.addEventListener("click", async (e) => {
-        const btn = e.target.closest(".post-status-toggle");
-        if (!btn) return;
+  document.addEventListener(
+    "click",
+    async (e) => {
+      const btn = e.target.closest(".post-status-toggle");
+      if (!btn) return;
 
-        e.preventDefault();
-        e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
 
-        const postId = btn.dataset.postId;
-        const currentStatus = btn.dataset.currentStatus;
-        if (!postId || !currentStatus) return;
+      const postId = btn.dataset.postId;
+      const currentStatus = btn.dataset.currentStatus;
+      if (!postId || !currentStatus) return;
 
-        // determine next status
-        const nextStatus = currentStatus === "draft" ? "published" : "draft";
+      const nextStatus = currentStatus === "draft" ? "published" : "draft";
+      btn.disabled = true;
 
-        // disable button while request runs
-        const originalText = btn.textContent;
-        btn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/posts/${postId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        });
 
-        try {
-            const res = await fetch(`${API_BASE}/posts/${postId}`, {
-                method: "PATCH",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                },
-                body: JSON.stringify({ status: nextStatus }),
-            });
-
-            if (res.status === 401) {
-                alert("You must be logged in.");
-                return;
-            }
-
-            if (!res.ok) {
-                const text = await res.text().catch(() => "");
-                console.error("Status update failed:", res.status, text);
-                alert("Failed to update post status.");
-                return;
-            }
-            // dynamically updates on draft/publish button press
-            await boot();
-        } catch (err) {
-            console.error("Status update request failed:", err);
-            alert("Failed to update post status.");
+        if (res.status === 401) {
+          uiNotify("You must be logged in.", { type: "warn" });
+          return;
         }
-    }, true);
+
+        if (!res.ok) {
+          uiNotify("Failed to update post status.", { type: "danger" });
+          return;
+        }
+
+        await boot();
+      } catch {
+        uiNotify("Failed to update post status.", { type: "danger" });
+      } finally {
+        btn.disabled = false;
+      }
+    },
+    true
+  );
 }
 
 function initDeletePost() {
-    if (deleteBound) return;
-    deleteBound = true;
+  if (deleteBound) return;
+  deleteBound = true;
 
-    document.addEventListener(
-        "click",
-        async (e) => {
-            const btn = e.target.closest(".post-delete");
-            if (!btn) return;
+  document.addEventListener(
+    "click",
+    async (e) => {
+      const btn = e.target.closest(".post-delete");
+      if (!btn) return;
 
-            e.preventDefault();
-            e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
 
-            const postId = btn.dataset.postId;
-            if (!postId) return;
+      const postId = btn.dataset.postId;
+      if (!postId) return;
 
-            const ok = confirm("Delete this post? This cannot be undone.");
-            if (!ok) return;
+      const ok = await uiConfirm(
+        "Delete this post? This action cannot be undone.",
+        {
+          type: "danger",
+          title: "Delete post",
+          okText: "Delete",
+          cancelText: "Cancel",
+        }
+      );
 
-            btn.disabled = true;
+      if (!ok) return;
 
-            try {
-                const res = await fetch(`${API_BASE}/posts/${postId}`, {
-                    method: "DELETE",
-                    credentials: "include",
-                    headers: { Accept: "application/json" },
-                });
+      btn.disabled = true;
 
-                if (res.status === 401) {
-                    alert("You must be logged in.");
-                    return;
-                }
+      try {
+        const res = await fetch(`${API_BASE}/posts/${postId}`, {
+          method: "DELETE",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
 
-                if (res.status === 404) {
-                    alert("Post not found (it may have already been deleted).");
-                    await boot();
-                    return;
-                }
+        if (res.status === 401) {
+          uiNotify("You must be logged in.", { type: "warn" });
+          return;
+        }
 
-                if (!res.ok) {
-                    const text = await res.text().catch(() => "");
-                    console.error("Delete failed:", res.status, text);
-                    alert("Failed to delete post.");
-                    return;
-                }
+        if (res.status === 404) {
+          uiNotify("Post not found.", { type: "warn" });
+          await boot();
+          return;
+        }
 
-                // re-render so it disappears and filter stays correct
-                await boot();
-            } catch (err) {
-                console.error("Delete request failed:", err);
-                alert("Failed to delete post.");
-            } finally {
-                if (document.contains(btn)) btn.disabled = false;
-            }
-        },
-        true
-    );
+        if (!res.ok) {
+          uiNotify("Failed to delete post.", { type: "danger" });
+          return;
+        }
+
+        uiNotify("Post deleted.", { type: "success" });
+        await boot();
+      } catch {
+        uiNotify("Failed to delete post.", { type: "danger" });
+      } finally {
+        if (document.contains(btn)) btn.disabled = false;
+      }
+    },
+    true
+  );
 }
 
 /*------
@@ -227,69 +223,52 @@ function initDeletePost() {
 ------*/
 
 async function fetchMyPosts({ page, perPage, status }) {
-    const url = new URL(`${API_BASE}/posts/mine`, window.location.origin);
-    url.searchParams.set("page", String(page));
-    url.searchParams.set("per_page", String(perPage));
+  const url = new URL(`${API_BASE}/posts/mine`, window.location.origin);
+  url.searchParams.set("page", String(page));
+  url.searchParams.set("per_page", String(perPage));
 
-    if (status && status !== "all") {
-        url.searchParams.set("status", status);
-    }
+  if (status && status !== "all") {
+    url.searchParams.set("status", status);
+  }
 
-    const res = await fetch(url.toString(), {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-    });
+  const res = await fetch(url.toString(), {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
 
-    if (res.status === 401) {
-        showMessage("You must be logged in to view your posts.");
-        return { posts: [], meta: null };
-    }
+  if (res.status === 401) {
+    uiNotify("You must be logged in to view your posts.", { type: "warn" });
+    return { posts: [], meta: null };
+  }
 
-    if (!res.ok) {
-        showMessage(`Failed to load posts (${res.status}).`);
-        return { posts: [], meta: null };
-    }
+  if (!res.ok) {
+    uiNotify(`Failed to load posts (${res.status}).`, { type: "danger" });
+    return { posts: [], meta: null };
+  }
 
-    const payload = await res.json();
-
-    const posts = Array.isArray(payload?.data) ? payload.data : [];
-    const meta = payload?.meta ?? null;
-
-    return { posts, meta };
-}
-
-/*------------
-  UX HELPERS
-------------*/
-
-function showMessage(text) {
-    const empty = document.getElementById("posts-empty");
-    if (empty) {
-        empty.textContent = text;
-        empty.hidden = false;
-    } else {
-        alert(text);
-    }
+  const payload = await res.json();
+  return {
+    posts: Array.isArray(payload?.data) ? payload.data : [],
+    meta: payload?.meta ?? null,
+  };
 }
 
 /*--------------------
-  CONCURENCY HELPERS
+  CONCURRENCY HELPERS
 --------------------*/
 
 async function runWithConcurrencyLimit(tasks, limit = 4) {
-    const queue = tasks.slice();
+  const queue = tasks.slice();
 
-    const workers = Array.from({ length: limit }, async () => {
-        while (queue.length) {
-            const task = queue.shift();
-            if (!task) return;
-            try {
-                await task();
-            } catch (e) {
-                console.error("Task failed:", e);
-            }
-        }
-    });
+  const workers = Array.from({ length: limit }, async () => {
+    while (queue.length) {
+      const task = queue.shift();
+      if (!task) return;
+      try {
+        await task();
+      } catch {}
+    }
+  });
 
-    await Promise.all(workers);
+  await Promise.all(workers);
 }

@@ -1,4 +1,5 @@
 // web/static/js/auth-modal.js
+import { uiNotify } from "./ui-messages.js";
 
 let modalLoaded = false;
 let modal = null;
@@ -30,7 +31,6 @@ export async function openAuthModal(path = "/login") {
     await loadAuthModal();
   }
 
-  // prepare iframe BEFORE showing modal
   frame.style.opacity = "0";
   frame.src = path;
 
@@ -50,3 +50,26 @@ export function closeAuthModal() {
   document.body.style.overflow = "";
   isOpen = false;
 }
+
+/* =========================
+   IFRAME → PARENT MESSAGES
+========================= */
+
+window.addEventListener("message", (event) => {
+  if (!event?.data) return;
+
+  // Toasts from iframe
+  if (event.data.type === "auth:notify") {
+    const { message, level } = event.data.payload || {};
+    if (message) {
+      uiNotify(message, { type: level || "info" });
+    }
+    return;
+  }
+
+  // Successful login
+  if (event.data === "auth:success") {
+    closeAuthModal();
+    window.location.href = "/";
+  }
+});
