@@ -9,12 +9,11 @@ export function initReactions() {
   bound = true;
 
   document.addEventListener(
-    "click",
+    "change",
     async (e) => {
       const btn = e.target.closest("[data-reaction]");
       if (!btn) return;
 
-      e.preventDefault();
       e.stopPropagation();
 
       // guest → auth modal
@@ -46,6 +45,9 @@ export function initReactions() {
             : `div[data-comment-id="${commentId}"]`
         );
 
+          console.log("commentId:", commentId);
+          console.log("found container:", container);
+
         if (!container) return;
 
         container.querySelector("[data-like-count]").textContent =
@@ -58,6 +60,5 @@ export function initReactions() {
         console.error("Reaction failed:", err);
       }
     },
-    true
   );
 }

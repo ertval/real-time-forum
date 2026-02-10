@@ -60,6 +60,46 @@
 }
 
 /* ==================================================
+   REACTIONS – ICON TOGGLE (Like/Dislike)
+================================================== */
+
+.reaction-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  line-height: 0;
+}
+
+.reaction-toggle > input {
+  position: relative;
+  opacity: 0;
+  height: 0;
+  width: 0;
+}
+
+.reaction-toggle svg {
+  height: 20px; /* adjust */
+  width: 20px;  /* adjust */
+  transition: transform 0.2s ease, fill 0.2s ease;
+  fill: #666;
+}
+
+.reaction-toggle:hover svg {
+  transform: scale(1.1) rotate(-10deg);
+}
+
+/* checked colors */
+.reaction-toggle--like > input:checked + svg {
+  fill: #2196F3;
+}
+
+.reaction-toggle--dislike > input:checked + svg {
+  fill: rgb(185, 51, 51);
+}
+
+/* ==================================================
    COMMENTS – COMMON
 ================================================== */
 
