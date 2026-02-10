@@ -276,13 +276,10 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
--------------
+/*-------------
+ POST ACTIONS
+-------------*/
 
-	POST ACTIONS
-
--------------
-*/
 func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID int64) {
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
