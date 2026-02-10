@@ -1,9 +1,10 @@
+<!-- web/templates/my-liked-posts.html -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>My liked Posts</title>
+  <title>My Liked Posts</title>
 
   <link rel="stylesheet" href="/static/css/base.css" />
   <link rel="stylesheet" href="/static/css/header.css" />
@@ -14,7 +15,6 @@
 
   <!-- helpers FIRST -->
   <script src="/static/js/helpers.js" defer></script>
-
   <script type="module" src="/static/js/ui-messages.js"></script>
   <script type="module" src="/static/js/my-liked-posts-page.js"></script>
 </head>
@@ -23,10 +23,14 @@
   <main class="container">
     <div id="header"></div>
 
-  <!-- POSTS -->
+    <!-- POSTS -->
     <section class="posts">
       <div id="posts-output"></div>
-      <p id="posts-empty" hidden>No Liked posts yet.</p>
+
+      <div id="posts-empty" class="empty-state" hidden>
+        <h3>No liked posts yet</h3>
+        <p>Posts you like will appear here.</p>
+      </div>
     </section>
   </main>
 </body>
