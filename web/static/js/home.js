@@ -64,18 +64,18 @@ async function renderPosts(state, pager, paginationEl) {
 
   output.innerHTML = "";
   empty.hidden = true;
-
   paginationEl.hidden = true;
-  pager.set(1, 1);
 
   const payload = await loadPosts(state);
+  const posts = Array.isArray(payload?.data) ? payload.data : [];
 
-  if (!payload || payload.data.length === 0) {
+  if (posts.length === 0) {
     empty.hidden = false;
+    pager.set(1, 1);
     return;
   }
 
-  for (const post of payload.data) {
+  for (const post of posts) {
     const card = renderPostCard(post);
     output.appendChild(card);
     await loadPostCommentsPreview(post.id, card);
@@ -83,13 +83,10 @@ async function renderPosts(state, pager, paginationEl) {
 
   if (state.perPage === 0) return;
 
-  if (payload.meta && payload.meta.pagination) {
-    const { page, total_pages } = payload.meta.pagination;
-
-    if (total_pages > 1) {
-      paginationEl.hidden = false;
-      pager.set(page, total_pages);
-    }
+  const pagination = payload?.meta?.pagination;
+  if (pagination && pagination.total_pages > 1) {
+    paginationEl.hidden = false;
+    pager.set(pagination.page, pagination.total_pages);
   }
 }
 

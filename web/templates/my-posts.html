@@ -1,3 +1,4 @@
+<!-- web/templates/my-posts.html -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -22,10 +23,14 @@
   <main class="container">
     <div id="header"></div>
 
-  <!-- POSTS -->
+    <!-- POSTS -->
     <section class="posts">
       <div id="posts-output"></div>
-      <p id="posts-empty" hidden>No posts yet.</p>
+
+      <div id="posts-empty" class="empty-state" hidden>
+        <h3>No posts yet</h3>
+        <p>You haven’t created any posts.</p>
+      </div>
     </section>
   </main>
 </body>

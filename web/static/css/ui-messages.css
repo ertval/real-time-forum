@@ -224,3 +224,30 @@
 .ui-toast__close:hover {
   color: rgba(0, 0, 0, 0.75);
 }
+
+.empty-state {
+  margin: 4rem auto;
+  padding: 3rem 2rem;
+  max-width: 520px;
+
+  text-align: center;
+
+  background: #f9fafb;
+  border: 1px dashed #d0d7de;
+  border-radius: 12px;
+
+  color: #57606a;
+}
+
+.empty-state h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #24292f;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
