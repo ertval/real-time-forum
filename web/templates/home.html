@@ -1,0 +1,73 @@
+<!-- /static/templates/home.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forum Home</title>
+
+    <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/header.css" />
+    <link rel="stylesheet" href="/static/css/posts.css" />
+    <link rel="stylesheet" href="/static/css/home.css" />
+    <link rel="stylesheet" href="/static/css/pagination.css" />
+    <link rel="stylesheet" href="/static/css/auth-modal.css">
+    <link rel="stylesheet" href="/static/css/ui-messages.css">
+
+    <script src="/static/js/helpers.js" defer></script>
+    <script type="module" src="/static/js/ui-messages.js"></script>
+    <script type="module" src="/static/js/home.js"></script>
+  </head>
+
+  <body class="home">
+    <main class="container">
+      <div id="header"></div>
+
+      <section class="filters">
+        <div class="filter-group">
+          <label for="categoryFilter">Category</label>
+          <select id="categoryFilter" name="category">
+            <option value="">All categories</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="perPageSelect">Posts per page</label>
+          <select id="perPageSelect" name="per_page">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="0">All posts</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="posts">
+        <div id="posts-output"></div>
+
+        <div id="posts-empty" class="empty-state" hidden>
+          <h3>No posts yet</h3>
+          <p>Be the first to start a discussion.</p>
+        </div>
+      </section>
+
+      <nav class="pagination" id="pagination" hidden>
+        <button class="btn" id="prevPage">‹</button>
+        <div id="pageNumbers" class="page-numbers"></div>
+        <button class="btn" id="nextPage">›</button>
+      </nav>
+    </main>
+
+    <script>
+      fetch("/static/partials/header.html")
+        .then(res => res.text())
+        .then(html => {
+          document.getElementById("header").innerHTML = html;
+          const script = document.createElement("script");
+          script.type = "module";
+          script.src = "/static/js/header-loader.js";
+          document.body.appendChild(script);
+        });
+    </script>
+  </body>
+</html>

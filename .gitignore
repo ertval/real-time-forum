@@ -1,0 +1,22 @@
+# .gitignore
+# Go build artifacts
+bin/
+*.exe
+*.out
+*.log
+
+# IDE / Editor settings
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+
+# SQLite local data
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Build binaries
+forum-backend
+forum-frontend

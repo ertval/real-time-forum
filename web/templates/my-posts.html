@@ -1,0 +1,37 @@
+<!-- web/templates/my-posts.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Posts</title>
+
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/header.css" />
+  <link rel="stylesheet" href="/static/css/home.css" />
+  <link rel="stylesheet" href="/static/css/posts.css" />
+  <link rel="stylesheet" href="/static/css/auth-modal.css">
+  <link rel="stylesheet" href="/static/css/ui-messages.css">
+
+  <!-- helpers FIRST -->
+  <script src="/static/js/helpers.js" defer></script>
+  <script type="module" src="/static/js/ui-messages.js"></script>
+  <script type="module" src="/static/js/my-posts-page.js"></script>
+</head>
+
+<body class="my-posts">
+  <main class="container">
+    <div id="header"></div>
+
+    <!-- POSTS -->
+    <section class="posts">
+      <div id="posts-output"></div>
+
+      <div id="posts-empty" class="empty-state" hidden>
+        <h3>No posts yet</h3>
+        <p>You haven't created any posts.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

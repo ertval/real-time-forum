@@ -1,0 +1,27 @@
+# .dockerignore
+# Go build artifacts
+bin/
+*.exe
+*.out
+*.log
+
+# IDE / editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Git metadata
+.git/
+.gitignore
+
+# Local SQLite data (must NOT be baked into the image)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Frontend (not needed for backend image)
+web/
+
+# Build outputs
+forum-backend
+forum-frontend

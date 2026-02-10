@@ -1,0 +1,46 @@
+/* web/static/css/create-post.css */
+
+.create-post .create-post-card {
+    width: 100%;
+    max-width: 720px;
+}
+
+.create-post .create-post-title {
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.create-post .create-post-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.create-post-back {
+    margin-top: 1.5rem;
+    text-align: left;
+}
+
+.category-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 14px;
+  padding: 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.6);
+}
+
+.category-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-checkbox input {
+  transform: translateY(1px);
+}
+
+#create-post-form textarea#body {
+    resize: none;
+}

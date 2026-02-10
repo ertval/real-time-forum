@@ -1,0 +1,16 @@
+/*-------------
+   HOME PAGE
+-------------*/
+
+.filters {
+  margin-bottom: 24px;
+}
+
+.home .posts {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.home .comments-scroll {
+  max-height: 220px;
+}

@@ -1,0 +1,54 @@
+/* --------------------------------------------------
+   HEADER (shared across all pages)
+-------------------------------------------------- */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.page-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.page-title {
+    margin: 0;
+}
+
+/* Forum logo */
+.forum-logo {
+    color: #000;
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 8px;
+    transition: background-color 120ms ease;
+}
+
+.forum-logo:hover,
+.forum-logo:focus {
+    color: #000;
+    text-decoration: none;
+    background-color: rgba(15, 23, 42, 0.04);
+}
+
+/* Greeting */
+#greeting {
+    margin: 0;
+}
+
+/* Header actions (buttons) */
+.page-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Header buttons controlled by JS */
+#login-btn,
+#logout-btn {
+    display: none;
+}

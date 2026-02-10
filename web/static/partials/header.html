@@ -1,0 +1,46 @@
+<!-- web/static/partials/header.html -->
+
+<header class="page-header">
+  <div class="page-title-wrap">
+    <h1 id="forum-title" class="page-title">
+      <a href="/" class="forum-logo">Forum</a>
+    </h1>
+
+    <p id="greeting" class="muted" aria-live="polite">
+      <!-- JS will fill -->
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a
+      id="login-btn"
+      class="btn btn-secondary"
+      href="/login"
+    >
+      Login
+    </a>
+
+    <button
+      id="logout-btn"
+      class="btn btn-secondary"
+      data-logout-button
+      data-logout-url="/api/v1/users/logout"
+      type="button"
+    >
+      Logout
+    </button>
+
+    <a id="my-posts-btn" class="btn btn-primary" href="/my-posts" style="display:none">
+      My posts
+    </a>
+
+    <a id="my-liked-posts-btn" class="btn btn-primary" href="/my-liked-posts" style="display:none">
+      My Liked Posts
+    </a>
+
+    <a id="create-post-btn" class="btn btn-primary" href="/create-post">
+      Create post
+    </a>
+  </div>
+
+</header>
