@@ -24,8 +24,8 @@ func Start() {
 	}
 
 	/* ----------------------------
-	  Initialize database
-	 -----------------------------*/
+	 Initialize database
+	-----------------------------*/
 	database, err := db.InitDB(dbPath)
 	if err != nil {
 		log.Fatal(err)

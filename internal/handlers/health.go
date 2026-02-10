@@ -1,4 +1,4 @@
-//Internal/handlers/health.go
+// Internal/handlers/health.go
 package handlers
 
 import (

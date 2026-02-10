@@ -1,3 +1,4 @@
+// internal/tests/helpers_test.go
 package tests
 
 import (
@@ -5,20 +6,22 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	db "forum/internal/db"
-	"forum/internal/handlers"
-	"forum/internal/router"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	db "forum/internal/db"
+	"forum/internal/handlers"
+	"forum/internal/router"
 )
 
-/* ------------------------------------------------------------
- setupTestDB — Creates full schema + seeds user/category/post
+/*------------------------------------------------------------
+	setupTestDB — Creates full schema + seeds user/category/post
 -------------------------------------------------------------*/
+
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -120,9 +123,10 @@ type apiEnvelope struct {
 	Error *apiError       `json:"error,omitempty"`
 }
 
-/* ---------------------------------------------
-   setupTestDBForCategories — schema + seed
+/*---------------------------------------------
+	  setupTestDBForCategories — schema + seed
 ----------------------------------------------*/
+
 func setupTestDBForCategories(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -152,9 +156,10 @@ func setupTestDBForCategories(t *testing.T) *sql.DB {
 	return dbConn
 }
 
-/* ----------------------------------------------------
-   newCategoryAPI — CLEAN handler wiring (NO router)
+/*----------------------------------------------------
+	  newCategoryAPI — CLEAN handler wiring (NO router)
 -----------------------------------------------------*/
+
 func newCategoryAPI(t *testing.T) (http.Handler, *sql.DB) {
 	t.Helper()
 
@@ -169,9 +174,10 @@ func newCategoryAPI(t *testing.T) (http.Handler, *sql.DB) {
 	return mux, db
 }
 
-/* -----------------
-   doReq helper
+/*-----------------
+	  doReq helper
 ------------------*/
+
 func doReq(
 	t *testing.T,
 	h http.Handler,

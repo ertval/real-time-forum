@@ -1,4 +1,4 @@
-//Internal/db/comments.go
+// Internal/db/comments.go
 package db
 
 import (

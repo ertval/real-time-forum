@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
-/* ------------------------------------------------------------
-   LOGGER MIDDLEWARE
-   Logs method, path and request duration.
+/*------------------------------------------------------------
+	  LOGGER MIDDLEWARE
+	  Logs method, path and request duration.
 -------------------------------------------------------------*/
+
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -23,13 +24,13 @@ func Logger(next http.Handler) http.Handler {
 	})
 }
 
-/* ------------------------------------------------------------
-   RECOVERER MIDDLEWARE
- Prevents server crash on panic and returns a safe JSON error.
+/*------------------------------------------------------------
+	  RECOVERER MIDDLEWARE
+	Prevents server crash on panic and returns a safe JSON error.
 -------------------------------------------------------------*/
+
 func Recoverer(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		defer func() {
 			if rec := recover(); rec != nil {
 
@@ -49,14 +50,14 @@ func Recoverer(next http.Handler) http.Handler {
 	})
 }
 
-/* ------------------------------------------------------------
-   EnableCORS MIDDLEWARE
-   Enables frontend ↔ backend communication on different ports.
+/*------------------------------------------------------------
+	  EnableCORS MIDDLEWARE
+	  Enables frontend ↔ backend communication on different ports.
 --------------------------------------------------------------*/
+
 func EnableCORS(origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

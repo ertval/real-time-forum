@@ -1,4 +1,4 @@
-//Internal/handlers/comments.go
+// Internal/handlers/comments.go
 package handlers
 
 import (

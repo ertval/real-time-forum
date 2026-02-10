@@ -34,7 +34,7 @@ func StartupCheckConfig() startupcheck.Config {
 	}
 }
 
-//HELPER
+// HELPER
 func ValidateFrontendStartup() error {
 	return startupcheck.ValidateFiles(StartupCheckConfig())
 }

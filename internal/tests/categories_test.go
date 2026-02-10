@@ -17,8 +17,9 @@ type categoryDTO struct {
 }
 
 /*--------------
-    Helpers
+	Helpers
 --------------*/
+
 func decodeEnvelope(t *testing.T, body []byte) apiEnvelope {
 	t.Helper()
 
@@ -80,6 +81,3 @@ func TestCategoriesGet(t *testing.T) {
 		t.Fatalf("expected Seed Category, got %v", cat["name"])
 	}
 }
-
-
-

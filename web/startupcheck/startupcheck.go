@@ -14,7 +14,7 @@ type Config struct {
 	WebRoot string
 
 	CriticalHTML []string
-	CriticalCSS []string
+	CriticalCSS  []string
 
 	JSDirs []string
 
@@ -33,7 +33,9 @@ func ValidateFiles(cfg Config) error {
 		return err
 	}
 	cssCount, err := countCSSFiles(cfg)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 
 	//Enforce JS count rules if configured
 	if cfg.ExactJSFiles > 0 && jsCount != cfg.ExactJSFiles {

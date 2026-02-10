@@ -1,4 +1,4 @@
-//Internal/db/reactions_counts.go
+// Internal/db/reactions_counts.go
 package db
 
 import (
