@@ -9,12 +9,11 @@ export function initReactions() {
   bound = true;
 
   document.addEventListener(
-    "click",
+    "change",
     async (e) => {
       const btn = e.target.closest("[data-reaction]");
       if (!btn) return;
 
-      e.preventDefault();
       e.stopPropagation();
 
       // guest → auth modal
@@ -24,6 +23,20 @@ export function initReactions() {
       const type = btn.dataset.reaction;
       const postId = btn.dataset.postId;
       const commentId = btn.dataset.commentId;
+
+        //find reaction scope
+        const scope = postId
+            ? btn.closest("article[data-post-id]")
+            : btn.closest(".comment");
+
+        //if the reaction was checked, uncheck opposite
+        if (btn.checked && scope) {
+            const oppositeType = type === "like" ? "dislike" : "like";
+            const opposite = scope.querySelector(
+                `input[data-reaction="${oppositeType}"]`
+            );
+            if (opposite) opposite.checked = false;
+        }
 
       const url = postId
         ? `${API_BASE}/posts/${postId}/${type}`
@@ -58,6 +71,5 @@ export function initReactions() {
         console.error("Reaction failed:", err);
       }
     },
-    true
   );
 }
