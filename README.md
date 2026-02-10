@@ -1,16 +1,17 @@
+
 # Forum Project — How to Run (Backend + Frontend)
 
-This document explains step-by-step how to set up and run the Forum project, including both the backend and frontend servers.
+This document explains how to set up and run the Forum project in its **current state**,
+including backend, frontend, database, authentication, drafts, and Docker support.
 
 ---
 
 ## 🚀 1. Requirements
 
-Ensure the following are installed:
-
 - Go 1.24+
 - Make
-- SQLite (optional)
+- SQLite (recommended, auto-managed)
+- Node.js (only for frontend tooling if needed)
 - Docker & Docker Compose (optional — backend only)
 
 ---
@@ -25,37 +26,43 @@ go mod tidy
 
 ---
 
-## 🗄️ 3. Initialize / Reset Database
+## 🗄️ 3. Database Initialization
 
-If you want a clean SQLite database:
+The project uses **SQLite**.
+
+### Reset database (development only):
 make reset-db
+
+> ⚠️ This deletes `forum.db` and recreates it from `forum_schema.sql`.
 
 ---
 
-## 🧱 4. Build the Project
+## 🧱 4. Build Targets
 
-### Backend only:
+### Backend:
 make build-backend
 
-### Frontend only:
+### Frontend:
 make build-frontend
 
-### Build everything:
+### Everything:
 make build-all
 
 ---
 
-## 🌍 5. Run the Application
+## 🌍 5. Running the Application
 
-The project uses two separate servers:
+Two separate servers are used:
 
-- Backend API → http://localhost:8080
-- Frontend UI → http://localhost:3000
+| Service   | URL |
+|----------|-----|
+| Backend API | http://localhost:8080 |
+| Frontend UI | http://localhost:3000 |
 
 ### Run backend:
 make run-backend
 
-### Run frontend (auto-opens browser):
+### Run frontend:
 make run-frontend
 
 ### Run both:
@@ -63,41 +70,57 @@ make run-all
 
 ---
 
-## 🛑 6. Stopping the Servers
+## ✍️ Drafts & Autosave
 
-### Stop backend:
-make stop-backend
-
-### Stop frontend:
-make stop-frontend
-
-### Stop both:
-make stop-all
+- Posts support **draft mode**
+- Drafts are autosaved client-side and synced with backend
+- Categories are preserved during autosave
+- Draft endpoints are protected (auth required)
 
 ---
 
-## 🐳 7. Running Backend with Docker (Optional)
+## 🔐 Authentication
 
-### Build Docker image:
+- Cookie-based sessions
+- HttpOnly cookies
+- One active session per user
+- Session invalidation on logout
+
+---
+
+## 🧪 Testing
+
+Run all backend integration tests:
+make test
+
+Tests:
+- Use in-memory SQLite
+- Load schema automatically
+- Validate real HTTP behavior
+
+---
+
+## 🐳 6. Docker (Backend Only)
+
+### Build image:
 make docker-build
 
-### Run backend container:
+### Run container:
 make docker-run
 
-### Using Docker Compose:
+### Docker Compose:
 make docker-up
-
-### Stop Compose:
 make docker-down
+
+- Non-root container user
+- Persistent volume for SQLite
+- Multi-stage build (Go → slim runtime)
 
 ---
 
-## 🧹 8. Clean Up
+## 🧹 7. Cleanup
 
-### Remove binaries:
 make clean
-
-### Clean everything:
 make clean-all
 
 ---
@@ -105,17 +128,17 @@ make clean-all
 ## ✔️ Recommended Workflow
 
 make deps
-make reset-db   (optional)
+make reset-db
 make run-all
 
-Frontend will open automatically at:
+Frontend opens automatically at:
 http://localhost:3000
 
 ---
 
 ## 📌 Notes
 
-- Backend is the only service that runs inside Docker.
-- Frontend is designed to run locally (not containerized).
-- Frontend communicates with backend using:
+- Frontend is **not containerized**
+- Backend exposes REST API under:
   http://localhost:8080/api/v1
+- CORS enabled for local development
