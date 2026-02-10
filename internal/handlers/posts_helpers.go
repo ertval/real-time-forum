@@ -1,4 +1,4 @@
-//Internal/handlers/posts_helpers.go
+// Internal/handlers/posts_helpers.go
 package handlers
 
 import (

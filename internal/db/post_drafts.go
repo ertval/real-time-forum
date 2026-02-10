@@ -1,4 +1,4 @@
-//Internal/db/post_drafts.go
+// Internal/db/post_drafts.go
 package db
 
 import (
@@ -8,10 +8,10 @@ import (
 )
 
 type Draft struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	UpdatedAt string `json:"updated_at"`
+	ID          int64   `json:"id"`
+	Title       string  `json:"title"`
+	Body        string  `json:"body"`
+	UpdatedAt   string  `json:"updated_at"`
 	CategoryIDs []int64 `json:"category_ids"`
 }
 
@@ -117,7 +117,6 @@ func DraftUpdate(
 
 	return tx.Commit()
 }
-
 
 func DraftGet(
 	ctx context.Context,

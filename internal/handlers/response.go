@@ -1,4 +1,4 @@
-//internal/handlers/response.go
+// internal/handlers/response.go
 package handlers
 
 import (
@@ -39,8 +39,7 @@ type Meta struct {
 	Pagination *PaginationMeta `json:"pagination,omitempty"`
 }
 
-
-//PaginationMeta describes pagination information for list endpoints.
+// PaginationMeta describes pagination information for list endpoints.
 type PaginationMeta struct {
 	Page       int `json:"page"`
 	PerPage    int `json:"per_page"`

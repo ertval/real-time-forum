@@ -1,4 +1,4 @@
-//Internal/db/posts_public_helpers.go
+// Internal/db/posts_public_helpers.go
 package db
 
 import (

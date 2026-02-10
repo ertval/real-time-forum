@@ -1,4 +1,4 @@
-//Internal/db/errors.go
+// Internal/db/errors.go
 package handlers
 
 import (

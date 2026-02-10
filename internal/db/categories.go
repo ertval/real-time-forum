@@ -171,7 +171,6 @@ func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
   LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
 --------------------------------------------*/
 
-
 func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPosts, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()

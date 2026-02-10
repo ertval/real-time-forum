@@ -1,4 +1,4 @@
-//Internal/db/helpers.go
+// Internal/db/helpers.go
 package db
 
 import "strings"

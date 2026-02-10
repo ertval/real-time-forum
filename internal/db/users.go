@@ -1,4 +1,4 @@
-//Internal/db/users.go
+// Internal/db/users.go
 package db
 
 import (
