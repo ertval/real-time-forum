@@ -121,12 +121,12 @@ async function restoreDraftIfExists() {
     if (!data) return;
 
     const restore = await uiConfirm(
-      "Unsaved draft found. Do you want to restore it?",
+      "Draft found. Do you want to restore it?",
       {
         type: "warn",
         title: "Draft detected",
         okText: "Restore",
-        cancelText: "Discard",
+        cancelText: "Cancel",
       }
     );
 

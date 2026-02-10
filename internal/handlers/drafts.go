@@ -53,6 +53,11 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if len(req.CategoryIDs) == 0 {
+			WriteError(w, r, NewError("BAD_REQUEST", "At least one category required", 400))
+			return
+		}
+
 		id, err := repository.DraftCreate(
 			r.Context(),
 			p.conn,
