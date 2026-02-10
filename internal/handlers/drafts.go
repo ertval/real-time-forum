@@ -1,4 +1,4 @@
-//internal/handlers/drafts.go
+// internal/handlers/drafts.go
 package handlers
 
 import (
@@ -34,9 +34,10 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodPost:
 		var req struct {
-			Title string `json:"title"`
-			Body  string `json:"body"`
+			Title       string  `json:"title"`
+			Body        string  `json:"body"`
 			CategoryIDs []int64 `json:"category_ids"`
+			Manual      bool    `json:"manual"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -44,18 +45,20 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if strings.TrimSpace(req.Title) == "" {
-			WriteError(w, r, NewError("BAD_REQUEST", "title required", 400))
-			return
-		}
-		if strings.TrimSpace(req.Body) == "" {
-			WriteError(w, r, NewError("BAD_REQUEST", "body required", 400))
-			return
-		}
-
-		if len(req.CategoryIDs) == 0 {
-			WriteError(w, r, NewError("BAD_REQUEST", "At least one category required", 400))
-			return
+		// Validation ONLY for manual "Save Draft"
+		if req.Manual {
+			if strings.TrimSpace(req.Title) == "" {
+				WriteError(w, r, NewError("BAD_REQUEST", "title required", 400))
+				return
+			}
+			if strings.TrimSpace(req.Body) == "" {
+				WriteError(w, r, NewError("BAD_REQUEST", "body required", 400))
+				return
+			}
+			if len(req.CategoryIDs) == 0 {
+				WriteError(w, r, NewError("BAD_REQUEST", "at least one category required", 400))
+				return
+			}
 		}
 
 		id, err := repository.DraftCreate(
@@ -85,7 +88,6 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// extract id from URL: /posts/draft/{id}
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) == 0 {
 		WriteError(w, r, NewError("BAD_REQUEST", "missing draft id", 400))
@@ -100,41 +102,45 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case http.MethodDelete:
-		err = repository.DraftDelete(r.Context(), p.conn, userID, draftID)
-		if err == sql.ErrNoRows {
-			WriteError(w, r, NewError("NOT_FOUND", "draft not found", http.StatusNotFound))
-			return
-		}
-		if err != nil {
-			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "delete failed", http.StatusInternalServerError))
-			return
-		}
-		WriteNoContent(w)
-		return
 
 	case http.MethodPut:
 		var req struct {
 			Title       string  `json:"title"`
 			Body        string  `json:"body"`
 			CategoryIDs []int64 `json:"category_ids"`
+			Manual      bool    `json:"manual"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid json", 400))
 			return
 		}
 
-		if strings.TrimSpace(req.Title) == "" {
-			WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
-			return
-		}
-		if strings.TrimSpace(req.Body) == "" {
-			WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
-			return
+		// Validation ONLY for manual update
+		if req.Manual {
+			if strings.TrimSpace(req.Title) == "" {
+				WriteError(w, r, NewError("BAD_REQUEST", "title required", 400))
+				return
+			}
+			if strings.TrimSpace(req.Body) == "" {
+				WriteError(w, r, NewError("BAD_REQUEST", "body required", 400))
+				return
+			}
+			if len(req.CategoryIDs) == 0 {
+				WriteError(w, r, NewError("BAD_REQUEST", "at least one category required", 400))
+				return
+			}
 		}
 
-		err = repository.DraftUpdate(r.Context(), p.conn, userID, draftID, req.Title, req.Body, req.CategoryIDs)
+		err = repository.DraftUpdate(
+			r.Context(),
+			p.conn,
+			userID,
+			draftID,
+			req.Title,
+			req.Body,
+			req.CategoryIDs,
+		)
 		if err == sql.ErrNoRows {
 			WriteError(w, r, NewError("NOT_FOUND", "draft not found", http.StatusNotFound))
 			return
@@ -146,8 +152,22 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 
 		WriteNoContent(w)
 		return
+
+	case http.MethodDelete:
+		err = repository.DraftDelete(r.Context(), p.conn, userID, draftID)
+		if err == sql.ErrNoRows {
+			WriteError(w, r, NewError("NOT_FOUND", "draft not found", http.StatusNotFound))
+			return
+		}
+		if err != nil {
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "delete failed", http.StatusInternalServerError))
+			return
+		}
+
+		WriteNoContent(w)
+		return
+
 	default:
 		MethodNotAllowed(w, r)
-		return
 	}
 }

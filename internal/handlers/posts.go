@@ -1,4 +1,4 @@
-//internal/handlers/posts.go
+// internal/handlers/posts.go
 package handlers
 
 import (
@@ -279,6 +279,7 @@ func (p *PostsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 /*-------------
  POST ACTIONS
 -------------*/
+
 func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID int64) {
 	post, err := repository.GetPost(r.Context(), p.conn, postID)
 	if err != nil {
@@ -483,7 +484,6 @@ func (p *PostsHandler) handleReaction(
 	)
 	if errors.Is(err, repository.ErrNotFound) {
 		WriteError(w, r, NewError("NOT_FOUND", "target not found", http.StatusNotFound))
-
 	}
 	if err != nil {
 		log.Printf("ToggleReaction failed: %v", err)
