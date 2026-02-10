@@ -24,6 +24,20 @@ export function initReactions() {
       const postId = btn.dataset.postId;
       const commentId = btn.dataset.commentId;
 
+        //find reaction scope
+        const scope = postId
+            ? btn.closest("article[data-post-id]")
+            : btn.closest(".comment");
+
+        //if the reaction was checked, uncheck opposite
+        if (btn.checked && scope) {
+            const oppositeType = type === "like" ? "dislike" : "like";
+            const opposite = scope.querySelector(
+                `input[data-reaction="${oppositeType}"]`
+            );
+            if (opposite) opposite.checked = false;
+        }
+
       const url = postId
         ? `${API_BASE}/posts/${postId}/${type}`
         : `${API_BASE}/comments/${commentId}/${type}`;
