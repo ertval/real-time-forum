@@ -180,9 +180,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       uiNotify("Title is required.", { type: "warn" });
       return;
     }
-    
+
     if (!body) {
       uiNotify("Post body is required.", { type: "warn" });
+      return;
+    }
+
+    // Check if at least one category is selected for both actions
+    if (categoryIds.length === 0) {
+      uiNotify("Select at least one category.", { type: "warn" });
       return;
     }
 
@@ -197,7 +203,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         method,
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, category_ids: categoryIds }),
+        body: JSON.stringify({
+          title,
+          body,
+          category_ids: categoryIds,
+          manual: true,
+        }),
       });
 
       if (!res.ok) {
@@ -214,11 +225,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       uiNotify("Draft saved successfully.", { type: "success" });
-      return;
-    }
-
-    if (categoryIds.length === 0) {
-      uiNotify("Select at least one category.", { type: "warn" });
       return;
     }
 
