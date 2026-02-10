@@ -16,13 +16,10 @@ type categoryDTO struct {
 	Name string `json:"name"`
 }
 
-/*
---------------
-
+/*--------------
 	Helpers
+--------------*/
 
---------------
-*/
 func decodeEnvelope(t *testing.T, body []byte) apiEnvelope {
 	t.Helper()
 
