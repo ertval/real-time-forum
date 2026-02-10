@@ -45,9 +45,6 @@ export function initReactions() {
             : `div[data-comment-id="${commentId}"]`
         );
 
-          console.log("commentId:", commentId);
-          console.log("found container:", container);
-
         if (!container) return;
 
         container.querySelector("[data-like-count]").textContent =
