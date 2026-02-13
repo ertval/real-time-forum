@@ -23,6 +23,12 @@ func NewMux() *http.ServeMux {
 			http.FileServer(http.Dir("./web/static")),
 		),
 	)
+
+	// Favicon (served from root with cache headers to prevent flicker)
+	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		http.ServeFile(w, r, "./web/static/favicon.ico")
+	})
 	/*-----------------------------
 	  Error assets (/errors/*)
 	-----------------------------*/

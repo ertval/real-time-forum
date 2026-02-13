@@ -138,6 +138,7 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Title       string  `json:"title"`
+		ImageURL    *string `json:"image_url"`
 		Body        string  `json:"body"`
 		Status      string  `json:"status"`
 		CategoryIDs []int64 `json:"category_ids"`
