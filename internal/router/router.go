@@ -185,6 +185,25 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
+	/*---------------
+	  GOOGLE AUTH
+	---------------*/
+	mux.Handle(
+		apiPrefix+"/auth/google",
+		middleware.AllowMethods(
+			http.HandlerFunc(users.GoogleStart),
+			http.MethodGet,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/auth/google/callback",
+		middleware.AllowMethods(
+			http.HandlerFunc(users.GoogleCallback),
+			http.MethodGet,
+		),
+	)
+
 	mux.Handle(
 		apiPrefix+"/users/me",
 		middleware.AllowMethods(

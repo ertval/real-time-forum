@@ -19,9 +19,20 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 
-# Frontend (not needed for backend image)
+# Frontend (if backend-only docker build)
 web/
 
 # Build outputs
 forum-backend
 forum-frontend
+
+# Environment files (never copy to Docker images)
+.env
+*.env
+cmd/backend/.env
+cmd/frontend/.env
+
+# Optional future-proof ignores
+node_modules/
+tmp/
+dist/
