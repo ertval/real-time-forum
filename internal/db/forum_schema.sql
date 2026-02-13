@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS posts (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   author_id   INTEGER NOT NULL,
   title       TEXT NOT NULL CHECK (length(title) > 0),
+  image_url   TEXT,
   body        TEXT NOT NULL CHECK (length(body) > 0),
   status      TEXT NOT NULL DEFAULT 'published'
                CHECK (status IN ('draft','published','archived')),
