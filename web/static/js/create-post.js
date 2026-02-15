@@ -174,6 +174,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const title = titleInput.value.trim();
     const body = bodyInput.value.trim();
     const categoryIds = getSelectedCategoryIds();
+    const imageInput = document.getElementById("image");
     const action = e.submitter?.value;
 
     if (!title) {
@@ -231,19 +232,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     autosaveEnabled = false;
     clearTimeout(draftTimer);
 
-    const res = await fetch(`${API_BASE}/posts`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        body,
-        category_ids: categoryIds,
-      }),
-    });
+    const hasImage =
+      imageInput &&
+      imageInput.files &&
+      imageInput.files.length > 0 &&
+      imageInput.files[0];
+
+    const res = await fetch(`${API_BASE}/posts`, hasImage
+      ? {
+          method: "POST",
+          credentials: "include",
+          body: buildMultipartPayload(title, body, categoryIds, imageInput.files[0]),
+        }
+      : {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            title,
+            body,
+            category_ids: categoryIds,
+          }),
+        });
 
     if (!res.ok) {
       autosaveEnabled = true;
@@ -269,4 +282,15 @@ function setSelectedCategoryIds(ids = []) {
     .forEach((cb) => {
       cb.checked = set.has(Number(cb.value));
     });
+}
+
+function buildMultipartPayload(title, body, categoryIds, imageFile) {
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("body", body);
+  categoryIds.forEach((id) => formData.append("category_ids", String(id)));
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+  return formData;
 }

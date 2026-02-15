@@ -41,6 +41,7 @@ func fetchPosts(
 			p.author_id,
 			u.username,
 			p.title,
+			p.image_url,
 			p.body,
 			p.created_at,
 			p.updated_at
@@ -59,16 +60,21 @@ func fetchPosts(
 
 	for rows.Next() {
 		var post Post
+		var imageURL sql.NullString
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
 			&post.Author,
 			&post.Title,
+			&imageURL,
 			&post.Body,
 			&post.CreatedAt,
 			&post.UpdatedAt,
 		); err != nil {
 			return nil, err
+		}
+		if imageURL.Valid {
+			post.ImageURL = &imageURL.String
 		}
 		posts = append(posts, post)
 	}

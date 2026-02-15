@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -144,9 +146,59 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		CategoryIDs []int64 `json:"category_ids"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
-		return
+	var (
+		uploadFile multipart.File
+		uploadMime string
+		uploadPath string
+	)
+
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		const maxUploadSize = 5 << 20
+		r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+		if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+			var maxErr *http.MaxBytesError
+			if errors.As(err, &maxErr) {
+				WriteError(w, r, NewError("PAYLOAD_TOO_LARGE", "upload too large", http.StatusRequestEntityTooLarge))
+				return
+			}
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid multipart form", http.StatusBadRequest))
+			return
+		}
+		if r.MultipartForm != nil {
+			defer r.MultipartForm.RemoveAll()
+		}
+
+		req.Title = r.FormValue("title")
+		req.Body = r.FormValue("body")
+		req.Status = r.FormValue("status")
+
+		categoryIDs, err := parseCategoryIDs(r.Form["category_ids"])
+		if err != nil {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid category_id", http.StatusBadRequest))
+			return
+		}
+		req.CategoryIDs = categoryIDs
+
+		file, _, err := r.FormFile("image")
+		if err == nil {
+			uploadFile = file
+			defer uploadFile.Close()
+			mime, err := validateImageType(uploadFile)
+			if err != nil {
+				WriteError(w, r, NewError("BAD_REQUEST", "unsupported image type", http.StatusBadRequest))
+				return
+			}
+			uploadMime = mime
+		} else if err != http.ErrMissingFile {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid image upload", http.StatusBadRequest))
+			return
+		}
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+			return
+		}
 	}
 
 	if strings.TrimSpace(req.Title) == "" {
@@ -184,6 +236,21 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if uploadFile != nil {
+		imageURL, imagePath, err := saveUploadedImage(uploadFile, uploadMime)
+		if err != nil {
+			log.Printf("failed to save image: %v", err)
+			WriteError(w, r, NewError(
+				"INTERNAL_SERVER_ERROR",
+				"error saving image",
+				http.StatusInternalServerError,
+			))
+			return
+		}
+		req.ImageURL = &imageURL
+		uploadPath = imagePath
+	}
+
 	postID, err := repository.CreatePostWithCategories(
 		r.Context(),
 		p.conn,
@@ -192,8 +259,12 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		req.Body,
 		status,
 		req.CategoryIDs,
+		req.ImageURL,
 	)
 	if err != nil {
+		if uploadPath != "" {
+			_ = os.Remove(uploadPath)
+		}
 		log.Printf("failed to create post: %v", err)
 		WriteError(w, r, NewError(
 			"INTERNAL_SERVER_ERROR",
