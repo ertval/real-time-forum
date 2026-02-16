@@ -57,7 +57,7 @@ export function renderPostCard(
   }
 
   article
-    .querySelectorAll(".post-comments, button, textarea, form")
+    .querySelectorAll(".post-comments, textarea, form")
     .forEach(el =>
       el.addEventListener("click", e => e.stopPropagation())
     );
