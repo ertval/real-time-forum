@@ -151,6 +151,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const titleInput = document.getElementById("title");
   const bodyInput = document.getElementById("body");
+  const imageInput = document.getElementById("image");
+  const imageButton = document.getElementById("image-button");
+  const imageName = document.getElementById("image-name");
 
   await renderCategoryCheckboxes();
   document
@@ -161,6 +164,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   titleInput.addEventListener("input", scheduleDraftSave);
   bodyInput.addEventListener("input", scheduleDraftSave);
+
+  if (imageButton && imageInput) {
+    imageButton.addEventListener("click", () => {
+      imageInput.click();
+    });
+  }
+
+  if (imageInput && imageName) {
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files && imageInput.files[0];
+      imageName.textContent = file ? `Selected: ${file.name}` : "";
+    });
+  }
 
   window.addEventListener("beforeunload", saveDraft);
   window.addEventListener("pagehide", saveDraft);
@@ -174,7 +190,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const title = titleInput.value.trim();
     const body = bodyInput.value.trim();
     const categoryIds = getSelectedCategoryIds();
-    const imageInput = document.getElementById("image");
     const action = e.submitter?.value;
 
     if (!title) {

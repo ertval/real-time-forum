@@ -44,3 +44,46 @@
 #create-post-form textarea#body {
     resize: none;
 }
+
+.textarea-wrap {
+  position: relative;
+}
+
+.textarea-wrap textarea {
+  padding-right: 52px;
+}
+
+.attach-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.attach-button:hover {
+  opacity: 0.8;
+}
+
+.attach-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.attach-button img {
+  width: 24px;
+  height: 24px;
+}
+
+.image-name {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
