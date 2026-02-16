@@ -62,7 +62,15 @@
             accept="image/jpeg,image/png,image/gif"
           />
         </div>
-        <div id="image-name" class="image-name muted" aria-live="polite"></div>
+        <div class="image-meta">
+          <div id="image-name" class="image-name muted" aria-live="polite"></div>
+          <button type="button" class="image-clear" id="image-clear" aria-label="Remove image" hidden>
+            ×
+          </button>
+        </div>
+        <div id="image-preview" class="image-preview" hidden>
+          <img alt="Selected upload preview" />
+        </div>
       </div>
 
       <!-- MULTI CATEGORY CHECKBOXES -->

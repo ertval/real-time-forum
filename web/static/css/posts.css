@@ -32,6 +32,19 @@
   margin: 0;
 }
 
+.post-image {
+  margin: 8px 0 12px;
+}
+
+.post-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
 /* ==================================================
    REACTIONS – COMMON
 ================================================== */

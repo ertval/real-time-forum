@@ -21,6 +21,23 @@ export function renderPostCard(
   article.className = "post card card-pad";
   article.dataset.postId = post.id;
 
+  const imageUrl =
+    typeof post.image_url === "string" && post.image_url.trim()
+      ? post.image_url
+      : "";
+
+  const imageMarkup = imageUrl
+    ? `
+      <div class="post-image">
+        <img src="${imageUrl}" alt="${escapeHTML(post.title)}" loading="lazy" />
+      </div>
+    `
+    : "";
+
+  const bodyMarkup = post.body
+    ? `<p>${escapeHTML(post.body)}</p>`
+    : "";
+
   article.innerHTML = `
     <header class="post-header ${clickable ? "clickable" : ""}">
       <div>
@@ -37,7 +54,8 @@ export function renderPostCard(
     </header>
 
     <section class="post-body ${clickable ? "clickable" : ""}">
-      <p>${escapeHTML(post.body)}</p>
+      ${imageMarkup}
+      ${bodyMarkup}
     </section>
 
     <section class="post-actions">

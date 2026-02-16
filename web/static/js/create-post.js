@@ -4,6 +4,7 @@ import { Auth } from "./auth.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
 
 let currentDraftId = null;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /*-----------------
   LOAD CATEGORIES
@@ -154,6 +155,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const imageInput = document.getElementById("image");
   const imageButton = document.getElementById("image-button");
   const imageName = document.getElementById("image-name");
+  const imagePreview = document.getElementById("image-preview");
+  const imageClear = document.getElementById("image-clear");
+  let previewUrl = null;
 
   await renderCategoryCheckboxes();
   document
@@ -174,7 +178,63 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (imageInput && imageName) {
     imageInput.addEventListener("change", () => {
       const file = imageInput.files && imageInput.files[0];
+      if (file && file.size > MAX_IMAGE_BYTES) {
+        imageInput.value = "";
+        imageName.textContent = "";
+        if (imageClear) {
+          imageClear.hidden = true;
+        }
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          previewUrl = null;
+        }
+        if (imagePreview) {
+          const img = imagePreview.querySelector("img");
+          if (img) img.removeAttribute("src");
+          imagePreview.hidden = true;
+        }
+        uiNotify("Image must be 5MB or smaller.", { type: "danger" });
+        return;
+      }
+
       imageName.textContent = file ? `Selected: ${file.name}` : "";
+      if (imageClear) {
+        imageClear.hidden = !file;
+      }
+      if (!imagePreview) return;
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+      }
+
+      if (file) {
+        previewUrl = URL.createObjectURL(file);
+        const img = imagePreview.querySelector("img");
+        if (img) {
+          img.src = previewUrl;
+        }
+        imagePreview.hidden = false;
+      } else {
+        imagePreview.hidden = true;
+      }
+    });
+  }
+
+  if (imageClear && imageInput) {
+    imageClear.addEventListener("click", () => {
+      imageInput.value = "";
+      imageName.textContent = "";
+      imageClear.hidden = true;
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+      }
+      if (imagePreview) {
+        const img = imagePreview.querySelector("img");
+        if (img) img.removeAttribute("src");
+        imagePreview.hidden = true;
+      }
     });
   }
 
@@ -197,7 +257,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    if (!body) {
+    const hasImage =
+      imageInput &&
+      imageInput.files &&
+      imageInput.files.length > 0 &&
+      imageInput.files[0];
+
+    if (hasImage && hasImage.size > MAX_IMAGE_BYTES) {
+      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
+      return;
+    }
+
+    if (!body && !hasImage) {
       uiNotify("Post body is required.", { type: "warn" });
       return;
     }
@@ -246,12 +317,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     autosaveEnabled = false;
     clearTimeout(draftTimer);
-
-    const hasImage =
-      imageInput &&
-      imageInput.files &&
-      imageInput.files.length > 0 &&
-      imageInput.files[0];
 
     const res = await fetch(`${API_BASE}/posts`, hasImage
       ? {

@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS posts (
   author_id   INTEGER NOT NULL,
   title       TEXT NOT NULL CHECK (length(title) > 0),
   image_url   TEXT,
-  body        TEXT NOT NULL CHECK (length(body) > 0),
+  body        TEXT NOT NULL CHECK ((length(body) > 0) OR image_url IS NOT NULL),
   status      TEXT NOT NULL DEFAULT 'published'
                CHECK (status IN ('draft','published','archived')),
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
