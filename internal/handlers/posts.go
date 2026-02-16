@@ -180,11 +180,11 @@ func (p *PostsHandler) createPost(w http.ResponseWriter, r *http.Request) {
 		}
 		req.CategoryIDs = categoryIDs
 
-		file, _, err := r.FormFile("image")
+		file, fileHeader, err := r.FormFile("image")
 		if err == nil {
 			uploadFile = file
 			defer uploadFile.Close()
-			mime, err := validateImageType(uploadFile)
+			mime, err := validateImageType(uploadFile, fileHeader.Filename)
 			if err != nil {
 				WriteError(w, r, NewError("BAD_REQUEST", "unsupported image type", http.StatusBadRequest))
 				return

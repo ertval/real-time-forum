@@ -98,7 +98,20 @@ func parseCategoryIDs(values []string) ([]int64, error) {
 	return ids, nil
 }
 
-func validateImageType(file io.ReadSeeker) (string, error) {
+func validateImageType(file io.ReadSeeker, filename string) (string, error) {
+	ext := strings.ToLower(filepath.Ext(filename))
+	expected := ""
+	switch ext {
+	case ".jpg", ".jpeg":
+		expected = "image/jpeg"
+	case ".png":
+		expected = "image/png"
+	case ".gif":
+		expected = "image/gif"
+	default:
+		return "", errors.New("unsupported image type")
+	}
+
 	buf := make([]byte, 512)
 	n, err := file.Read(buf)
 	if err != nil && err != io.EOF {
@@ -109,12 +122,10 @@ func validateImageType(file io.ReadSeeker) (string, error) {
 	}
 
 	mime := http.DetectContentType(buf[:n])
-	switch mime {
-	case "image/jpeg", "image/png", "image/gif":
-		return mime, nil
-	default:
+	if mime != expected {
 		return "", errors.New("unsupported image type")
 	}
+	return mime, nil
 }
 
 func saveUploadedImage(file io.Reader, mime string) (string, string, error) {
