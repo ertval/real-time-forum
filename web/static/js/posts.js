@@ -8,6 +8,7 @@ import {
 } from "./utils.js";
 
 import { Auth } from "./auth.js";
+import { playUpload } from "./sound-effects.js";
 
 /*-----------
   POST CARD
@@ -56,7 +57,7 @@ export function renderPostCard(
   }
 
   article
-    .querySelectorAll(".post-comments, button, textarea, form")
+    .querySelectorAll(".post-comments, textarea, form")
     .forEach(el =>
       el.addEventListener("click", e => e.stopPropagation())
     );
@@ -101,6 +102,7 @@ export async function loadPostCommentsPreview(postId, article) {
     console.error("Failed to load comments:", err);
   }
 }
+
 
 function renderComment(comment) {
   const div = document.createElement("div");
@@ -179,6 +181,8 @@ function maybeRenderCommentForm(container, postId) {
     const newComment = payload.data ?? payload;
 
     textarea.value = "";
+
+    playUpload();
 
     const list = container.querySelector(".comments-scroll");
     list?.appendChild(renderComment(newComment));
