@@ -4,6 +4,7 @@ import { Auth } from "./auth.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
 
 let currentDraftId = null;
+let draftImageURL = null;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /*-----------------
@@ -80,15 +81,23 @@ async function saveDraft() {
   const title = document.getElementById("title")?.value.trim();
   const body = document.getElementById("body")?.value.trim();
   const categoryIds = getSelectedCategoryIds();
+  const pendingImageFile = document.getElementById("image")?.files?.[0];
 
-  if (!title || !body) return;
+  if (!title) return;
+  if (!body && !draftImageURL) return;
+  if (pendingImageFile) return;
 
   if (currentDraftId) {
     await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, category_ids: categoryIds }),
+      body: JSON.stringify({
+        title,
+        body,
+        image_url: draftImageURL,
+        category_ids: categoryIds,
+      }),
     });
     return;
   }
@@ -97,13 +106,36 @@ async function saveDraft() {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, body, category_ids: categoryIds }),
+    body: JSON.stringify({
+      title,
+      body,
+      image_url: draftImageURL,
+      category_ids: categoryIds,
+    }),
   });
 
   if (!res.ok) return;
 
   const payload = await res.json().catch(() => null);
   currentDraftId = payload?.data?.id ?? null;
+}
+
+async function refreshDraftState() {
+  try {
+    const res = await fetch(`${API_BASE}/posts/draft`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const payload = await res.json().catch(() => null);
+    const data = payload?.data || null;
+    if (!data) return null;
+    currentDraftId = data.id ?? null;
+    draftImageURL = data.image_url || null;
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 /*---------------
@@ -134,6 +166,7 @@ async function restoreDraftIfExists() {
     if (!restore) return;
 
     currentDraftId = data.id;
+    draftImageURL = data.image_url || null;
     document.getElementById("title").value = data.title || "";
     document.getElementById("body").value = data.body || "";
     setSelectedCategoryIds(data.category_ids || []);
@@ -158,6 +191,43 @@ document.addEventListener("DOMContentLoaded", async () => {
   const imagePreview = document.getElementById("image-preview");
   const imageClear = document.getElementById("image-clear");
   let previewUrl = null;
+  const clearObjectPreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrl = null;
+    }
+  };
+  const updateImageUI = () => {
+    const file = imageInput?.files?.[0] || null;
+    if (imageClear) {
+      imageClear.hidden = !file && !draftImageURL;
+    }
+    if (imageName) {
+      if (file) {
+        imageName.textContent = `Selected: ${file.name}`;
+      } else if (draftImageURL) {
+        imageName.textContent = "Saved draft image attached";
+      } else {
+        imageName.textContent = "";
+      }
+    }
+    if (!imagePreview) return;
+    const img = imagePreview.querySelector("img");
+    clearObjectPreview();
+    if (file) {
+      previewUrl = URL.createObjectURL(file);
+      if (img) img.src = previewUrl;
+      imagePreview.hidden = false;
+      return;
+    }
+    if (draftImageURL) {
+      if (img) img.src = draftImageURL;
+      imagePreview.hidden = false;
+      return;
+    }
+    if (img) img.removeAttribute("src");
+    imagePreview.hidden = true;
+  };
 
   await renderCategoryCheckboxes();
   document
@@ -165,6 +235,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     ?.addEventListener("change", scheduleDraftSave);
 
   await restoreDraftIfExists();
+  updateImageUI();
 
   titleInput.addEventListener("input", scheduleDraftSave);
   bodyInput.addEventListener("input", scheduleDraftSave);
@@ -180,60 +251,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       const file = imageInput.files && imageInput.files[0];
       if (file && file.size > MAX_IMAGE_BYTES) {
         imageInput.value = "";
-        imageName.textContent = "";
-        if (imageClear) {
-          imageClear.hidden = true;
-        }
-        if (previewUrl) {
-          URL.revokeObjectURL(previewUrl);
-          previewUrl = null;
-        }
-        if (imagePreview) {
-          const img = imagePreview.querySelector("img");
-          if (img) img.removeAttribute("src");
-          imagePreview.hidden = true;
-        }
+        updateImageUI();
         uiNotify("Image must be 5MB or smaller.", { type: "danger" });
         return;
       }
-
-      imageName.textContent = file ? `Selected: ${file.name}` : "";
-      if (imageClear) {
-        imageClear.hidden = !file;
-      }
-      if (!imagePreview) return;
-
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        previewUrl = null;
-      }
-
-      if (file) {
-        previewUrl = URL.createObjectURL(file);
-        const img = imagePreview.querySelector("img");
-        if (img) {
-          img.src = previewUrl;
-        }
-        imagePreview.hidden = false;
-      } else {
-        imagePreview.hidden = true;
-      }
+      updateImageUI();
     });
   }
 
   if (imageClear && imageInput) {
     imageClear.addEventListener("click", () => {
-      imageInput.value = "";
-      imageName.textContent = "";
-      imageClear.hidden = true;
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        previewUrl = null;
+      const hasSelectedFile = !!imageInput.files?.[0];
+      if (hasSelectedFile) {
+        imageInput.value = "";
+        updateImageUI();
+        return;
       }
-      if (imagePreview) {
-        const img = imagePreview.querySelector("img");
-        if (img) img.removeAttribute("src");
-        imagePreview.hidden = true;
+      if (draftImageURL) {
+        draftImageURL = null;
+        updateImageUI();
+        scheduleDraftSave();
       }
     });
   }
@@ -262,13 +299,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       imageInput.files &&
       imageInput.files.length > 0 &&
       imageInput.files[0];
+    const hasDraftImage = !!draftImageURL;
 
     if (hasImage && hasImage.size > MAX_IMAGE_BYTES) {
       uiNotify("Image must be 5MB or smaller.", { type: "danger" });
       return;
     }
 
-    if (!body && !hasImage) {
+    if (!body && !hasImage && !hasDraftImage) {
       uiNotify("Post body is required.", { type: "warn" });
       return;
     }
@@ -285,18 +323,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         : `${API_BASE}/posts/draft`;
 
       const method = currentDraftId ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          body,
-          category_ids: categoryIds,
-          manual: true,
-        }),
-      });
+      const res = await fetch(
+        url,
+        hasImage
+          ? {
+              method,
+              credentials: "include",
+              body: buildDraftMultipartPayload(
+                title,
+                body,
+                categoryIds,
+                imageInput.files[0],
+                true
+              ),
+            }
+          : {
+              method,
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title,
+                body,
+                image_url: draftImageURL,
+                category_ids: categoryIds,
+                manual: true,
+              }),
+            }
+      );
 
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
@@ -306,10 +359,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      if (!currentDraftId) {
-        const payload = await res.json().catch(() => null);
-        currentDraftId = payload?.data?.id ?? null;
+      if (hasImage) {
+        imageInput.value = "";
       }
+      await refreshDraftState();
+      updateImageUI();
 
       uiNotify("Draft saved successfully.", { type: "success" });
       return;
@@ -334,6 +388,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           body: JSON.stringify({
             title,
             body,
+            image_url: draftImageURL,
             category_ids: categoryIds,
           }),
         });
@@ -371,6 +426,15 @@ function buildMultipartPayload(title, body, categoryIds, imageFile) {
   categoryIds.forEach((id) => formData.append("category_ids", String(id)));
   if (imageFile) {
     formData.append("image", imageFile);
+  }
+  return formData;
+}
+
+function buildDraftMultipartPayload(title, body, categoryIds, imageFile, manual) {
+  const formData = buildMultipartPayload(title, body, categoryIds, imageFile);
+  formData.append("manual", String(Boolean(manual)));
+  if (draftImageURL) {
+    formData.append("image_url", draftImageURL);
   }
   return formData;
 }
