@@ -8,6 +8,7 @@ import {
 } from "./utils.js";
 
 import { Auth } from "./auth.js";
+import { playUpload } from "./sound-effects.js";
 
 /*-----------
   POST CARD
@@ -102,6 +103,7 @@ export async function loadPostCommentsPreview(postId, article) {
   }
 }
 
+
 function renderComment(comment) {
   const div = document.createElement("div");
   div.className = "comment";
@@ -179,6 +181,8 @@ function maybeRenderCommentForm(container, postId) {
     const newComment = payload.data ?? payload;
 
     textarea.value = "";
+
+    playUpload();
 
     const list = container.querySelector(".comments-scroll");
     list?.appendChild(renderComment(newComment));

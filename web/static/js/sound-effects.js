@@ -1,17 +1,28 @@
 // web/static/js/sound-effects.js
 
-const likeSound = new Audio("/static/sounds/like.mp3");
-const dislikeSound = new Audio("/static/sounds/dislike.mp3");
+// --- Preload sounds ---
+const reactionSound = new Audio("/static/sounds/reaction.mp3");
+const uploadSound = new Audio("/static/sounds/upload.mp3");
 
-likeSound.volume = 0.3;
-dislikeSound.volume = 0.3;
+reactionSound.volume = 0.35;
+uploadSound.volume = 0.35;
 
-export function playLike() {
-    likeSound.currentTime = 0;
-    likeSound.play().catch(() => {});
+export function playReaction() {
+    try {
+        reactionSound.currentTime = 0;
+        reactionSound.play();
+    } catch (_) {}
 }
 
-export function playDislike() {
-    dislikeSound.currentTime = 0;
-    dislikeSound.play().catch(() => {});
+export function playUpload() {
+    try {
+        uploadSound.currentTime = 0;
+        uploadSound.play();
+    } catch (_) {}
+}
+
+// Optional: preload in background for smoother first play
+export function initSounds() {
+    reactionSound.load();
+    uploadSound.load();
 }

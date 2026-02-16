@@ -1,7 +1,7 @@
 // web/static/js/reactions.js
 import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
-import { playLike, playDislike } from "./sound-effects.js";
+import { playReaction } from "./sound-effects.js";   
 
 let bound = false;
 
@@ -15,6 +15,7 @@ export function initReactions() {
 
     e.stopPropagation();
 
+    // Guest → force login modal
     const allowed = await Auth.requireOrPrompt();
     if (!allowed) return;
 
@@ -22,10 +23,12 @@ export function initReactions() {
     const postId = btn.dataset.postId;
     const commentId = btn.dataset.commentId;
 
+    // Determine if scope is a post or a comment
     const scope = postId
       ? btn.closest("article[data-post-id]")
       : btn.closest(".comment");
 
+    // Mutually exclusive toggles
     if (btn.checked && scope) {
       const oppositeType = type === "like" ? "dislike" : "like";
       const opposite = scope.querySelector(
@@ -47,9 +50,8 @@ export function initReactions() {
 
       if (!res.ok) return;
 
-      // 🔊 SOUND EFFECT
-      if (type === "like") playLike();
-      else playDislike();
+      // Play unified reaction sound
+      playReaction();
 
       const { data } = await res.json();
 
@@ -72,4 +74,3 @@ export function initReactions() {
     }
   });
 }
-
