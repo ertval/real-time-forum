@@ -3,6 +3,7 @@ import { API_BASE, getPaginationFromURL } from "./utils.js";
 import { renderPostCard, loadPostCommentsPreview } from "./posts.js";
 import { initReactions } from "./reactions.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
+import { playUpload, playDelete } from "./sound-effects.js";
 
 let statusToggleBound = false;
 let deleteBound = false;
@@ -132,17 +133,20 @@ function initStatusToggle() {
           body: JSON.stringify({ status: nextStatus }),
         });
 
-        if (res.status === 401) {
-          uiNotify("You must be logged in.", { type: "warn" });
-          return;
-        }
-
         if (!res.ok) {
           uiNotify("Failed to update post status.", { type: "danger" });
           return;
         }
 
+        // SOUND IMMEDIATELY
+        playUpload();
+
+        //  UPDATE BUTTON TEXT + DATA
+        btn.dataset.currentStatus = nextStatus;
+        btn.textContent = nextStatus === "draft" ? "Publish" : "Draft";
+
         await boot();
+
       } catch {
         uiNotify("Failed to update post status.", { type: "danger" });
       } finally {
@@ -206,8 +210,12 @@ function initDeletePost() {
           return;
         }
 
+        // Play delete sound exactly once
+        playDelete();
+
         uiNotify("Post deleted.", { type: "success" });
         await boot();
+
       } catch {
         uiNotify("Failed to delete post.", { type: "danger" });
       } finally {
