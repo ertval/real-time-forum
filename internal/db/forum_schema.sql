@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS comments (
   post_id            INTEGER NOT NULL,
   user_id            INTEGER NOT NULL,
   parent_comment_id  INTEGER,
-  body               TEXT NOT NULL CHECK (length(body) > 0),
+  body               TEXT NOT NULL CHECK ((length(body) > 0) OR image_url IS NOT NULL),
   image_url          TEXT,
   created_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   updated_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
