@@ -638,18 +638,93 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 	}
 
 	var req struct {
-		Body            string `json:"body"`
-		ParentCommentID *int64 `json:"parent_comment_id"`
+		Body            string  `json:"body"`
+		ImageURL        *string `json:"image_url"`
+		ParentCommentID *int64  `json:"parent_comment_id"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+	var (
+		uploadFile multipart.File
+		uploadMime string
+		uploadPath string
+	)
+
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		const maxUploadSize = 5 << 20
+		r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+		if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+			var maxErr *http.MaxBytesError
+			if errors.As(err, &maxErr) {
+				WriteError(w, r, NewError("PAYLOAD_TOO_LARGE", "upload too large", http.StatusRequestEntityTooLarge))
+				return
+			}
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid multipart form", http.StatusBadRequest))
+			return
+		}
+		if r.MultipartForm != nil {
+			defer r.MultipartForm.RemoveAll()
+		}
+
+		req.Body = r.FormValue("body")
+
+		if raw := strings.TrimSpace(r.FormValue("image_url")); raw != "" {
+			req.ImageURL = &raw
+		}
+
+		if rawParent := strings.TrimSpace(r.FormValue("parent_comment_id")); rawParent != "" {
+			parentID, err := strconv.ParseInt(rawParent, 10, 64)
+			if err != nil || parentID <= 0 {
+				WriteError(w, r, NewError("BAD_REQUEST", "invalid parent_comment_id", http.StatusBadRequest))
+				return
+			}
+			req.ParentCommentID = &parentID
+		}
+
+		file, fileHeader, err := r.FormFile("image")
+		if err == nil {
+			uploadFile = file
+			defer uploadFile.Close()
+			mime, err := validateImageType(uploadFile, fileHeader.Filename)
+			if err != nil {
+				WriteError(w, r, NewError("BAD_REQUEST", "unsupported image type", http.StatusBadRequest))
+				return
+			}
+			uploadMime = mime
+		} else if err != http.ErrMissingFile {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid image upload", http.StatusBadRequest))
+			return
+		}
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+			return
+		}
+	}
+
+	if req.ParentCommentID != nil && *req.ParentCommentID <= 0 {
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid parent_comment_id", http.StatusBadRequest))
 		return
 	}
 
 	if strings.TrimSpace(req.Body) == "" {
 		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 		return
+	}
+
+	if uploadFile != nil {
+		imageURL, imagePath, err := saveUploadedImage(uploadFile, uploadMime)
+		if err != nil {
+			log.Printf("failed to save comment image: %v", err)
+			WriteError(w, r, NewError(
+				"INTERNAL_SERVER_ERROR",
+				"error saving image",
+				http.StatusInternalServerError,
+			))
+			return
+		}
+		req.ImageURL = &imageURL
+		uploadPath = imagePath
 	}
 
 	// Create comment
@@ -661,9 +736,13 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 			UserID:          userID,
 			ParentCommentID: req.ParentCommentID,
 			Body:            req.Body,
+			ImageURL:        req.ImageURL,
 		},
 	)
 	if err != nil {
+		if uploadPath != "" {
+			_ = os.Remove(uploadPath)
+		}
 		log.Printf("failed to create comment: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error creating comment", http.StatusInternalServerError))
 		return

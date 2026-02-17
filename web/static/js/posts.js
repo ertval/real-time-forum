@@ -9,6 +9,11 @@ import {
 
 import { Auth } from "./auth.js";
 
+let imageLightbox = null;
+let imageLightboxImg = null;
+let imageLightboxCloseBtn = null;
+let lastFocusedElement = null;
+
 /*-----------
   POST CARD
 -----------*/
@@ -29,7 +34,15 @@ export function renderPostCard(
   const imageMarkup = imageUrl
     ? `
       <div class="post-image">
-        <img src="${imageUrl}" alt="${escapeHTML(post.title)}" loading="lazy" />
+        <img
+          src="${escapeHTML(imageUrl)}"
+          alt="${escapeHTML(post.title)}"
+          loading="lazy"
+          class="expandable-image"
+          tabindex="0"
+          role="button"
+          aria-label="Expand post image"
+        />
       </div>
     `
     : "";
@@ -72,6 +85,8 @@ export function renderPostCard(
       });
     });
   }
+
+  bindExpandableImage(article.querySelector(".post-image img"), "post");
 
   article
     .querySelectorAll(".post-comments, button, textarea, form")
@@ -125,6 +140,30 @@ function renderComment(comment) {
   div.className = "comment";
   div.dataset.commentId = comment.id;
 
+  const commentImageUrl =
+    typeof comment.image_url === "string" && comment.image_url.trim()
+      ? comment.image_url
+      : "";
+
+  const commentBody = typeof comment.body === "string" ? comment.body : "";
+  const bodyMarkup = commentBody.trim()
+    ? `<p class="comment-text">${escapeHTML(commentBody)}</p>`
+    : "";
+  const imageMarkup = commentImageUrl
+    ? `
+      <div class="comment-image">
+        <img
+          src="${escapeHTML(commentImageUrl)}"
+          alt="Comment image by ${escapeHTML(resolveUsername(comment))}"
+          loading="lazy"
+          tabindex="0"
+          role="button"
+          aria-label="Expand comment image"
+        />
+      </div>
+    `
+    : "";
+
   div.innerHTML = `
     <div class="comment-meta muted">
       <strong>${resolveUsername(comment)}</strong>
@@ -132,13 +171,16 @@ function renderComment(comment) {
     </div>
 
     <div class="comment-body">
-      ${escapeHTML(comment.body)}
+      ${bodyMarkup}
+      ${imageMarkup}
     </div>
 
     <div class="comment-actions">
       ${reactionTemplate(comment, true)}
     </div>
   `;
+
+  bindExpandableImage(div.querySelector(".comment-image img"), "comment");
 
   return div;
 }
@@ -153,10 +195,36 @@ function maybeRenderCommentForm(container, postId) {
   form.noValidate = true;
 
   form.innerHTML = `
-    <textarea placeholder="Write a comment..." rows="2"></textarea>
+    <div class="comment-textarea-wrap">
+      <textarea placeholder="Write a comment..." rows="2"></textarea>
+      <button type="button" class="comment-image-btn" aria-label="Attach image">
+        <img src="/static/img/paperclip.png" alt="" />
+      </button>
+      <input type="file" class="comment-image-input" accept="image/jpeg,image/png,image/gif" hidden />
+    </div>
+    <div class="comment-image-row">
+      <span class="comment-image-name muted" aria-live="polite"></span>
+      <button type="button" class="comment-image-clear" aria-label="Remove selected image" hidden>x</button>
+    </div>
     <p class="comment-error" role="alert" hidden></p>
     <button class="btn btn-primary" type="submit">Comment</button>
   `;
+
+  const textarea = form.querySelector("textarea");
+  const imageButton = form.querySelector(".comment-image-btn");
+  const imageInput = form.querySelector(".comment-image-input");
+  const imageName = form.querySelector(".comment-image-name");
+  const imageClear = form.querySelector(".comment-image-clear");
+
+  const updateImageState = () => {
+    const file = imageInput?.files?.[0] || null;
+    if (imageClear) {
+      imageClear.hidden = !file;
+    }
+    if (imageName) {
+      imageName.textContent = file ? `Selected: ${file.name}` : "";
+    }
+  };
 
   ["click", "mousedown", "keydown", "submit"].forEach(evt =>
     form.addEventListener(evt, e => {
@@ -165,13 +233,25 @@ function maybeRenderCommentForm(container, postId) {
     })
   );
 
+  imageButton?.addEventListener("click", () => {
+    imageInput?.click();
+  });
+
+  imageInput?.addEventListener("change", updateImageState);
+
+  imageClear?.addEventListener("click", () => {
+    if (!imageInput) return;
+    imageInput.value = "";
+    updateImageState();
+  });
+
   form.addEventListener("submit", async () => {
     const allowed = await Auth.requireOrPrompt();
     if (!allowed) return;
 
-    const textarea = form.querySelector("textarea");
     const errorEl = form.querySelector(".comment-error");
     const body = textarea.value.trim();
+    const imageFile = imageInput?.files?.[0] || null;
 
     if (!body) {
       errorEl.textContent = "Cannot submit an empty comment";
@@ -181,15 +261,28 @@ function maybeRenderCommentForm(container, postId) {
 
     errorEl.hidden = true;
 
-    const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ body }),
-    });
+    let res;
+    if (imageFile) {
+      const formData = new FormData();
+      formData.append("body", body);
+      formData.append("image", imageFile);
+      res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        body: formData,
+      });
+    } else {
+      res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ body }),
+      });
+    }
 
     if (!res.ok) return;
 
@@ -197,6 +290,8 @@ function maybeRenderCommentForm(container, postId) {
     const newComment = payload.data ?? payload;
 
     textarea.value = "";
+    if (imageInput) imageInput.value = "";
+    updateImageState();
 
     const list = container.querySelector(".comments-scroll");
     list?.appendChild(renderComment(newComment));
@@ -287,4 +382,85 @@ function deletePostTemplate(post) {
       Delete
     </button>
   `;
+}
+
+function bindExpandableImage(imgEl, variant = "post") {
+  if (!(imgEl instanceof HTMLImageElement)) return;
+
+  const openImage = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    openImageLightbox(imgEl.currentSrc || imgEl.src, imgEl.alt, variant);
+  };
+
+  imgEl.addEventListener("click", openImage);
+  imgEl.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      openImage(e);
+    }
+  });
+}
+
+function ensureImageLightbox() {
+  if (imageLightbox) return;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "image-lightbox";
+  wrapper.hidden = true;
+  wrapper.innerHTML = `
+    <div class="image-lightbox-backdrop" data-close-lightbox></div>
+    <figure class="image-lightbox-content" role="dialog" aria-modal="true" aria-label="Expanded post image">
+      <button type="button" class="image-lightbox-close" aria-label="Close expanded image">x</button>
+      <img alt="Expanded post image" />
+    </figure>
+  `;
+
+  document.body.appendChild(wrapper);
+  imageLightbox = wrapper;
+  imageLightboxImg = wrapper.querySelector("img");
+  imageLightboxCloseBtn = wrapper.querySelector(".image-lightbox-close");
+
+  wrapper.addEventListener("click", e => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    if (
+      target.matches("[data-close-lightbox]") ||
+      target.classList.contains("image-lightbox-close")
+    ) {
+      closeImageLightbox();
+    }
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && imageLightbox && !imageLightbox.hidden) {
+      closeImageLightbox();
+    }
+  });
+}
+
+function openImageLightbox(src, alt = "", variant = "post") {
+  if (!src) return;
+  ensureImageLightbox();
+  if (!imageLightbox || !imageLightboxImg) return;
+
+  lastFocusedElement = document.activeElement;
+  imageLightboxImg.src = src;
+  imageLightboxImg.alt = alt || "Expanded post image";
+  imageLightbox.dataset.variant = variant;
+  imageLightbox.hidden = false;
+  document.body.classList.add("image-lightbox-open");
+  imageLightboxCloseBtn?.focus();
+}
+
+function closeImageLightbox() {
+  if (!imageLightbox || imageLightbox.hidden) return;
+
+  imageLightbox.hidden = true;
+  delete imageLightbox.dataset.variant;
+  document.body.classList.remove("image-lightbox-open");
+  imageLightboxImg?.removeAttribute("src");
+
+  if (lastFocusedElement instanceof HTMLElement) {
+    lastFocusedElement.focus();
+  }
 }
