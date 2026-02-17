@@ -34,6 +34,7 @@ export function renderPostCard(
   const imageMarkup = imageUrl
     ? `
       <div class="post-image">
+        <div class="post-image-ambient" aria-hidden="true"></div>
         <img
           src="${escapeHTML(imageUrl)}"
           alt="${escapeHTML(post.title)}"
@@ -86,7 +87,28 @@ export function renderPostCard(
     });
   }
 
-  bindExpandableImage(article.querySelector(".post-image img"), "post");
+  const postImage = article.querySelector(".post-image img");
+  bindExpandableImage(postImage, "post");
+
+  const postImageFrame = article.querySelector(".post-image");
+  const postImageAmbient = article.querySelector(".post-image-ambient");
+  if (postImage && postImageAmbient && postImageFrame) {
+    const syncPreviewBackground = async () => {
+      const src = postImage.currentSrc || postImage.src;
+      if (!src) return;
+      const hasTransparency = await isTransparentPng(postImage, src);
+      if ((postImage.currentSrc || postImage.src) !== src) return;
+      postImage.dataset.transparent = hasTransparency ? "true" : "false";
+      postImageFrame.classList.toggle("post-image--checkerboard", hasTransparency);
+      if (hasTransparency) {
+        postImageAmbient.style.backgroundImage = "";
+      } else {
+        postImageAmbient.style.backgroundImage = `url("${src}")`;
+      }
+    };
+    syncPreviewBackground();
+    postImage.addEventListener("load", syncPreviewBackground);
+  }
 
   article
     .querySelectorAll(".post-comments, button, textarea, form")
@@ -198,7 +220,7 @@ function maybeRenderCommentForm(container, postId) {
     <div class="comment-textarea-wrap">
       <textarea placeholder="Write a comment..." rows="2"></textarea>
       <button type="button" class="comment-image-btn" aria-label="Attach image">
-        <img src="/static/img/paperclip.png" alt="" />
+        <img src="/static/img/camera.png" alt="" />
       </button>
       <input type="file" class="comment-image-input" accept="image/jpeg,image/png,image/gif" hidden />
     </div>
@@ -390,7 +412,13 @@ function bindExpandableImage(imgEl, variant = "post") {
   const openImage = e => {
     e.preventDefault();
     e.stopPropagation();
-    openImageLightbox(imgEl.currentSrc || imgEl.src, imgEl.alt, variant);
+    const useCheckerboard = imgEl.dataset.transparent === "true";
+    openImageLightbox(
+      imgEl.currentSrc || imgEl.src,
+      imgEl.alt,
+      variant,
+      useCheckerboard
+    );
   };
 
   imgEl.addEventListener("click", openImage);
@@ -399,6 +427,46 @@ function bindExpandableImage(imgEl, variant = "post") {
       openImage(e);
     }
   });
+}
+
+function isPngSource(src) {
+  if (!src) return false;
+  try {
+    const parsed = new URL(src, window.location.href);
+    return parsed.pathname.toLowerCase().endsWith(".png");
+  } catch {
+    return src.split("?")[0].toLowerCase().endsWith(".png");
+  }
+}
+
+async function isTransparentPng(imgEl, srcHint = "") {
+  const src = srcHint || imgEl.currentSrc || imgEl.src;
+  if (!isPngSource(src)) return false;
+
+  if (!imgEl.naturalWidth || !imgEl.naturalHeight) return false;
+
+  try {
+    const sampleWidth = Math.min(80, imgEl.naturalWidth);
+    const sampleHeight = Math.min(80, imgEl.naturalHeight);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = sampleWidth;
+    canvas.height = sampleHeight;
+
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+
+    ctx.drawImage(imgEl, 0, 0, sampleWidth, sampleHeight);
+    const { data } = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 250) return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
 }
 
 function ensureImageLightbox() {
@@ -438,7 +506,7 @@ function ensureImageLightbox() {
   });
 }
 
-function openImageLightbox(src, alt = "", variant = "post") {
+function openImageLightbox(src, alt = "", variant = "post", useCheckerboard = false) {
   if (!src) return;
   ensureImageLightbox();
   if (!imageLightbox || !imageLightboxImg) return;
@@ -446,6 +514,11 @@ function openImageLightbox(src, alt = "", variant = "post") {
   lastFocusedElement = document.activeElement;
   imageLightboxImg.src = src;
   imageLightboxImg.alt = alt || "Expanded post image";
+  if (useCheckerboard) {
+    imageLightbox.dataset.checkerboard = "true";
+  } else {
+    delete imageLightbox.dataset.checkerboard;
+  }
   imageLightbox.dataset.variant = variant;
   imageLightbox.hidden = false;
   document.body.classList.add("image-lightbox-open");
@@ -457,6 +530,7 @@ function closeImageLightbox() {
 
   imageLightbox.hidden = true;
   delete imageLightbox.dataset.variant;
+  delete imageLightbox.dataset.checkerboard;
   document.body.classList.remove("image-lightbox-open");
   imageLightboxImg?.removeAttribute("src");
 
