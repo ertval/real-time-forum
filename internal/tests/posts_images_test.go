@@ -336,6 +336,49 @@ func TestAPICommentsCreate_MultipartImage_IncludedInCommentPayloads(t *testing.T
 	}
 }
 
+func TestAPICommentsCreate_MultipartImageOnly_AllowsEmptyBody(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Post for image-only comments",
+		"body":         "seed body",
+		"category_ids": []int64{1},
+	})
+
+	rec := multipartCommentRequest(
+		t,
+		h,
+		token,
+		postID,
+		map[string]string{},
+		"comment.jpg",
+		sampleJPEGBytes,
+	)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	comment := decodeEnvelopeDataMap(t, rec)
+	rawBody, ok := comment["body"]
+	if !ok {
+		t.Fatalf("expected body field in response, got %v", comment)
+	}
+	if bodyStr, ok := rawBody.(string); !ok || bodyStr != "" {
+		t.Fatalf("expected empty body string for image-only comment, got %T(%v)", rawBody, rawBody)
+	}
+	rawURL, ok := comment["image_url"]
+	if !ok || rawURL == nil {
+		t.Fatalf("expected image_url in create comment response, got %v", comment)
+	}
+	commentImageURL, ok := rawURL.(string)
+	if !ok || strings.TrimSpace(commentImageURL) == "" {
+		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, commentImageURL) })
+}
+
 func TestAPICommentsCreate_MultipartRejectsUnsupportedImageType(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()

@@ -1,12 +1,11 @@
 // web/static/js/create-post.js
-import { API_BASE } from "./utils.js";
+import { API_BASE, MAX_IMAGE_BYTES } from "./utils.js";
 import { Auth } from "./auth.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
 import { playUpload } from "./sound-effects.js";
 
 let currentDraftId = null;
 let draftImageURL = null;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /*-----------------
   LOAD CATEGORIES

@@ -707,7 +707,8 @@ func (p *PostsHandler) createComment(w http.ResponseWriter, r *http.Request, pos
 		return
 	}
 
-	if strings.TrimSpace(req.Body) == "" {
+	hasImageUpload := r.MultipartForm != nil && len(r.MultipartForm.File["image"]) > 0
+	if strings.TrimSpace(req.Body) == "" && !hasImageUpload && req.ImageURL == nil {
 		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 		return
 	}

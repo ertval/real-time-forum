@@ -2,6 +2,7 @@
 
 import {
   API_BASE,
+  MAX_IMAGE_BYTES,
   formatCreatedAt,
   resolveUsername,
   escapeHTML,
@@ -9,6 +10,7 @@ import {
 
 import { Auth } from "./auth.js";
 import { playUpload } from "./sound-effects.js";
+import { uiNotify } from "./ui-messages.js";
 
 let imageLightbox = null;
 let imageLightboxImg = null;
@@ -277,7 +279,18 @@ function maybeRenderCommentForm(container, postId) {
     const body = textarea.value.trim();
     const imageFile = imageInput?.files?.[0] || null;
 
-    if (!body) {
+    const hasImage =
+        imageInput &&
+        imageInput.files &&
+        imageInput.files.length > 0 &&
+        imageInput.files[0];
+
+    if (hasImage && hasImage.size > MAX_IMAGE_BYTES) {
+      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
+      return;
+    }
+
+    if (!body && !hasImage) {
       errorEl.textContent = "Cannot submit an empty comment";
       errorEl.hidden = false;
       return;
