@@ -226,6 +226,22 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
 
+	/*-----------------------------
+	  ERROR ASSETS (HTML PAGES)
+	-----------------------------*/
+	mux.Handle(
+		"/errors/",
+		http.StripPrefix(
+			"/errors/",
+			http.FileServer(http.Dir("./web/errors")),
+		),
+	)
+
+	// Favicon used by the shared error template.
+	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./web/static/favicon.ico")
+	})
+
 	/*-------------------
 	  GLOBAL MIDDLEWARE
 	-------------------*/
