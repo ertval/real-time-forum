@@ -132,7 +132,7 @@ body.image-lightbox-open {
   background-position: 0 0, 8px 8px;
 }
 
-.image-lightbox-content img {
+.image-lightbox-content > .image-lightbox-image {
   display: block;
   max-width: 98vw;
   max-height: 98vh;
@@ -150,7 +150,7 @@ body.image-lightbox-open {
   max-height: 78vh;
 }
 
-.image-lightbox[data-variant="comment"] .image-lightbox-content img {
+.image-lightbox[data-variant="comment"] .image-lightbox-content > .image-lightbox-image {
   max-width: min(82vw, 760px);
   max-height: 78vh;
 }
@@ -160,16 +160,22 @@ body.image-lightbox-open {
   top: 14px;
   right: 14px;
   z-index: 3;
-  width: 28px;
-  height: 28px;
+  width: 38px;
+  height: 38px;
   border: 1px solid #9ca3af;
   border-radius: 999px;
   background: rgba(229, 231, 235, 0.95);
-  color: #374151;
-  font-size: 16px;
-  line-height: 1;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   cursor: pointer;
+}
+
+.image-lightbox-close-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .image-lightbox-close:hover {
