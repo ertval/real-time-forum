@@ -482,14 +482,16 @@ function ensureImageLightbox() {
   wrapper.innerHTML = `
     <div class="image-lightbox-backdrop" data-close-lightbox></div>
     <figure class="image-lightbox-content" role="dialog" aria-modal="true" aria-label="Expanded post image">
-      <button type="button" class="image-lightbox-close" aria-label="Close expanded image">x</button>
-      <img alt="Expanded post image" />
+      <button type="button" class="image-lightbox-close" aria-label="Close expanded image">
+        <img src="/static/img/close.png" alt="" aria-hidden="true" class="image-lightbox-close-icon" />
+      </button>
+      <img class="image-lightbox-image" alt="Expanded post image" />
     </figure>
   `;
 
   document.body.appendChild(wrapper);
   imageLightbox = wrapper;
-  imageLightboxImg = wrapper.querySelector("img");
+  imageLightboxImg = wrapper.querySelector(".image-lightbox-image");
   imageLightboxCloseBtn = wrapper.querySelector(".image-lightbox-close");
 
   wrapper.addEventListener("click", e => {
@@ -497,7 +499,7 @@ function ensureImageLightbox() {
     if (!(target instanceof Element)) return;
     if (
       target.matches("[data-close-lightbox]") ||
-      target.classList.contains("image-lightbox-close")
+      target.closest(".image-lightbox-close")
     ) {
       closeImageLightbox();
     }
