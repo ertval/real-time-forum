@@ -266,3 +266,107 @@ func TestAPIPostsImageURLVisibleInPublicMyAndLikedLists(t *testing.T) {
 		t.Fatalf("expected image_url string in liked posts image entry, got %v", imageLiked["image_url"])
 	}
 }
+
+func TestAPICommentsCreate_MultipartImage_IncludedInCommentPayloads(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Post for image comments",
+		"body":         "seed body",
+		"category_ids": []int64{1},
+	})
+
+	rec := multipartCommentRequest(
+		t,
+		h,
+		token,
+		postID,
+		map[string]string{
+			"body": "Comment with image",
+		},
+		"comment.jpg",
+		sampleJPEGBytes,
+	)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	comment := decodeEnvelopeDataMap(t, rec)
+	rawURL, ok := comment["image_url"]
+	if !ok || rawURL == nil {
+		t.Fatalf("expected image_url in create comment response, got %v", comment)
+	}
+	commentImageURL, ok := rawURL.(string)
+	if !ok || strings.TrimSpace(commentImageURL) == "" {
+		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, commentImageURL) })
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/posts/%d/comments", postID), nil)
+	recList := httptest.NewRecorder()
+	h.ServeHTTP(recList, req)
+	if recList.Code != http.StatusOK {
+		t.Fatalf("expected 200 listing comments, got %d body=%s", recList.Code, recList.Body.String())
+	}
+
+	var env apiEnvelope
+	if err := json.Unmarshal(recList.Body.Bytes(), &env); err != nil {
+		t.Fatalf("unmarshal comments envelope: %v body=%s", err, recList.Body.String())
+	}
+	if env.Error != nil {
+		t.Fatalf("unexpected list comments error: %+v", env.Error)
+	}
+
+	var comments []map[string]any
+	if err := json.Unmarshal(env.Data, &comments); err != nil {
+		t.Fatalf("unmarshal comments payload: %v", err)
+	}
+
+	found := false
+	for _, c := range comments {
+		if c["image_url"] == commentImageURL {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected created image_url %q in comments list payload %v", commentImageURL, comments)
+	}
+}
+
+func TestAPICommentsCreate_MultipartRejectsUnsupportedImageType(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Post for invalid comment image",
+		"body":         "seed body",
+		"category_ids": []int64{1},
+	})
+
+	rec := multipartCommentRequest(
+		t,
+		h,
+		token,
+		postID,
+		map[string]string{
+			"body": "Comment with invalid image",
+		},
+		"comment.png",
+		sampleTextBytes,
+	)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, rec)
+	if apiErr == nil {
+		t.Fatalf("expected error envelope, got body=%s", rec.Body.String())
+	}
+	if apiErr.Message != "unsupported image type" {
+		t.Fatalf("expected unsupported image type message, got %q", apiErr.Message)
+	}
+}

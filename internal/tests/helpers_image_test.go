@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -66,6 +67,50 @@ func multipartRequest(
 	}
 
 	req := httptest.NewRequest(method, path, bytes.NewReader(body.Bytes()))
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Cookie", "session_token="+token)
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func multipartCommentRequest(
+	t *testing.T,
+	h http.Handler,
+	token string,
+	postID int64,
+	fields map[string]string,
+	filename string,
+	fileBytes []byte,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	for k, v := range fields {
+		if err := writer.WriteField(k, v); err != nil {
+			t.Fatalf("write multipart comment field %q: %v", k, err)
+		}
+	}
+
+	if fileBytes != nil {
+		fw, err := writer.CreateFormFile("image", filename)
+		if err != nil {
+			t.Fatalf("create multipart comment image: %v", err)
+		}
+		if _, err := fw.Write(fileBytes); err != nil {
+			t.Fatalf("write multipart comment image: %v", err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	path := fmt.Sprintf("/api/v1/posts/%d/comments", postID)
+	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(body.Bytes()))
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Cookie", "session_token="+token)
 
