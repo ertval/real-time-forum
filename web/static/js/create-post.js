@@ -2,6 +2,7 @@
 import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
+import { playUpload } from "./sound-effects.js";
 
 let currentDraftId = null;
 let draftImageURL = null;
@@ -365,7 +366,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       await refreshDraftState();
       updateImageUI();
 
+      // Manual draft save → play sound + redirect to My Posts
+      playUpload();
       uiNotify("Draft saved successfully.", { type: "success" });
+
+      setTimeout(() => {
+        window.location.href = "/my-posts";
+      }, 750);
+
       return;
     }
 
@@ -406,7 +414,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    window.location.href = "/";
+    // SOUND EFFECT for publish
+    playUpload();
+
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 750);
   });
 });
 
