@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS comments (
   user_id            INTEGER NOT NULL,
   parent_comment_id  INTEGER,
   body               TEXT NOT NULL CHECK (length(body) > 0),
+  image_url          TEXT,
   created_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   updated_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
