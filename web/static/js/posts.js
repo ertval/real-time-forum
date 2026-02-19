@@ -97,23 +97,12 @@ export function renderPostCard(
 
   const postImageFrame = article.querySelector(".post-image");
   const postImageAmbient = article.querySelector(".post-image-ambient");
-  if (postImage && postImageAmbient && postImageFrame) {
-    const syncPreviewBackground = async () => {
-      const src = postImage.currentSrc || postImage.src;
-      if (!src) return;
-      const hasTransparency = await isTransparentPng(postImage, src);
-      if ((postImage.currentSrc || postImage.src) !== src) return;
-      postImage.dataset.transparent = hasTransparency ? "true" : "false";
-      postImageFrame.classList.toggle("post-image--checkerboard", hasTransparency);
-      if (hasTransparency) {
-        postImageAmbient.style.backgroundImage = "";
-      } else {
-        postImageAmbient.style.backgroundImage = `url("${src}")`;
-      }
-    };
-    syncPreviewBackground();
-    postImage.addEventListener("load", syncPreviewBackground);
-  }
+  syncImageTransparencyPresentation({
+    imgEl: postImage,
+    frameEl: postImageFrame,
+    checkerboardClass: "post-image--checkerboard",
+    ambientEl: postImageAmbient,
+  });
 
   article
     .querySelectorAll(".post-comments, textarea, form")
@@ -208,7 +197,13 @@ function renderComment(comment) {
     </div>
   `;
 
-  bindExpandableImage(div.querySelector(".comment-image img"), "comment");
+  const commentImage = div.querySelector(".comment-image img");
+  bindExpandableImage(commentImage, "comment");
+  syncImageTransparencyPresentation({
+    imgEl: commentImage,
+    frameEl: div.querySelector(".comment-image"),
+    checkerboardClass: "comment-image--checkerboard",
+  });
 
   return div;
 }
@@ -481,6 +476,33 @@ function bindExpandableImage(imgEl, variant = "post") {
       openImage(e);
     }
   });
+}
+
+function syncImageTransparencyPresentation({
+  imgEl,
+  frameEl = null,
+  checkerboardClass = "",
+  ambientEl = null,
+} = {}) {
+  if (!(imgEl instanceof HTMLImageElement)) return;
+
+  const sync = async () => {
+    const src = imgEl.currentSrc || imgEl.src;
+    if (!src) return;
+    const hasTransparency = await isTransparentPng(imgEl, src);
+    if ((imgEl.currentSrc || imgEl.src) !== src) return;
+
+    imgEl.dataset.transparent = hasTransparency ? "true" : "false";
+    if (frameEl instanceof Element && checkerboardClass) {
+      frameEl.classList.toggle(checkerboardClass, hasTransparency);
+    }
+    if (ambientEl instanceof HTMLElement) {
+      ambientEl.style.backgroundImage = hasTransparency ? "" : `url("${src}")`;
+    }
+  };
+
+  sync();
+  imgEl.addEventListener("load", sync);
 }
 
 function isPngSource(src) {
