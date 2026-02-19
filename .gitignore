@@ -23,3 +23,9 @@ forum-frontend
 
 # Uploaded files
 web/static/uploads/
+
+# Environment variables (never commit secrets)
+.env
+*.env
+cmd/backend/.env
+cmd/frontend/.env

@@ -72,3 +72,20 @@
 .btn-ghost:hover {
   background: var(--surface-muted);
 }
+
+/* login google */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #444;
+  margin-top: 0.5rem;
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+}

@@ -1,8 +1,9 @@
 // web/static/js/create-post.js
-import { API_BASE, MAX_IMAGE_BYTES } from "./utils.js";
+import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
 import { playUpload } from "./sound-effects.js";
+import { setupImagePicker } from "./image-picker.js";
 
 let currentDraftId = null;
 let draftImageURL = null;
@@ -190,44 +191,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   const imageName = document.getElementById("image-name");
   const imagePreview = document.getElementById("image-preview");
   const imageClear = document.getElementById("image-clear");
-  let previewUrl = null;
-  const clearObjectPreview = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      previewUrl = null;
-    }
-  };
-  const updateImageUI = () => {
-    const file = imageInput?.files?.[0] || null;
-    if (imageClear) {
-      imageClear.hidden = !file && !draftImageURL;
-    }
-    if (imageName) {
-      if (file) {
-        imageName.textContent = `Selected: ${file.name}`;
-      } else if (draftImageURL) {
-        imageName.textContent = "Saved draft image attached";
-      } else {
-        imageName.textContent = "";
-      }
-    }
-    if (!imagePreview) return;
-    const img = imagePreview.querySelector("img");
-    clearObjectPreview();
-    if (file) {
-      previewUrl = URL.createObjectURL(file);
-      if (img) img.src = previewUrl;
-      imagePreview.hidden = false;
-      return;
-    }
-    if (draftImageURL) {
-      if (img) img.src = draftImageURL;
-      imagePreview.hidden = false;
-      return;
-    }
-    if (img) img.removeAttribute("src");
-    imagePreview.hidden = true;
-  };
+  const imagePreviewImg = imagePreview?.querySelector("img");
+
+  const imagePicker = setupImagePicker({
+    input: imageInput,
+    triggerButton: imageButton,
+    clearButton: imageClear,
+    nameLabel: imageName,
+    previewContainer: imagePreview,
+    previewImage: imagePreviewImg,
+    persistedUrl: draftImageURL,
+    persistedLabel: "Saved draft image attached",
+    onTooLarge: () => {
+      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
+    },
+    onClearPersisted: () => {
+      draftImageURL = null;
+      scheduleDraftSave();
+    },
+  });
 
   await renderCategoryCheckboxes();
   document
@@ -235,45 +217,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     ?.addEventListener("change", scheduleDraftSave);
 
   await restoreDraftIfExists();
-  updateImageUI();
+  imagePicker.setPersistedUrl(draftImageURL);
 
   titleInput.addEventListener("input", scheduleDraftSave);
   bodyInput.addEventListener("input", scheduleDraftSave);
-
-  if (imageButton && imageInput) {
-    imageButton.addEventListener("click", () => {
-      imageInput.click();
-    });
-  }
-
-  if (imageInput && imageName) {
-    imageInput.addEventListener("change", () => {
-      const file = imageInput.files && imageInput.files[0];
-      if (file && file.size > MAX_IMAGE_BYTES) {
-        imageInput.value = "";
-        updateImageUI();
-        uiNotify("Image must be 5MB or smaller.", { type: "danger" });
-        return;
-      }
-      updateImageUI();
-    });
-  }
-
-  if (imageClear && imageInput) {
-    imageClear.addEventListener("click", () => {
-      const hasSelectedFile = !!imageInput.files?.[0];
-      if (hasSelectedFile) {
-        imageInput.value = "";
-        updateImageUI();
-        return;
-      }
-      if (draftImageURL) {
-        draftImageURL = null;
-        updateImageUI();
-        scheduleDraftSave();
-      }
-    });
-  }
 
   window.addEventListener("beforeunload", saveDraft);
   window.addEventListener("pagehide", saveDraft);
@@ -294,17 +241,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const hasImage =
-      imageInput &&
-      imageInput.files &&
-      imageInput.files.length > 0 &&
-      imageInput.files[0];
+    const selectedImageFile = imagePicker.getFile();
+    const hasImage = !!selectedImageFile;
     const hasDraftImage = !!draftImageURL;
-
-    if (hasImage && hasImage.size > MAX_IMAGE_BYTES) {
-      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
-      return;
-    }
 
     if (!body && !hasImage && !hasDraftImage) {
       uiNotify("Post body is required.", { type: "warn" });
@@ -333,7 +272,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 title,
                 body,
                 categoryIds,
-                imageInput.files[0],
+                selectedImageFile,
                 true
               ),
             }
@@ -360,10 +299,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (hasImage) {
-        imageInput.value = "";
+        imagePicker.clearSelectedFile();
       }
       await refreshDraftState();
-      updateImageUI();
+      imagePicker.setPersistedUrl(draftImageURL);
 
       // Manual draft save → play sound + redirect to My Posts
       playUpload();
@@ -383,7 +322,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? {
           method: "POST",
           credentials: "include",
-          body: buildMultipartPayload(title, body, categoryIds, imageInput.files[0]),
+          body: buildMultipartPayload(title, body, categoryIds, selectedImageFile),
         }
       : {
           method: "POST",
