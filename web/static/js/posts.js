@@ -2,7 +2,6 @@
 
 import {
   API_BASE,
-  MAX_IMAGE_BYTES,
   formatCreatedAt,
   resolveUsername,
   escapeHTML,
@@ -11,6 +10,7 @@ import {
 import { Auth } from "./auth.js";
 import { playUpload } from "./sound-effects.js";
 import { uiNotify } from "./ui-messages.js";
+import { setupImagePicker } from "./image-picker.js";
 
 let imageLightbox = null;
 let imageLightboxImg = null;
@@ -232,6 +232,9 @@ function maybeRenderCommentForm(container, postId) {
       <span class="comment-image-name muted" aria-live="polite"></span>
       <button type="button" class="comment-image-clear" aria-label="Remove selected image" hidden>x</button>
     </div>
+    <div class="comment-image-preview" hidden>
+      <img alt="Selected comment image preview" />
+    </div>
     <p class="comment-error" role="alert" hidden></p>
     <button class="btn btn-primary" type="submit">Comment</button>
   `;
@@ -241,16 +244,19 @@ function maybeRenderCommentForm(container, postId) {
   const imageInput = form.querySelector(".comment-image-input");
   const imageName = form.querySelector(".comment-image-name");
   const imageClear = form.querySelector(".comment-image-clear");
-
-  const updateImageState = () => {
-    const file = imageInput?.files?.[0] || null;
-    if (imageClear) {
-      imageClear.hidden = !file;
-    }
-    if (imageName) {
-      imageName.textContent = file ? `Selected: ${file.name}` : "";
-    }
-  };
+  const imagePreview = form.querySelector(".comment-image-preview");
+  const imagePreviewImg = imagePreview?.querySelector("img");
+  const imagePicker = setupImagePicker({
+    input: imageInput,
+    triggerButton: imageButton,
+    clearButton: imageClear,
+    nameLabel: imageName,
+    previewContainer: imagePreview,
+    previewImage: imagePreviewImg,
+    onTooLarge: () => {
+      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
+    },
+  });
 
   ["click", "mousedown", "keydown", "submit"].forEach(evt =>
     form.addEventListener(evt, e => {
@@ -259,36 +265,14 @@ function maybeRenderCommentForm(container, postId) {
     })
   );
 
-  imageButton?.addEventListener("click", () => {
-    imageInput?.click();
-  });
-
-  imageInput?.addEventListener("change", updateImageState);
-
-  imageClear?.addEventListener("click", () => {
-    if (!imageInput) return;
-    imageInput.value = "";
-    updateImageState();
-  });
-
   form.addEventListener("submit", async () => {
     const allowed = await Auth.requireOrPrompt();
     if (!allowed) return;
 
     const errorEl = form.querySelector(".comment-error");
     const body = textarea.value.trim();
-    const imageFile = imageInput?.files?.[0] || null;
-
-    const hasImage =
-        imageInput &&
-        imageInput.files &&
-        imageInput.files.length > 0 &&
-        imageInput.files[0];
-
-    if (hasImage && hasImage.size > MAX_IMAGE_BYTES) {
-      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
-      return;
-    }
+    const imageFile = imagePicker.getFile();
+    const hasImage = !!imageFile;
 
     if (!body && !hasImage) {
       errorEl.textContent = "Cannot submit an empty comment";
@@ -327,8 +311,7 @@ function maybeRenderCommentForm(container, postId) {
     const newComment = payload.data ?? payload;
 
     textarea.value = "";
-    if (imageInput) imageInput.value = "";
-    updateImageState();
+    imagePicker.clearSelectedFile();
 
     playUpload();
 

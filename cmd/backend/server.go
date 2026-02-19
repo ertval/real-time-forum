@@ -9,26 +9,32 @@ import (
 	"time"
 
 	"forum/internal/db"
+	"forum/internal/env"
 	"forum/internal/router"
 )
 
 const addr = ":8080"
 
 func Start() {
+	/* ----------------------------
+	   Load environment variables
+	-----------------------------*/
+	env.LoadEnv(".env")
+
 	/* ------------------------------------
 	   Resolve DB path (local & Docker)
-	 -------------------------------------*/
+	-------------------------------------*/
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
 		dbPath = "./data/forum.db"
 	}
 
 	/* ----------------------------
-	 Initialize database
+	   Initialize database
 	-----------------------------*/
 	database, err := db.InitDB(dbPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("DATABASE INIT ERROR:", err)
 	}
 	defer database.Close()
 
@@ -43,7 +49,7 @@ func Start() {
 
 		for range ticker.C {
 			if err := db.CleanupSessions(context.Background(), database); err != nil {
-				log.Println("session cleanup error:", err)
+				log.Println("Session cleanup error:", err)
 			}
 		}
 	}()
@@ -52,7 +58,10 @@ func Start() {
 	   HTTP server
 	-----------------------------*/
 	handler := router.NewRouter(database)
+
 	log.Println("Server running on http://localhost" + addr)
 
-	log.Fatal(http.ListenAndServe(addr, handler))
+	if err := http.ListenAndServe(addr, handler); err != nil {
+		log.Fatal("SERVER ERROR:", err)
+	}
 }

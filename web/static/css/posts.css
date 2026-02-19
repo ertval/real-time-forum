@@ -420,6 +420,21 @@ body.image-lightbox-open {
   background: #d1d5db;
 }
 
+.comment-image-preview {
+  margin-top: 8px;
+  width: min(100%, 280px);
+}
+
+.comment-image-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
 .post-categories {
   margin-bottom: 6px;
 }

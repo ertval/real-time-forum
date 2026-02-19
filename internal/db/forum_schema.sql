@@ -32,6 +32,23 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ===============================================================
+-- OAUTH USERS (Google, Github, etc)
+-- ===============================================================
+-- Linked to the main users table through user_id.
+-- OAuth users do NOT require password_hash.
+-- ===============================================================
+
+CREATE TABLE IF NOT EXISTS oauth_users (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id           INTEGER NOT NULL,
+  provider          TEXT NOT NULL,                -- "google", "github"
+  provider_user_id  TEXT NOT NULL,                -- Google 'sub', Github id
+  created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  UNIQUE(provider, provider_user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ===============================================================
 -- CATEGORIES
 -- ===============================================================
 CREATE TABLE IF NOT EXISTS categories (
