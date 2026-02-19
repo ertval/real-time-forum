@@ -136,6 +136,8 @@ body.image-lightbox-open {
   display: block;
   max-width: 98vw;
   max-height: 98vh;
+  min-width: var(--lightbox-min-width, 0px);
+  min-height: var(--lightbox-min-height, 0px);
   width: auto;
   height: auto;
   object-fit: contain;
@@ -143,16 +145,6 @@ body.image-lightbox-open {
   border: 1px solid rgba(148, 163, 184, 0.5);
   background: transparent;
   box-shadow: 0 18px 48px rgba(2, 6, 23, 0.45);
-}
-
-.image-lightbox[data-variant="comment"] .image-lightbox-content {
-  max-width: min(82vw, 760px);
-  max-height: 78vh;
-}
-
-.image-lightbox[data-variant="comment"] .image-lightbox-content > .image-lightbox-image {
-  max-width: min(82vw, 760px);
-  max-height: 78vh;
 }
 
 .image-lightbox-close {
@@ -404,20 +396,9 @@ body.image-lightbox-open {
   line-height: 1.2;
 }
 
-.comment-image-clear {
-  width: 24px;
-  height: 24px;
-  border: 1px solid #9ca3af;
-  border-radius: 999px;
-  background: #e5e7eb;
-  color: #374151;
-  line-height: 1;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.comment-image-clear:hover {
-  background: #d1d5db;
+.comment-image-row .image-clear {
+  margin-top: 0;
+  align-self: center;
 }
 
 .comment-image-preview {

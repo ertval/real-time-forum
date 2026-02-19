@@ -230,7 +230,7 @@ function maybeRenderCommentForm(container, postId) {
     </div>
     <div class="comment-image-row">
       <span class="comment-image-name muted" aria-live="polite"></span>
-      <button type="button" class="comment-image-clear" aria-label="Remove selected image" hidden>x</button>
+      <button type="button" class="image-clear" aria-label="Remove selected image" hidden>x</button>
     </div>
     <div class="comment-image-preview" hidden>
       <img alt="Selected comment image preview" />
@@ -243,7 +243,7 @@ function maybeRenderCommentForm(container, postId) {
   const imageButton = form.querySelector(".comment-image-btn");
   const imageInput = form.querySelector(".comment-image-input");
   const imageName = form.querySelector(".comment-image-name");
-  const imageClear = form.querySelector(".comment-image-clear");
+  const imageClear = form.querySelector(".image-clear");
   const imagePreview = form.querySelector(".comment-image-preview");
   const imagePreviewImg = imagePreview?.querySelector("img");
   const imagePicker = setupImagePicker({
@@ -413,11 +413,33 @@ function bindExpandableImage(imgEl, variant = "post") {
     e.preventDefault();
     e.stopPropagation();
     const useCheckerboard = imgEl.dataset.transparent === "true";
+    const imageRect = imgEl.getBoundingClientRect();
+    const minDimensions = {
+      minWidth: Math.max(0, Math.round(imageRect.width)),
+      minHeight: Math.max(0, Math.round(imageRect.height)),
+    };
+
+    if (variant === "comment") {
+      const postImage = document.querySelector(".post-image img");
+      if (postImage instanceof HTMLImageElement) {
+        const postRect = postImage.getBoundingClientRect();
+        minDimensions.minWidth = Math.max(
+          minDimensions.minWidth,
+          Math.round(postRect.width)
+        );
+        minDimensions.minHeight = Math.max(
+          minDimensions.minHeight,
+          Math.round(postRect.height)
+        );
+      }
+    }
+
     openImageLightbox(
       imgEl.currentSrc || imgEl.src,
       imgEl.alt,
       variant,
-      useCheckerboard
+      useCheckerboard,
+      minDimensions
     );
   };
 
@@ -508,12 +530,27 @@ function ensureImageLightbox() {
   });
 }
 
-function openImageLightbox(src, alt = "", variant = "post", useCheckerboard = false) {
+function openImageLightbox(
+  src,
+  alt = "",
+  variant = "post",
+  useCheckerboard = false,
+  minDimensions = {}
+) {
   if (!src) return;
   ensureImageLightbox();
   if (!imageLightbox || !imageLightboxImg) return;
 
   lastFocusedElement = document.activeElement;
+  const { minWidth = 0, minHeight = 0 } = minDimensions;
+  imageLightboxImg.style.setProperty(
+    "--lightbox-min-width",
+    `${Math.max(0, minWidth)}px`
+  );
+  imageLightboxImg.style.setProperty(
+    "--lightbox-min-height",
+    `${Math.max(0, minHeight)}px`
+  );
   imageLightboxImg.src = src;
   imageLightboxImg.alt = alt || "Expanded post image";
   if (useCheckerboard) {
@@ -534,6 +571,8 @@ function closeImageLightbox() {
   delete imageLightbox.dataset.variant;
   delete imageLightbox.dataset.checkerboard;
   document.body.classList.remove("image-lightbox-open");
+  imageLightboxImg?.style.removeProperty("--lightbox-min-width");
+  imageLightboxImg?.style.removeProperty("--lightbox-min-height");
   imageLightboxImg?.removeAttribute("src");
 
   if (lastFocusedElement instanceof HTMLElement) {
