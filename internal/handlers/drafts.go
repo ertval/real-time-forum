@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -46,27 +45,19 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var (
-			uploadFile multipart.File
-			uploadMime string
-			uploadPath string
+			uploadFile     multipart.File
+			uploadMime     string
+			uploadPath     string
+			hasImageUpload bool
 		)
 
 		contentType := strings.ToLower(r.Header.Get("Content-Type"))
 		if strings.HasPrefix(contentType, "multipart/form-data") {
-			const maxUploadSize = 5 << 20
-			r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
-			if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-				var maxErr *http.MaxBytesError
-				if errors.As(err, &maxErr) {
-					WriteError(w, r, NewError("PAYLOAD_TOO_LARGE", "upload too large", http.StatusRequestEntityTooLarge))
-					return
-				}
-				WriteError(w, r, NewError("BAD_REQUEST", "invalid multipart form", http.StatusBadRequest))
+			cleanupMultipartForm, ok := parseMultipartForm(w, r)
+			if !ok {
 				return
 			}
-			if r.MultipartForm != nil {
-				defer r.MultipartForm.RemoveAll()
-			}
+			defer cleanupMultipartForm()
 
 			req.Title = r.FormValue("title")
 			req.Body = r.FormValue("body")
@@ -89,19 +80,15 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 			}
 			req.CategoryIDs = categoryIDs
 
-			file, fileHeader, err := r.FormFile("image")
-			if err == nil {
+			file, mime, hasUpload, ok := parseImageUpload(w, r)
+			if !ok {
+				return
+			}
+			if hasUpload {
 				uploadFile = file
 				defer uploadFile.Close()
-				mime, err := validateImageType(uploadFile, fileHeader.Filename)
-				if err != nil {
-					WriteError(w, r, NewError("BAD_REQUEST", "unsupported image type", http.StatusBadRequest))
-					return
-				}
 				uploadMime = mime
-			} else if err != http.ErrMissingFile {
-				WriteError(w, r, NewError("BAD_REQUEST", "invalid image upload", http.StatusBadRequest))
-				return
+				hasImageUpload = true
 			}
 		} else {
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -119,7 +106,6 @@ func (p *PostsHandler) HandleDraft(w http.ResponseWriter, r *http.Request) {
 				WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
 				return
 			}
-			hasImageUpload := r.MultipartForm != nil && len(r.MultipartForm.File["image"]) > 0
 			if strings.TrimSpace(req.Body) == "" && !hasImageUpload && req.ImageURL == nil {
 				WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 				return
@@ -205,27 +191,19 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var (
-			uploadFile multipart.File
-			uploadMime string
-			uploadPath string
+			uploadFile     multipart.File
+			uploadMime     string
+			uploadPath     string
+			hasImageUpload bool
 		)
 
 		contentType := strings.ToLower(r.Header.Get("Content-Type"))
 		if strings.HasPrefix(contentType, "multipart/form-data") {
-			const maxUploadSize = 5 << 20
-			r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
-			if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-				var maxErr *http.MaxBytesError
-				if errors.As(err, &maxErr) {
-					WriteError(w, r, NewError("PAYLOAD_TOO_LARGE", "upload too large", http.StatusRequestEntityTooLarge))
-					return
-				}
-				WriteError(w, r, NewError("BAD_REQUEST", "invalid multipart form", http.StatusBadRequest))
+			cleanupMultipartForm, ok := parseMultipartForm(w, r)
+			if !ok {
 				return
 			}
-			if r.MultipartForm != nil {
-				defer r.MultipartForm.RemoveAll()
-			}
+			defer cleanupMultipartForm()
 
 			req.Title = r.FormValue("title")
 			req.Body = r.FormValue("body")
@@ -248,19 +226,15 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 			}
 			req.CategoryIDs = categoryIDs
 
-			file, fileHeader, err := r.FormFile("image")
-			if err == nil {
+			file, mime, hasUpload, ok := parseImageUpload(w, r)
+			if !ok {
+				return
+			}
+			if hasUpload {
 				uploadFile = file
 				defer uploadFile.Close()
-				mime, err := validateImageType(uploadFile, fileHeader.Filename)
-				if err != nil {
-					WriteError(w, r, NewError("BAD_REQUEST", "unsupported image type", http.StatusBadRequest))
-					return
-				}
 				uploadMime = mime
-			} else if err != http.ErrMissingFile {
-				WriteError(w, r, NewError("BAD_REQUEST", "invalid image upload", http.StatusBadRequest))
-				return
+				hasImageUpload = true
 			}
 		} else {
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -303,7 +277,6 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 				WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
 				return
 			}
-			hasImageUpload := r.MultipartForm != nil && len(r.MultipartForm.File["image"]) > 0
 			hasImageURL := req.ImageURL != nil && strings.TrimSpace(*req.ImageURL) != ""
 			if strings.TrimSpace(req.Body) == "" && !hasImageUpload && !hasImageURL {
 				WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))

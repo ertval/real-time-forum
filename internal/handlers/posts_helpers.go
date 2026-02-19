@@ -8,6 +8,7 @@ import (
 	repository "forum/internal/db"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+const maxUploadSize int64 = 5 << 20
 
 func resolvePostRoute(w http.ResponseWriter, r *http.Request) (postID int64, action string, ok bool) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/posts/")
@@ -97,6 +100,46 @@ func parseCategoryIDs(values []string) ([]int64, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+func parseMultipartForm(w http.ResponseWriter, r *http.Request) (func(), bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			WriteError(w, r, NewError("PAYLOAD_TOO_LARGE", "upload too large", http.StatusRequestEntityTooLarge))
+			return nil, false
+		}
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid multipart form", http.StatusBadRequest))
+		return nil, false
+	}
+
+	cleanup := func() {}
+	if r.MultipartForm != nil {
+		cleanup = func() {
+			_ = r.MultipartForm.RemoveAll()
+		}
+	}
+	return cleanup, true
+}
+
+func parseImageUpload(w http.ResponseWriter, r *http.Request) (file multipart.File, mime string, hasUpload bool, ok bool) {
+	file, fileHeader, err := r.FormFile("image")
+	if err == nil {
+		mime, err = validateImageType(file, fileHeader.Filename)
+		if err != nil {
+			_ = file.Close()
+			WriteError(w, r, NewError("BAD_REQUEST", "unsupported image type", http.StatusBadRequest))
+			return nil, "", false, false
+		}
+		return file, mime, true, true
+	}
+	if errors.Is(err, http.ErrMissingFile) {
+		return nil, "", false, true
+	}
+
+	WriteError(w, r, NewError("BAD_REQUEST", "invalid image upload", http.StatusBadRequest))
+	return nil, "", false, false
 }
 
 func validateImageType(file io.ReadSeeker, filename string) (string, error) {
