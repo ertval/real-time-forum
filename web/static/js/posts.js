@@ -2,7 +2,9 @@
 
 import {
   API_BASE,
+  buildImageRequestOptions,
   formatCreatedAt,
+  IMAGE_ACCEPT_ATTR,
   resolveUsername,
   escapeHTML,
 } from "./utils.js";
@@ -226,7 +228,7 @@ function maybeRenderCommentForm(container, postId) {
       <button type="button" class="comment-image-btn" aria-label="Attach image">
         <img src="/static/img/camera.png" alt="" />
       </button>
-      <input type="file" class="comment-image-input" accept="image/jpeg,image/png,image/gif" hidden />
+      <input type="file" class="comment-image-input" accept="${IMAGE_ACCEPT_ATTR}" hidden />
     </div>
     <div class="comment-image-row">
       <span class="comment-image-name muted" aria-live="polite"></span>
@@ -246,6 +248,8 @@ function maybeRenderCommentForm(container, postId) {
   const imageClear = form.querySelector(".image-clear");
   const imagePreview = form.querySelector(".comment-image-preview");
   const imagePreviewImg = imagePreview?.querySelector("img");
+  const submitButton = form.querySelector("button[type='submit']");
+  let isSubmitting = false;
   const imagePicker = setupImagePicker({
     input: imageInput,
     triggerButton: imageButton,
@@ -266,58 +270,65 @@ function maybeRenderCommentForm(container, postId) {
   );
 
   form.addEventListener("submit", async () => {
-    const allowed = await Auth.requireOrPrompt();
-    if (!allowed) return;
-
-    const errorEl = form.querySelector(".comment-error");
-    const body = textarea.value.trim();
-    const imageFile = imagePicker.getFile();
-    const hasImage = !!imageFile;
-
-    if (!body && !hasImage) {
-      errorEl.textContent = "Cannot submit an empty comment";
-      errorEl.hidden = false;
-      return;
+    if (isSubmitting) return;
+    isSubmitting = true;
+    if (submitButton instanceof HTMLButtonElement) {
+      submitButton.disabled = true;
     }
 
-    errorEl.hidden = true;
+    try {
+      const allowed = await Auth.requireOrPrompt();
+      if (!allowed) return;
 
-    let res;
-    if (imageFile) {
-      const formData = new FormData();
-      formData.append("body", body);
-      formData.append("image", imageFile);
-      res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-        body: formData,
-      });
-    } else {
-      res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ body }),
-      });
+      const errorEl = form.querySelector(".comment-error");
+      const body = textarea.value.trim();
+      const imageFile = imagePicker.getFile();
+      const hasImage = !!imageFile;
+
+      if (!body && !hasImage) {
+        errorEl.textContent = "Cannot submit an empty comment";
+        errorEl.hidden = false;
+        return;
+      }
+
+      errorEl.hidden = true;
+
+      const res = await fetch(
+        `${API_BASE}/posts/${postId}/comments`,
+        buildImageRequestOptions({
+          method: "POST",
+          imageFile,
+          buildMultipartBody: file => {
+            const formData = new FormData();
+            formData.append("body", body);
+            formData.append("image", file);
+            return formData;
+          },
+          jsonBody: { body },
+          multipartHeaders: { Accept: "application/json" },
+          jsonHeaders: { Accept: "application/json" },
+        })
+      );
+
+      if (!res.ok) return;
+
+      const payload = await res.json();
+      const newComment = payload.data ?? payload;
+
+      textarea.value = "";
+      imagePicker.clearSelectedFile();
+
+      playUpload();
+
+      const list = container.querySelector(".comments-scroll");
+      list?.appendChild(renderComment(newComment));
+      list.scrollTop = list.scrollHeight;
+    } finally {
+      isSubmitting = false;
+      if (submitButton instanceof HTMLButtonElement) {
+        submitButton.disabled = false;
+      }
     }
-
-    if (!res.ok) return;
-
-    const payload = await res.json();
-    const newComment = payload.data ?? payload;
-
-    textarea.value = "";
-    imagePicker.clearSelectedFile();
-
-    playUpload();
-
-    const list = container.querySelector(".comments-scroll");
-    list?.appendChild(renderComment(newComment));
-    list.scrollTop = list.scrollHeight;
   });
 
   container.appendChild(form);
