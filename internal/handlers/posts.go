@@ -465,6 +465,12 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 		return
 	}
 
+	imageURLs, err := collectPostRelatedImageURLs(r.Context(), p.conn, postID)
+	if err != nil {
+		log.Printf("failed to collect post image URLs before deletion (post_id=%d): %v", postID, err)
+		imageURLs = nil
+	}
+
 	if err := repository.DeletePost(r.Context(), p.conn, postID); err != nil {
 		log.Printf("failed to delete post: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -473,6 +479,12 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 		}
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error deleting post", http.StatusInternalServerError))
 		return
+	}
+
+	for _, imageURL := range imageURLs {
+		if err := maybeDeleteUploadedImageByURL(r.Context(), p.conn, imageURL); err != nil {
+			log.Printf("failed to cleanup post-related image after post deletion (post_id=%d, image_url=%q): %v", postID, imageURL, err)
+		}
 	}
 
 	WriteNoContent(w)
