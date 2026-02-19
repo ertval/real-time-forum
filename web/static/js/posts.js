@@ -250,17 +250,31 @@ function maybeRenderCommentForm(container, postId) {
   const imagePreviewImg = imagePreview?.querySelector("img");
   const submitButton = form.querySelector("button[type='submit']");
   let isSubmitting = false;
-  const imagePicker = setupImagePicker({
-    input: imageInput,
-    triggerButton: imageButton,
-    clearButton: imageClear,
-    nameLabel: imageName,
-    previewContainer: imagePreview,
-    previewImage: imagePreviewImg,
-    onTooLarge: () => {
-      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
-    },
-  });
+  let imagePicker = null;
+
+  const ensureImagePicker = () => {
+    if (imagePicker) return imagePicker;
+    imagePicker = setupImagePicker({
+      input: imageInput,
+      triggerButton: imageButton,
+      clearButton: imageClear,
+      nameLabel: imageName,
+      previewContainer: imagePreview,
+      previewImage: imagePreviewImg,
+      onTooLarge: () => {
+        uiNotify("Image must be 5MB or smaller.", { type: "danger" });
+      },
+    });
+    return imagePicker;
+  };
+
+  imageButton?.addEventListener("click", e => {
+    if (imagePicker) return;
+    e.preventDefault();
+    e.stopPropagation();
+    ensureImagePicker();
+    imageInput?.click();
+  }, { capture: true });
 
   ["click", "mousedown", "keydown", "submit"].forEach(evt =>
     form.addEventListener(evt, e => {
@@ -282,7 +296,10 @@ function maybeRenderCommentForm(container, postId) {
 
       const errorEl = form.querySelector(".comment-error");
       const body = textarea.value.trim();
-      const imageFile = imagePicker.getFile();
+      const imageFile =
+        imagePicker?.getFile() ||
+        imageInput?.files?.[0] ||
+        null;
       const hasImage = !!imageFile;
 
       if (!body && !hasImage) {
@@ -316,7 +333,11 @@ function maybeRenderCommentForm(container, postId) {
       const newComment = payload.data ?? payload;
 
       textarea.value = "";
-      imagePicker.clearSelectedFile();
+      if (imagePicker) {
+        imagePicker.clearSelectedFile();
+      } else if (imageInput) {
+        imageInput.value = "";
+      }
 
       playUpload();
 
