@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   user_id     INTEGER NOT NULL,
   token       TEXT NOT NULL UNIQUE,
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-  expires_at  TEXT NOT NULL CHECK (expires_at > created_at),
+  expires_at TEXT NOT NULL,
   ip          TEXT,
   user_agent  TEXT CHECK (length(user_agent) <= 512),
   is_valid    INTEGER NOT NULL DEFAULT 1 CHECK (is_valid IN (0, 1)),
@@ -129,8 +129,6 @@ CREATE TABLE IF NOT EXISTS reactions (
   comment_id  INTEGER,
   value       INTEGER NOT NULL CHECK (value IN (-1, 1)),
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-  UNIQUE (user_id, post_id),
-  UNIQUE (user_id, comment_id),
   CHECK ((post_id IS NOT NULL) != (comment_id IS NOT NULL)),
   FOREIGN KEY (user_id)    REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (post_id)    REFERENCES posts(id) ON DELETE CASCADE,
@@ -178,3 +176,6 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user
 
 CREATE INDEX IF NOT EXISTS idx_sessions_expires
   ON sessions(expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_oauth_user_id
+ON oauth_users(user_id);

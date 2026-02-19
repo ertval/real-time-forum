@@ -1,5 +1,4 @@
 // internal/router/router.go
-
 package router
 
 import (
@@ -41,6 +40,7 @@ func NewRouter(database *sql.DB) http.Handler {
 			http.MethodGet,
 		),
 	)
+
 	/*---------------------
 	  CATEGORIES (PUBLIC)
 	---------------------*/
@@ -71,7 +71,6 @@ func NewRouter(database *sql.DB) http.Handler {
 	/*----------------------------
 	  POSTS - PUBLIC COLLECTIONS
 	----------------------------*/
-
 	mux.Handle(
 		apiPrefix+"/posts/public",
 		middleware.AllowMethods(
@@ -102,10 +101,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	/*-------------------
-	  POSTS COLLECETION
+	  POSTS COLLECTION
 	-------------------*/
-	// GET  /posts → list
-	// POST /posts → create (auth)
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -118,16 +115,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	})
 
 	/*------------------------------------
-	  POSTS ITEM + COMMENTS + REACTIONS)
+	  POSTS ITEM + COMMENTS + REACTIONS
 	------------------------------------*/
-	// Handles:
-	// GET    /posts/{id}
-	// PATCH  /posts/{id}
-	// DELETE /posts/{id}
-	// POST   /posts/{id}/like
-	// POST   /posts/{id}/dislike
-	// GET    /posts/{id}/comments
-	// POST   /posts/{id}/comments
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -185,6 +174,22 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
+	mux.Handle(
+		apiPrefix+"/users/me",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.Me)),
+			http.MethodGet,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/users/",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.HandleUser)),
+			http.MethodGet,
+		),
+	)
+
 	/*---------------
 	  GOOGLE AUTH
 	---------------*/
@@ -204,18 +209,21 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
+	/*---------------
+	  GITHUB AUTH
+	---------------*/
 	mux.Handle(
-		apiPrefix+"/users/me",
+		apiPrefix+"/auth/github",
 		middleware.AllowMethods(
-			auth(http.HandlerFunc(users.Me)),
+			http.HandlerFunc(users.GithubStart),
 			http.MethodGet,
 		),
 	)
 
 	mux.Handle(
-		apiPrefix+"/users/",
+		apiPrefix+"/auth/github/callback",
 		middleware.AllowMethods(
-			auth(http.HandlerFunc(users.HandleUser)),
+			http.HandlerFunc(users.GithubCallback),
 			http.MethodGet,
 		),
 	)
@@ -223,11 +231,6 @@ func NewRouter(database *sql.DB) http.Handler {
 	/*---------------------------
 	  COMMENTS ITEM + REACTIONS
 	---------------------------*/
-	// GET    /comments/{id}
-	// PATCH  /comments/{id}
-	// DELETE /comments/{id}
-	// POST   /comments/{id}/like
-	// POST   /comments/{id}/dislike
 	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -245,9 +248,6 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
 
-	/*-------------------
-	  GLOBAL MIDDLEWARE
-	-------------------*/
 	return addMiddlewares(mux)
 }
 
@@ -260,8 +260,8 @@ func notFoundJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func addMiddlewares(handler http.Handler) http.Handler {
+	handler = middleware.EnableCORS(frontendOrigin)(handler)
 	handler = middleware.Logger(handler)
 	handler = middleware.Recoverer(handler)
-	handler = middleware.EnableCORS(frontendOrigin)(handler)
 	return handler
 }
