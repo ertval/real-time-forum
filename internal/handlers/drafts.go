@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -271,6 +272,16 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 			req.ImageURL = nil
 		}
 
+		previousImageURL, err := fetchDraftImageURLByID(r.Context(), p.conn, userID, draftID)
+		if err == sql.ErrNoRows {
+			WriteError(w, r, NewError("NOT_FOUND", "draft not found", http.StatusNotFound))
+			return
+		}
+		if err != nil {
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading draft", http.StatusInternalServerError))
+			return
+		}
+
 		if uploadFile != nil {
 			imageURL, imagePath, err := saveUploadedImage(uploadFile, uploadMime)
 			if err != nil {
@@ -326,10 +337,26 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if imageURLToCleanup, shouldCleanup := replacedOrRemovedImageURL(previousImageURL, req.ImageURL); shouldCleanup {
+			if err := maybeDeleteUploadedImageByURL(r.Context(), p.conn, imageURLToCleanup); err != nil {
+				log.Printf("failed to cleanup replaced draft image (draft_id=%d, image_url=%q): %v", draftID, imageURLToCleanup, err)
+			}
+		}
+
 		WriteNoContent(w)
 		return
 
 	case http.MethodDelete:
+		existingImageURL, err := fetchDraftImageURLByID(r.Context(), p.conn, userID, draftID)
+		if err == sql.ErrNoRows {
+			WriteError(w, r, NewError("NOT_FOUND", "draft not found", http.StatusNotFound))
+			return
+		}
+		if err != nil {
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading draft", http.StatusInternalServerError))
+			return
+		}
+
 		err = repository.DraftDelete(r.Context(), p.conn, userID, draftID)
 		if err == sql.ErrNoRows {
 			WriteError(w, r, NewError("NOT_FOUND", "draft not found", http.StatusNotFound))
@@ -340,10 +367,54 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if existingImageURL != nil {
+			if err := maybeDeleteUploadedImageByURL(r.Context(), p.conn, *existingImageURL); err != nil {
+				log.Printf("failed to cleanup draft image after delete (draft_id=%d, image_url=%q): %v", draftID, *existingImageURL, err)
+			}
+		}
+
 		WriteNoContent(w)
 		return
 
 	default:
 		MethodNotAllowed(w, r)
 	}
+}
+
+func fetchDraftImageURLByID(ctx context.Context, db *sql.DB, userID, draftID int64) (*string, error) {
+	var imageURL sql.NullString
+	err := db.QueryRowContext(ctx, `
+		SELECT image_url
+		FROM posts
+		WHERE id = ? AND author_id = ? AND status = 'draft'
+	`, draftID, userID).Scan(&imageURL)
+	if err != nil {
+		return nil, err
+	}
+	if !imageURL.Valid {
+		return nil, nil
+	}
+	value := imageURL.String
+	return &value, nil
+}
+
+func replacedOrRemovedImageURL(previous, next *string) (string, bool) {
+	if previous == nil {
+		return "", false
+	}
+	prev, ok := normalizeUploadedImageURL(*previous)
+	if !ok {
+		return "", false
+	}
+	if next == nil {
+		return prev, true
+	}
+	nextNorm, ok := normalizeUploadedImageURL(*next)
+	if !ok {
+		return prev, true
+	}
+	if prev == nextNorm {
+		return "", false
+	}
+	return prev, true
 }

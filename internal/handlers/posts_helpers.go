@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	repository "forum/internal/db"
@@ -161,4 +162,105 @@ func saveUploadedImage(file io.Reader, mime string) (string, string, error) {
 	}
 
 	return "/static/uploads/" + filename, diskPath, nil
+}
+
+// Collects all related Image urls of a post for deletion
+func collectPostRelatedImageURLs(ctx context.Context, db *sql.DB, postID int64) ([]string, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT image_url
+		FROM posts
+		WHERE id = ? AND image_url IS NOT NULL
+		UNION
+		SELECT image_url
+		FROM comments
+		WHERE post_id = ? AND image_url IS NOT NULL
+	`, postID, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	seen := make(map[string]struct{})
+	var urls []string
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		if normalized, ok := normalizeUploadedImageURL(raw); ok {
+			if _, exists := seen[normalized]; exists {
+				continue
+			}
+			seen[normalized] = struct{}{}
+			urls = append(urls, normalized)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return urls, nil
+}
+
+func maybeDeleteUploadedImageByURL(ctx context.Context, db *sql.DB, imageURL string) error {
+	normalizedURL, ok := normalizeUploadedImageURL(imageURL)
+	if !ok {
+		return nil
+	}
+
+	var refs int
+	if err := db.QueryRowContext(ctx, `
+		SELECT
+			(SELECT COUNT(1) FROM posts WHERE image_url = ?)
+			+ (SELECT COUNT(1) FROM comments WHERE image_url = ?)
+	`, normalizedURL, normalizedURL).Scan(&refs); err != nil {
+		return err
+	}
+	if refs > 0 {
+		return nil
+	}
+
+	diskPath, ok := uploadedImageDiskPath(normalizedURL)
+	if !ok {
+		return nil
+	}
+	if err := os.Remove(diskPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+func normalizeUploadedImageURL(raw string) (string, bool) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "", false
+	}
+
+	if cut := strings.IndexAny(value, "?#"); cut >= 0 {
+		value = value[:cut]
+	}
+
+	const prefix = "/static/uploads/"
+	if !strings.HasPrefix(value, prefix) {
+		return "", false
+	}
+
+	filename := strings.TrimPrefix(value, prefix)
+	if filename == "" {
+		return "", false
+	}
+	if filename != filepath.Base(filename) {
+		return "", false
+	}
+
+	return prefix + filename, true
+}
+
+func uploadedImageDiskPath(imageURL string) (string, bool) {
+	normalizedURL, ok := normalizeUploadedImageURL(imageURL)
+	if !ok {
+		return "", false
+	}
+	filename := strings.TrimPrefix(normalizedURL, "/static/uploads/")
+	return filepath.Join("web", "static", "uploads", filename), true
 }

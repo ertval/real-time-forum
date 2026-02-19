@@ -156,5 +156,11 @@ func (p *PostsHandler) deleteComment(w http.ResponseWriter, r *http.Request, com
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error deleting comment", http.StatusInternalServerError))
 		return
 	}
+
+	if comment.ImageURL != nil {
+		if err := maybeDeleteUploadedImageByURL(r.Context(), p.conn, *comment.ImageURL); err != nil {
+			log.Printf("failed to cleanup comment image after delete (comment_id=%d, image_url=%q): %v", commentID, *comment.ImageURL, err)
+		}
+	}
 	WriteNoContent(w)
 }
