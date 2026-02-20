@@ -14,16 +14,17 @@ import (
 -----------------*/
 
 type Comment struct {
-	ID              int64  `json:"id"`
-	PostID          int64  `json:"post_id"`
-	UserID          int64  `json:"user_id"`
-	Username        string `json:"username"`
-	ParentCommentID *int64 `json:"parent_comment_id,omitempty"`
-	Body            string `json:"body"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at,omitempty"`
-	Likes           int    `json:"likes"`
-	Dislikes        int    `json:"dislikes"`
+	ID              int64   `json:"id"`
+	PostID          int64   `json:"post_id"`
+	UserID          int64   `json:"user_id"`
+	Username        string  `json:"username"`
+	ParentCommentID *int64  `json:"parent_comment_id,omitempty"`
+	Body            string  `json:"body"`
+	ImageURL        *string `json:"image_url"`
+	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at,omitempty"`
+	Likes           int     `json:"likes"`
+	Dislikes        int     `json:"dislikes"`
 }
 
 type ListCommentsParams struct {
@@ -81,6 +82,7 @@ type CreateCommentInput struct {
 	UserID          int64
 	ParentCommentID *int64
 	Body            string
+	ImageURL        *string
 }
 
 func CreateComment(
@@ -97,8 +99,8 @@ func CreateComment(
 	}
 
 	const query = `
-		INSERT INTO comments (post_id, user_id, parent_comment_id, body, created_at, updated_at)
-		VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+		INSERT INTO comments (post_id, user_id, parent_comment_id, body, image_url, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
 	`
 
 	res, err := db.ExecContext(ctx, query,
@@ -106,6 +108,7 @@ func CreateComment(
 		input.UserID,
 		input.ParentCommentID,
 		input.Body,
+		input.ImageURL,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create comment: %w", err)
@@ -140,6 +143,7 @@ func GetCommentWithAuthor(
 			u.username,
 			c.parent_comment_id,
 			c.body,
+			c.image_url,
 			c.created_at,
 			c.updated_at
 		FROM comments c
@@ -149,6 +153,7 @@ func GetCommentWithAuthor(
 
 	var comment Comment
 	var parentID sql.NullInt64
+	var imageURL sql.NullString
 
 	err := db.QueryRowContext(ctx, query, id).
 		Scan(
@@ -158,6 +163,7 @@ func GetCommentWithAuthor(
 			&comment.Username,
 			&parentID,
 			&comment.Body,
+			&imageURL,
 			&comment.CreatedAt,
 			&comment.UpdatedAt,
 		)
@@ -168,6 +174,9 @@ func GetCommentWithAuthor(
 	if parentID.Valid {
 		pid := parentID.Int64
 		comment.ParentCommentID = &pid
+	}
+	if imageURL.Valid {
+		comment.ImageURL = &imageURL.String
 	}
 
 	likes, dislikes, err := CountReactionsForComment(ctx, db, id)

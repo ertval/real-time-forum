@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -51,6 +52,7 @@ type ErrorPageData struct {
 	Code    int
 	Title   string
 	Message string
+	HomeURL string
 }
 
 /* -------------------
@@ -103,6 +105,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, err *APIError) {
 			Code:    err.Status,
 			Title:   statusTitle(err.Status),
 			Message: err.Message,
+			HomeURL: getFrontendOrigin(),
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -153,4 +156,11 @@ func statusTitle(code int) string {
 	default:
 		return "Error"
 	}
+}
+
+func getFrontendOrigin() string {
+	if origin := strings.TrimSpace(os.Getenv("FRONTEND_ORIGIN")); origin != "" {
+		return strings.TrimRight(origin, "/")
+	}
+	return "http://localhost:3000"
 }

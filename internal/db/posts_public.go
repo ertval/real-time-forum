@@ -15,6 +15,7 @@ import (
 type PublicPost struct {
 	ID         int64    `json:"id"`
 	Title      string   `json:"title"`
+	ImageURL   *string  `json:"image_url"`
 	Body       string   `json:"body"`
 	Author     string   `json:"author"`
 	Categories []string `json:"categories"`
@@ -42,6 +43,7 @@ const sqlListPublicPosts = `
 SELECT 
     p.id,
     p.title,
+    p.image_url,
     p.body,
     u.username AS author,
     IFNULL(l.likes, 0) AS likes,
@@ -133,10 +135,12 @@ func ListPublicPosts(
 
 	for rows.Next() {
 		var post PublicPost
+		var imageURL sql.NullString
 
 		if err := rows.Scan(
 			&post.ID,
 			&post.Title,
+			&imageURL,
 			&post.Body,
 			&post.Author,
 			&post.Likes,
@@ -144,6 +148,9 @@ func ListPublicPosts(
 			&post.CreatedAt,
 		); err != nil {
 			return ListPublicPostsResult{}, fmt.Errorf("scan post: %w", err)
+		}
+		if imageURL.Valid {
+			post.ImageURL = &imageURL.String
 		}
 
 		categories, err := loadCategoriesForPost(ctx, db, post.ID)
