@@ -19,7 +19,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const maxUploadSize int64 = 5 << 20
+const maxUploadSize int64 = 20 << 20
 
 type imageTypeValidationError struct {
 	message string
