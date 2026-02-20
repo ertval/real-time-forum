@@ -4,15 +4,13 @@ package router
 import (
 	"database/sql"
 	"net/http"
+	"os"
 
 	"forum/internal/handlers"
 	"forum/internal/middleware"
 )
 
-const (
-	apiPrefix      = "/api/v1"
-	frontendOrigin = "http://localhost:3000"
-)
+const apiPrefix = "/api/v1"
 
 func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
@@ -29,6 +27,11 @@ func NewRouter(database *sql.DB) http.Handler {
 	  MIDDLEWARE
 	------------*/
 	auth := middleware.Auth(database)
+
+	frontendOrigin := os.Getenv("FRONTEND_URL")
+	if frontendOrigin == "" {
+		frontendOrigin = "http://localhost:3000"
+	}
 
 	/*--------
 	  HEALTH
@@ -191,7 +194,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	/*---------------
-	  GOOGLE AUTH
+	  OAUTH - GOOGLE
 	---------------*/
 	mux.Handle(
 		apiPrefix+"/auth/google",
@@ -210,7 +213,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	/*---------------
-	  GITHUB AUTH
+	  OAUTH - GITHUB
 	---------------*/
 	mux.Handle(
 		apiPrefix+"/auth/github",
@@ -248,7 +251,22 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api", notFoundJSON)
 	mux.HandleFunc("/api/", notFoundJSON)
 
-	return addMiddlewares(mux)
+	/*-----------------------------
+	  STATIC ERROR PAGES
+	-----------------------------*/
+	mux.Handle(
+		"/errors/",
+		http.StripPrefix(
+			"/errors/",
+			http.FileServer(http.Dir("./web/errors")),
+		),
+	)
+
+	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./web/static/favicon.ico")
+	})
+
+	return addMiddlewares(mux, frontendOrigin)
 }
 
 func notFoundJSON(w http.ResponseWriter, r *http.Request) {
@@ -259,7 +277,7 @@ func notFoundJSON(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func addMiddlewares(handler http.Handler) http.Handler {
+func addMiddlewares(handler http.Handler, frontendOrigin string) http.Handler {
 	handler = middleware.EnableCORS(frontendOrigin)(handler)
 	handler = middleware.Logger(handler)
 	handler = middleware.Recoverer(handler)

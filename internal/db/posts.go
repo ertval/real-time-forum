@@ -18,6 +18,7 @@ type Post struct {
 	AuthorID   int64          `json:"author_id"`
 	Author     string         `json:"author"`
 	Title      string         `json:"title"`
+	ImageURL   *string        `json:"image_url"`
 	Body       string         `json:"body"`
 	CreatedAt  string         `json:"created_at"`
 	UpdatedAt  string         `json:"updated_at,omitempty"`
@@ -93,6 +94,7 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 	defer cancel()
 
 	var post Post
+	var imageURL sql.NullString
 
 	err := db.QueryRowContext(ctx, `
 		SELECT
@@ -100,6 +102,7 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 			p.author_id,
 			u.username,
 			p.title,
+			p.image_url,
 			p.body,
 			p.created_at,
 			p.updated_at
@@ -111,12 +114,16 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 		&post.AuthorID,
 		&post.Author,
 		&post.Title,
+		&imageURL,
 		&post.Body,
 		&post.CreatedAt,
 		&post.UpdatedAt,
 	)
 	if err != nil {
 		return Post{}, err
+	}
+	if imageURL.Valid {
+		post.ImageURL = &imageURL.String
 	}
 
 	// categories (ID + name)
@@ -158,6 +165,7 @@ func CreatePostWithCategories(
 	authorID int64,
 	title, body, status string,
 	categoryIDs []int64,
+	imageURL *string,
 ) (int64, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -174,9 +182,9 @@ func CreatePostWithCategories(
 	}
 
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO posts (author_id, title, body, status)
-		VALUES (?, ?, ?, ?)
-		`, authorID, title, body, status)
+		INSERT INTO posts (author_id, title, body, status, image_url)
+		VALUES (?, ?, ?, ?, ?)
+		`, authorID, title, body, status, imageURL)
 
 	if err != nil {
 		return 0, err
@@ -361,6 +369,7 @@ func ListPostsByCategory(
 			p.author_id,
 			u.username,
 			p.title,
+			p.image_url,
 			p.body,
 			p.created_at,
 			p.updated_at
@@ -380,16 +389,21 @@ func ListPostsByCategory(
 	var posts []Post
 	for rows.Next() {
 		var post Post
+		var imageURL sql.NullString
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
 			&post.Author,
 			&post.Title,
+			&imageURL,
 			&post.Body,
 			&post.CreatedAt,
 			&post.UpdatedAt,
 		); err != nil {
 			return ListPostsByCategoryResult{}, err
+		}
+		if imageURL.Valid {
+			post.ImageURL = &imageURL.String
 		}
 		posts = append(posts, post)
 	}
@@ -470,6 +484,7 @@ func ListPostsByAuthor(
 			p.author_id,
 			u.username,
 			p.title,
+			p.image_url,
 			p.body,
 			p.created_at,
 			p.updated_at,
@@ -488,17 +503,22 @@ func ListPostsByAuthor(
 	var posts []Post
 	for rows.Next() {
 		var post Post
+		var imageURL sql.NullString
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
 			&post.Author,
 			&post.Title,
+			&imageURL,
 			&post.Body,
 			&post.CreatedAt,
 			&post.UpdatedAt,
 			&post.Status,
 		); err != nil {
 			return ListPostsByAuthorResult{}, err
+		}
+		if imageURL.Valid {
+			post.ImageURL = &imageURL.String
 		}
 		posts = append(posts, post)
 	}
@@ -594,6 +614,7 @@ func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUs
 			p.author_id,
 			u.username,
 			p.title,
+			p.image_url,
 			p.body,
 			p.created_at,
 			p.updated_at
@@ -613,16 +634,21 @@ func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUs
 	posts := make([]Post, 0)
 	for rows.Next() {
 		var post Post
+		var imageURL sql.NullString
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
 			&post.Author,
 			&post.Title,
+			&imageURL,
 			&post.Body,
 			&post.CreatedAt,
 			&post.UpdatedAt,
 		); err != nil {
 			return nil, err
+		}
+		if imageURL.Valid {
+			post.ImageURL = &imageURL.String
 		}
 		posts = append(posts, post)
 	}

@@ -10,6 +10,7 @@ import (
 type Draft struct {
 	ID          int64   `json:"id"`
 	Title       string  `json:"title"`
+	ImageURL    *string `json:"image_url"`
 	Body        string  `json:"body"`
 	UpdatedAt   string  `json:"updated_at"`
 	CategoryIDs []int64 `json:"category_ids"`
@@ -21,6 +22,7 @@ func DraftCreate(
 	userID int64,
 	title, body string,
 	categoryIDs []int64,
+	imageURL *string,
 ) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -33,9 +35,9 @@ func DraftCreate(
 
 	//Insert new draft post
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO posts (author_id, title, body, status)
-		VALUES (?, ?, ?, 'draft')
-	`, userID, title, body)
+		INSERT INTO posts (author_id, title, body, status, image_url)
+		VALUES (?, ?, ?, 'draft', ?)
+	`, userID, title, body, imageURL)
 	if err != nil {
 		return 0, err
 	}
@@ -68,6 +70,7 @@ func DraftUpdate(
 	userID, draftID int64,
 	title, body string,
 	categoryIDs []int64,
+	imageURL *string,
 ) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -80,9 +83,9 @@ func DraftUpdate(
 
 	res, err := tx.ExecContext(ctx, `
 		UPDATE posts
-		SET title = ?, body = ?, updated_at = datetime('now')
+		SET title = ?, body = ?, image_url = ?, updated_at = datetime('now')
 		WHERE id = ? AND author_id = ? AND status = 'draft'
-	`, title, body, draftID, userID)
+	`, title, body, imageURL, draftID, userID)
 	if err != nil {
 		return err
 	}
@@ -129,12 +132,12 @@ func DraftGet(
 
 	var d Draft
 	err := db.QueryRowContext(ctx, `
-		SELECT id, title, body, updated_at
+		SELECT id, title, image_url, body, updated_at
 		FROM posts
 		WHERE author_id = ? AND status = 'draft'
 		ORDER BY updated_at DESC
 		LIMIT 1
-	`, userID).Scan(&d.ID, &d.Title, &d.Body, &d.UpdatedAt)
+	`, userID).Scan(&d.ID, &d.Title, &d.ImageURL, &d.Body, &d.UpdatedAt)
 
 	if err != nil {
 		return nil, err
