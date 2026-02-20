@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	repository "forum/internal/db"
 	"io"
 	"log"
@@ -19,6 +20,14 @@ import (
 )
 
 const maxUploadSize int64 = 5 << 20
+
+type imageTypeValidationError struct {
+	message string
+}
+
+func (e *imageTypeValidationError) Error() string {
+	return e.message
+}
 
 func resolvePostRoute(w http.ResponseWriter, r *http.Request) (postID int64, action string, ok bool) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/posts/")
@@ -129,7 +138,12 @@ func parseImageUpload(w http.ResponseWriter, r *http.Request) (file multipart.Fi
 		mime, err = validateImageType(file, fileHeader.Filename)
 		if err != nil {
 			_ = file.Close()
-			WriteError(w, r, NewError("BAD_REQUEST", "unsupported image type", http.StatusBadRequest))
+			var typeErr *imageTypeValidationError
+			if errors.As(err, &typeErr) {
+				WriteError(w, r, NewError("BAD_REQUEST", typeErr.Error(), http.StatusBadRequest))
+				return nil, "", false, false
+			}
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid image upload", http.StatusBadRequest))
 			return nil, "", false, false
 		}
 		return file, mime, true, true
@@ -143,19 +157,6 @@ func parseImageUpload(w http.ResponseWriter, r *http.Request) (file multipart.Fi
 }
 
 func validateImageType(file io.ReadSeeker, filename string) (string, error) {
-	ext := strings.ToLower(filepath.Ext(filename))
-	expected := ""
-	switch ext {
-	case ".jpg", ".jpeg":
-		expected = "image/jpeg"
-	case ".png":
-		expected = "image/png"
-	case ".gif":
-		expected = "image/gif"
-	default:
-		return "", errors.New("unsupported image type")
-	}
-
 	buf := make([]byte, 512)
 	n, err := file.Read(buf)
 	if err != nil && err != io.EOF {
@@ -166,10 +167,27 @@ func validateImageType(file io.ReadSeeker, filename string) (string, error) {
 	}
 
 	mime := http.DetectContentType(buf[:n])
-	if mime != expected {
-		return "", errors.New("unsupported image type")
+	switch mime {
+	case "image/jpeg", "image/png", "image/gif":
+		return mime, nil
+	default:
+		ext := strings.ToLower(filepath.Ext(filename))
+		if ext != "" {
+			return "", &imageTypeValidationError{
+				message: fmt.Sprintf(
+					"unsupported image type: detected %s from file content (filename extension is %s). Supported formats: JPEG, PNG, GIF",
+					mime,
+					ext,
+				),
+			}
+		}
+		return "", &imageTypeValidationError{
+			message: fmt.Sprintf(
+				"unsupported image type: detected %s from file content. Supported formats: JPEG, PNG, GIF",
+				mime,
+			),
+		}
 	}
-	return mime, nil
 }
 
 func saveUploadedImage(file io.Reader, mime string) (string, string, error) {
