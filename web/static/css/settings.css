@@ -1,0 +1,148 @@
+/* =========================
+   SETTINGS MODAL
+========================= */
+
+.settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-modal.hidden {
+  display: none;
+}
+
+.settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+}
+
+.settings-card {
+  position: relative;
+  width: 360px;
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.7);
+  animation: fadeIn .2s ease;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+}
+
+#settings-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+}
+
+#settings-close:hover {
+  color: #000;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* =========================
+   SFX TOGGLE
+========================= */
+
+#sfxToggle {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sfx-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .25s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12), inset 0 -3px 6px rgba(0,0,0,0.05);
+  position: relative;
+  color: #1f7a3f; /* ON color */
+}
+
+.sfx-toggle .speaker,
+.sfx-toggle .mute-speaker {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .25s ease;
+}
+
+.sfx-toggle .mute-speaker {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.sfx-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.18), inset 0 -3px 6px rgba(0,0,0,0.05);
+}
+
+.sfx-toggle:active {
+  transform: scale(.92);
+}
+
+/* OFF state - when checkbox is CHECKED */
+#sfxToggle:checked + .sfx-toggle {
+  color: #c0392b; /* OFF color */
+  background: #fff5f5;
+}
+
+#sfxToggle:checked + .sfx-toggle .speaker {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+#sfxToggle:checked + .sfx-toggle .mute-speaker {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ON state - default (checkbox NOT checked) */
+#sfxToggle:not(:checked) + .sfx-toggle .speaker {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#sfxToggle:not(:checked) + .sfx-toggle .mute-speaker {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(.95); }
+  to { opacity: 1; transform: scale(1); }
+}
