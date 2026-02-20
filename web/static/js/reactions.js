@@ -1,7 +1,7 @@
 // web/static/js/reactions.js
 import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
-import { playReaction } from "./sound-effects.js";   
+import { playReaction } from "./sound-effects.js";
 
 let bound = false;
 
@@ -15,27 +15,30 @@ export function initReactions() {
 
     e.stopPropagation();
 
+    // Save previous state for rollback
+    const previousState = !btn.checked;
+
     // Guest → force login modal
     const allowed = await Auth.requireOrPrompt();
-    if (!allowed) return;
+    if (!allowed) {
+      btn.checked = previousState; // rollback immediately
+      return;
+    }
 
     const type = btn.dataset.reaction;
     const postId = btn.dataset.postId;
     const commentId = btn.dataset.commentId;
 
-    // Determine if scope is a post or a comment
     const scope = postId
       ? btn.closest("article[data-post-id]")
       : btn.closest(".comment");
 
-    // Mutually exclusive toggles
-    if (btn.checked && scope) {
-      const oppositeType = type === "like" ? "dislike" : "like";
-      const opposite = scope.querySelector(
-        `input[data-reaction="${oppositeType}"]`
-      );
-      if (opposite) opposite.checked = false;
-    }
+    const oppositeType = type === "like" ? "dislike" : "like";
+    const opposite = scope?.querySelector(
+      `input[data-reaction="${oppositeType}"]`
+    );
+
+    const oppositePreviousState = opposite ? opposite.checked : null;
 
     const url = postId
       ? `${API_BASE}/posts/${postId}/${type}`
@@ -48,9 +51,28 @@ export function initReactions() {
         headers: { Accept: "application/json" },
       });
 
-      if (!res.ok) return;
+      if (res.status === 401) {
+        btn.checked = previousState;
+        if (opposite && oppositePreviousState !== null) {
+          opposite.checked = oppositePreviousState;
+        }
+        await Auth.requireOrPrompt();
+        return;
+      }
 
-      // Play unified reaction sound
+      if (!res.ok) {
+        btn.checked = previousState;
+        if (opposite && oppositePreviousState !== null) {
+          opposite.checked = oppositePreviousState;
+        }
+        return;
+      }
+
+      // Only now apply mutual exclusion
+      if (btn.checked && opposite) {
+        opposite.checked = false;
+      }
+
       playReaction();
 
       const { data } = await res.json();
@@ -71,6 +93,12 @@ export function initReactions() {
 
     } catch (err) {
       console.error("Reaction failed:", err);
+
+      // Full rollback on network error
+      btn.checked = previousState;
+      if (opposite && oppositePreviousState !== null) {
+        opposite.checked = oppositePreviousState;
+      }
     }
   });
 }
