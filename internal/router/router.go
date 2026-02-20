@@ -1,19 +1,16 @@
 // internal/router/router.go
-
 package router
 
 import (
 	"database/sql"
 	"net/http"
+	"os"
 
 	"forum/internal/handlers"
 	"forum/internal/middleware"
 )
 
-const (
-	apiPrefix      = "/api/v1"
-	frontendOrigin = "http://localhost:3000"
-)
+const apiPrefix = "/api/v1"
 
 func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
@@ -31,6 +28,11 @@ func NewRouter(database *sql.DB) http.Handler {
 	------------*/
 	auth := middleware.Auth(database)
 
+	frontendOrigin := os.Getenv("FRONTEND_URL")
+	if frontendOrigin == "" {
+		frontendOrigin = "http://localhost:3000"
+	}
+
 	/*--------
 	  HEALTH
 	--------*/
@@ -41,6 +43,7 @@ func NewRouter(database *sql.DB) http.Handler {
 			http.MethodGet,
 		),
 	)
+
 	/*---------------------
 	  CATEGORIES (PUBLIC)
 	---------------------*/
@@ -71,7 +74,6 @@ func NewRouter(database *sql.DB) http.Handler {
 	/*----------------------------
 	  POSTS - PUBLIC COLLECTIONS
 	----------------------------*/
-
 	mux.Handle(
 		apiPrefix+"/posts/public",
 		middleware.AllowMethods(
@@ -102,10 +104,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	)
 
 	/*-------------------
-	  POSTS COLLECETION
+	  POSTS COLLECTION
 	-------------------*/
-	// GET  /posts → list
-	// POST /posts → create (auth)
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -118,16 +118,8 @@ func NewRouter(database *sql.DB) http.Handler {
 	})
 
 	/*------------------------------------
-	  POSTS ITEM + COMMENTS + REACTIONS)
+	  POSTS ITEM + COMMENTS + REACTIONS
 	------------------------------------*/
-	// Handles:
-	// GET    /posts/{id}
-	// PATCH  /posts/{id}
-	// DELETE /posts/{id}
-	// POST   /posts/{id}/like
-	// POST   /posts/{id}/dislike
-	// GET    /posts/{id}/comments
-	// POST   /posts/{id}/comments
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -185,8 +177,24 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
+	mux.Handle(
+		apiPrefix+"/users/me",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.Me)),
+			http.MethodGet,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/users/",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.HandleUser)),
+			http.MethodGet,
+		),
+	)
+
 	/*---------------
-	  GOOGLE AUTH
+	  OAUTH - GOOGLE
 	---------------*/
 	mux.Handle(
 		apiPrefix+"/auth/google",
@@ -204,18 +212,21 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
+	/*---------------
+	  OAUTH - GITHUB
+	---------------*/
 	mux.Handle(
-		apiPrefix+"/users/me",
+		apiPrefix+"/auth/github",
 		middleware.AllowMethods(
-			auth(http.HandlerFunc(users.Me)),
+			http.HandlerFunc(users.GithubStart),
 			http.MethodGet,
 		),
 	)
 
 	mux.Handle(
-		apiPrefix+"/users/",
+		apiPrefix+"/auth/github/callback",
 		middleware.AllowMethods(
-			auth(http.HandlerFunc(users.HandleUser)),
+			http.HandlerFunc(users.GithubCallback),
 			http.MethodGet,
 		),
 	)
@@ -223,11 +234,6 @@ func NewRouter(database *sql.DB) http.Handler {
 	/*---------------------------
 	  COMMENTS ITEM + REACTIONS
 	---------------------------*/
-	// GET    /comments/{id}
-	// PATCH  /comments/{id}
-	// DELETE /comments/{id}
-	// POST   /comments/{id}/like
-	// POST   /comments/{id}/dislike
 	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -246,7 +252,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc("/api/", notFoundJSON)
 
 	/*-----------------------------
-	  ERROR ASSETS (HTML PAGES)
+	  STATIC ERROR PAGES
 	-----------------------------*/
 	mux.Handle(
 		"/errors/",
@@ -256,15 +262,11 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	// Favicon used by the shared error template.
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./web/static/favicon.ico")
 	})
 
-	/*-------------------
-	  GLOBAL MIDDLEWARE
-	-------------------*/
-	return addMiddlewares(mux)
+	return addMiddlewares(mux, frontendOrigin)
 }
 
 func notFoundJSON(w http.ResponseWriter, r *http.Request) {
@@ -275,9 +277,9 @@ func notFoundJSON(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func addMiddlewares(handler http.Handler) http.Handler {
+func addMiddlewares(handler http.Handler, frontendOrigin string) http.Handler {
+	handler = middleware.EnableCORS(frontendOrigin)(handler)
 	handler = middleware.Logger(handler)
 	handler = middleware.Recoverer(handler)
-	handler = middleware.EnableCORS(frontendOrigin)(handler)
 	return handler
 }

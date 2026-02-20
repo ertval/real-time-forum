@@ -37,7 +37,7 @@ func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 }
 
 /*--------------------------------
-  HandleUser: /api/v1/users/{id}
+  GET /api/v1/users/{id}
 --------------------------------*/
 
 func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
@@ -53,8 +53,12 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
-		log.Printf("failed to load user: %v", err)
-		WriteError(w, r, NewError("NOT_FOUND", "user not found", http.StatusNotFound))
+		log.Printf("[USERS][GET] failed: %v", err)
+		WriteError(w, r, NewError(
+			"NOT_FOUND",
+			"user not found",
+			http.StatusNotFound,
+		))
 		return
 	}
 
@@ -62,7 +66,6 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 }
 
 /*------------------------------
-  REGISTER
   POST /api/v1/users/register
 ------------------------------*/
 
@@ -82,10 +85,9 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1️⃣ Create user
 	userID, err := repository.CreateUser(r.Context(), u.conn, req)
 	if err != nil {
-		log.Printf("failed to create user: %v", err)
+		log.Printf("[USERS][REGISTER] failed: %v", err)
 		WriteError(w, r, NewError(
 			"BAD_REQUEST",
 			err.Error(),
@@ -94,7 +96,6 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2️⃣ Create session (AUTO LOGIN)
 	session, err := repository.CreateSession(
 		r.Context(),
 		u.conn,
@@ -103,12 +104,11 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 		r.UserAgent(),
 	)
 	if err != nil {
-		log.Printf("CreateSession ERROR: %+v\n", err)
+		log.Printf("[AUTH][REGISTER] session creation failed: %v", err)
 		writeHandlerError(w, r, err, "failed to create session")
 		return
 	}
 
-	// 3️⃣ Set cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    session.Token,
@@ -117,7 +117,6 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	// 4️⃣ Success
 	WriteCreated(w, map[string]any{
 		"id":      userID,
 		"message": "user registered and logged in",
@@ -125,7 +124,6 @@ func (u *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 /*---------------------------
-  LOGIN
   POST /api/v1/users/login
 ---------------------------*/
 
@@ -147,7 +145,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repository.LoginUser(r.Context(), u.conn, req)
 	if err != nil {
-		log.Printf("failed to login user: %v", err)
+		log.Printf("[AUTH][LOGIN] failed: %v", err)
 		WriteError(w, r, NewError(
 			"UNAUTHORIZED",
 			"invalid credentials",
@@ -164,7 +162,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		r.UserAgent(),
 	)
 	if err != nil {
-		log.Printf("CreateSession ERROR: %+v\n", err)
+		log.Printf("[AUTH][LOGIN] session creation failed: %v", err)
 		writeHandlerError(w, r, err, "failed to create session")
 		return
 	}
@@ -174,7 +172,7 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Value:    session.Token,
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // important for tests
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	WriteOK(w, map[string]any{
@@ -183,7 +181,6 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 /*-----------------------
-  ME
   GET /api/v1/users/me
 -----------------------*/
 
@@ -200,7 +197,7 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repository.GetUser(r.Context(), u.conn, userID)
 	if err != nil {
-		log.Printf("failed to load authenticated user: %v", err)
+		log.Printf("[USERS][ME] failed: %v", err)
 		writeHandlerError(w, r, err, "failed to load user")
 		return
 	}
@@ -209,7 +206,6 @@ func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 }
 
 /*---------------------------
-  LOGOUT
   POST /api/v1/users/logout
 ---------------------------*/
 
@@ -234,7 +230,7 @@ func (u *UsersHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		u.conn,
 		cookie.Value,
 	); err != nil {
-		log.Printf("failed to invalidate session on logout: %v", err)
+		log.Printf("[AUTH][LOGOUT] session invalidation failed: %v", err)
 	}
 
 	http.SetCookie(w, &http.Cookie{

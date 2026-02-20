@@ -73,19 +73,29 @@
   background: var(--surface-muted);
 }
 
-/* login google */
-.btn-google {
+/* OAuth buttons (Google / GitHub) */
+.oauth-login {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-oauth {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   background: white;
-  color: #444;
-  margin-top: 0.5rem;
+  color: var(--text);
 }
 
-.google-icon {
+.btn-oauth:hover {
+  background: var(--surface-muted);
+}
+
+.oauth-icon {
   width: 18px;
   height: 18px;
 }
