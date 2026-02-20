@@ -1,13 +1,11 @@
-/* internal/handlers/oauth_google.go */
-
 package handlers
 
 import (
 	"bytes"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
-	"forum/internal/db"
+	"fmt"
+	"forum/internal/auth"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -19,25 +17,18 @@ const googleAuthURL = "https://accounts.google.com/o/oauth2/v2/auth"
 const googleTokenURL = "https://oauth2.googleapis.com/token"
 const googleUserInfoURL = "https://openidconnect.googleapis.com/v1/userinfo"
 
-// ----------------------------------------
-// STEP 1: Redirect user to Google login page
-// GET /api/v1/auth/google
-// ----------------------------------------
+/* ---------------- GOOGLE START ---------------- */
+
 func (u *UsersHandler) GoogleStart(w http.ResponseWriter, r *http.Request) {
+
 	state, err := generateState()
 	if err != nil {
-		WriteError(w, r, NewError("SERVER_ERROR", "could not generate oauth state", 500))
+		log.Printf("[OAUTH][GOOGLE] state generation failed: %v", err)
+		WriteError(w, r, NewError("SERVER_ERROR", "authentication unavailable", http.StatusInternalServerError))
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "oauth_state",
-		Value:    state,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   300, // 5 minutes
-	})
+	setOAuthStateCookie(w, state)
 
 	params := url.Values{}
 	params.Add("client_id", os.Getenv("GOOGLE_CLIENT_ID"))
@@ -46,99 +37,57 @@ func (u *UsersHandler) GoogleStart(w http.ResponseWriter, r *http.Request) {
 	params.Add("scope", "openid email profile")
 	params.Add("state", state)
 
-	authURL := googleAuthURL + "?" + params.Encode()
-
-	http.Redirect(w, r, authURL, http.StatusFound)
+	http.Redirect(w, r, googleAuthURL+"?"+params.Encode(), http.StatusFound)
 }
 
-// ----------------------------------------
-// STEP 2: Google redirects here with ?code=...
-// GET /api/v1/auth/google/callback
-// ----------------------------------------
-func (u *UsersHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
-	// Validate state
-	cookie, err := r.Cookie("oauth_state")
-	if err != nil {
-		WriteError(w, r, NewError("BAD_REQUEST", "missing oauth state", 400))
-		return
-	}
+/* ---------------- GOOGLE CALLBACK ---------------- */
 
-	if r.URL.Query().Get("state") != cookie.Value {
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid oauth state", 400))
+func (u *UsersHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
+
+	if err := validateOAuthState(r); err != nil {
+		log.Printf("[OAUTH][GOOGLE] invalid state: %v", err)
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid oauth state", http.StatusBadRequest))
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		WriteError(w, r, NewError("BAD_REQUEST", "missing code", 400))
+		WriteError(w, r, NewError("BAD_REQUEST", "missing code", http.StatusBadRequest))
 		return
 	}
 
-	// Exchange code for token
-	tokenResp, err := exchangeCodeForToken(code)
+	tokenResp, err := exchangeGoogleCode(code)
 	if err != nil {
-		log.Println("token exchange error:", err)
-		WriteError(w, r, NewError("UNAUTHORIZED", "google token exchange failed", 401))
+		log.Printf("[OAUTH][GOOGLE] token exchange failed: %v", err)
+		WriteError(w, r, NewError("UNAUTHORIZED", "google authentication failed", http.StatusUnauthorized))
 		return
 	}
 
-	// Get user info from Google
-	googleUser, err := fetchGoogleUser(tokenResp.AccessToken)
+	user, err := fetchGoogleUser(tokenResp.AccessToken)
 	if err != nil {
-		log.Println("userinfo error:", err)
-		WriteError(w, r, NewError("UNAUTHORIZED", "google user info failed", 401))
+		log.Printf("[OAUTH][GOOGLE] user fetch failed: %v", err)
+		WriteError(w, r, NewError("UNAUTHORIZED", "google authentication failed", http.StatusUnauthorized))
 		return
 	}
 
-	// Upsert user into DB
-	userID, err := db.FindOrCreateOAuthUser(
+	userID, err := auth.FindOrCreateOAuthUser(
 		r.Context(),
 		u.conn,
 		"google",
-		googleUser.Sub,
-		googleUser.Email,
-		googleUser.Name,
+		user.Sub,
+		user.Email,
+		user.Name,
 	)
 	if err != nil {
-		log.Println("upsert oauth error:", err)
-		WriteError(w, r, NewError("SERVER_ERROR", "failed to create oauth user", 500))
+		log.Printf("[OAUTH][GOOGLE] upsert failed: %v", err)
+		WriteError(w, r, NewError("SERVER_ERROR", "authentication failed", http.StatusInternalServerError))
 		return
 	}
 
-	// 5️⃣ Create session
-	session, err := db.CreateSession(
-		r.Context(),
-		u.conn,
-		userID,
-		r.RemoteAddr,
-		r.UserAgent(),
-	)
-	if err != nil {
-		log.Println("session create error:", err)
-		WriteError(w, r, NewError("SERVER_ERROR", "failed to create session", 500))
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    session.Token,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
-
-	http.Redirect(w, r, "http://localhost:3000/", http.StatusFound)
+	createSessionAndRedirect(w, r, u.conn, userID)
 }
 
-// ---------------------------------------------------------------------
-// HELPERS
-// ---------------------------------------------------------------------
-
-func generateState() (string, error) {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	return base64.URLEncoding.EncodeToString(b), err
-}
+/* ---------------- TOKEN EXCHANGE ---------------- */
 
 type googleTokenResponse struct {
 	AccessToken string `json:"access_token"`
@@ -147,7 +96,8 @@ type googleTokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-func exchangeCodeForToken(code string) (*googleTokenResponse, error) {
+func exchangeGoogleCode(code string) (*googleTokenResponse, error) {
+
 	values := url.Values{}
 	values.Set("client_id", os.Getenv("GOOGLE_CLIENT_ID"))
 	values.Set("client_secret", os.Getenv("GOOGLE_CLIENT_SECRET"))
@@ -157,6 +107,8 @@ func exchangeCodeForToken(code string) (*googleTokenResponse, error) {
 
 	req, _ := http.NewRequest("POST", googleTokenURL, bytes.NewBufferString(values.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "forum-app")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -165,12 +117,20 @@ func exchangeCodeForToken(code string) (*googleTokenResponse, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("google token exchange failed: %s", string(body))
+	}
+
 	var token googleTokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
 		return nil, err
 	}
+
 	return &token, nil
 }
+
+/* ---------------- FETCH USER ---------------- */
 
 type googleUserInfo struct {
 	Sub   string `json:"sub"`
@@ -179,8 +139,11 @@ type googleUserInfo struct {
 }
 
 func fetchGoogleUser(accessToken string) (*googleUserInfo, error) {
+
 	req, _ := http.NewRequest("GET", googleUserInfoURL, nil)
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "forum-app")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -189,10 +152,15 @@ func fetchGoogleUser(accessToken string) (*googleUserInfo, error) {
 	}
 	defer resp.Body.Close()
 
-	var info googleUserInfo
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("google user API failed: %s", string(body))
+	}
+
+	var user googleUserInfo
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		return nil, err
 	}
 
-	return &info, nil
+	return &user, nil
 }

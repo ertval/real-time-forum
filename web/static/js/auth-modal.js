@@ -58,7 +58,6 @@ export function closeAuthModal() {
 window.addEventListener("message", (event) => {
   if (!event?.data) return;
 
-  // Toasts from iframe
   if (event.data.type === "auth:notify") {
     const { message, level } = event.data.payload || {};
     if (message) {
@@ -67,7 +66,6 @@ window.addEventListener("message", (event) => {
     return;
   }
 
-  // Successful login
   if (event.data === "auth:success") {
     closeAuthModal();
     window.location.href = "/";
