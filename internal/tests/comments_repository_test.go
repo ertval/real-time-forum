@@ -140,6 +140,39 @@ func TestCreateGetUpdateDeleteComment(t *testing.T) {
 	}
 }
 
+func TestCreateComment_ImageOnlyAllowed(t *testing.T) {
+	db := newTestDB(t)
+	defer db.Close()
+
+	userID, postID := seedUserAndPost(t, db)
+	ctx := context.Background()
+
+	imageURL := "/static/uploads/comment-image.jpg"
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+		PostID:   postID,
+		UserID:   userID,
+		Body:     "",
+		ImageURL: &imageURL,
+	})
+	if err != nil {
+		t.Fatalf("CreateComment image-only: %v", err)
+	}
+	if commentID == 0 {
+		t.Fatalf("expected non-zero commentID for image-only comment")
+	}
+
+	comment, err := repository.GetCommentWithAuthor(ctx, db, commentID)
+	if err != nil {
+		t.Fatalf("GetCommentWithAuthor image-only: %v", err)
+	}
+	if comment.ImageURL == nil || *comment.ImageURL != imageURL {
+		t.Fatalf("expected image_url %q, got %v", imageURL, comment.ImageURL)
+	}
+	if comment.Body != "" {
+		t.Fatalf("expected empty body for image-only comment, got %q", comment.Body)
+	}
+}
+
 func TestUpdateComment_NoFieldsIsNoop(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
