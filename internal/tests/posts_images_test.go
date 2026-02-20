@@ -122,12 +122,12 @@ func TestAPIPostsCreate_MultipartRejectsUnsupportedImageType(t *testing.T) {
 	if apiErr == nil {
 		t.Fatalf("expected error envelope, got body=%s", rec.Body.String())
 	}
-	if apiErr.Message != "unsupported image type" {
-		t.Fatalf("expected unsupported image type message, got %q", apiErr.Message)
+	if !strings.HasPrefix(apiErr.Message, "unsupported image type") {
+		t.Fatalf("expected unsupported image type message prefix, got %q", apiErr.Message)
 	}
 }
 
-func TestAPIPostsCreate_MultipartRejectsExtensionMimeMismatch(t *testing.T) {
+func TestAPIPostsCreate_MultipartAllowsExtensionMimeMismatchWhenDetectedTypeSupported(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -148,16 +148,22 @@ func TestAPIPostsCreate_MultipartRejectsExtensionMimeMismatch(t *testing.T) {
 		samplePNGBytes,
 	)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
-	apiErr := decodeErrorEnvelope(t, rec)
-	if apiErr == nil {
-		t.Fatalf("expected error envelope, got body=%s", rec.Body.String())
+	post := decodeEnvelopeDataMap(t, rec)
+	rawURL, ok := post["image_url"]
+	if !ok || rawURL == nil {
+		t.Fatalf("expected image_url in create response, got post=%v", post)
 	}
-	if apiErr.Message != "unsupported image type" {
-		t.Fatalf("expected unsupported image type message, got %q", apiErr.Message)
+	imageURL, ok := rawURL.(string)
+	if !ok || strings.TrimSpace(imageURL) == "" {
+		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, imageURL) })
+	if !strings.HasSuffix(strings.ToLower(imageURL), ".png") {
+		t.Fatalf("expected uploaded image extension to match detected PNG type, got %q", imageURL)
 	}
 }
 
@@ -409,7 +415,7 @@ func TestAPICommentsCreate_MultipartRejectsUnsupportedImageType(t *testing.T) {
 	if apiErr == nil {
 		t.Fatalf("expected error envelope, got body=%s", rec.Body.String())
 	}
-	if apiErr.Message != "unsupported image type" {
-		t.Fatalf("expected unsupported image type message, got %q", apiErr.Message)
+	if !strings.HasPrefix(apiErr.Message, "unsupported image type") {
+		t.Fatalf("expected unsupported image type message prefix, got %q", apiErr.Message)
 	}
 }

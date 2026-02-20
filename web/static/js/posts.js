@@ -322,7 +322,12 @@ function maybeRenderCommentForm(container, postId) {
         })
       );
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        errorEl.textContent = payload?.error?.message || "Failed to submit comment";
+        errorEl.hidden = false;
+        return;
+      }
 
       const payload = await res.json();
       const newComment = payload.data ?? payload;

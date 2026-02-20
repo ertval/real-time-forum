@@ -162,12 +162,12 @@ func TestAPIDraftCreate_RejectsUnsupportedImageType(t *testing.T) {
 	if apiErr == nil {
 		t.Fatalf("expected error envelope, got body=%s", rec.Body.String())
 	}
-	if apiErr.Message != "unsupported image type" {
-		t.Fatalf("expected unsupported image type, got %q", apiErr.Message)
+	if !strings.HasPrefix(apiErr.Message, "unsupported image type") {
+		t.Fatalf("expected unsupported image type prefix, got %q", apiErr.Message)
 	}
 }
 
-func TestAPIDraftCreate_RejectsExtensionMimeMismatch(t *testing.T) {
+func TestAPIDraftCreate_AllowsExtensionMimeMismatchWhenDetectedTypeSupported(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -188,15 +188,30 @@ func TestAPIDraftCreate_RejectsExtensionMimeMismatch(t *testing.T) {
 		"draft.jpg",
 		sampleGIFBytes,
 	)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
-	apiErr := decodeErrorEnvelope(t, rec)
-	if apiErr == nil {
-		t.Fatalf("expected error envelope, got body=%s", rec.Body.String())
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/posts/draft", nil)
+	getReq.Header.Set("Cookie", "session_token="+token)
+	getRec := httptest.NewRecorder()
+	h.ServeHTTP(getRec, getReq)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on draft get, got %d body=%s", getRec.Code, getRec.Body.String())
 	}
-	if apiErr.Message != "unsupported image type" {
-		t.Fatalf("expected unsupported image type, got %q", apiErr.Message)
+
+	draft := decodeEnvelopeDataMap(t, getRec)
+	rawURL, ok := draft["image_url"]
+	if !ok || rawURL == nil {
+		t.Fatalf("expected image_url in draft response, got draft=%v", draft)
+	}
+	imageURL, ok := rawURL.(string)
+	if !ok || strings.TrimSpace(imageURL) == "" {
+		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, imageURL) })
+	if !strings.HasSuffix(strings.ToLower(imageURL), ".gif") {
+		t.Fatalf("expected uploaded image extension to match detected GIF type, got %q", imageURL)
 	}
 }
 

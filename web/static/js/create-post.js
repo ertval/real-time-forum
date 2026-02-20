@@ -385,7 +385,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (!res.ok) {
         autosaveEnabled = true;
-        uiNotify("Failed to publish post.", { type: "danger" });
+        const payload = await res.json().catch(() => null);
+        uiNotify(payload?.error?.message || "Failed to publish post.", { type: "danger" });
         return;
       }
 
