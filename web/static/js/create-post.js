@@ -250,7 +250,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     persistedUrl: draftImageURL,
     persistedLabel: "Saved draft image attached",
     onTooLarge: () => {
-      uiNotify("Image must be 5MB or smaller.", { type: "danger" });
+      uiNotify("Image must be 20MB or smaller.", { type: "danger" });
     },
     onClearPersisted: () => {
       draftImageURL = null;
