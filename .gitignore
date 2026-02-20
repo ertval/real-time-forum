@@ -1,3 +1,4 @@
+# .gitignore
 # Go build artifacts
 bin/
 *.exe
@@ -19,6 +20,9 @@ data/*.db-shm
 # Build binaries
 forum-backend
 forum-frontend
+
+# Uploaded files
+web/static/uploads/
 
 # Environment variables (never commit secrets)
 .env

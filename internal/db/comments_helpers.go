@@ -59,6 +59,7 @@ func fetchCommentsByPost(
 			u.username,
 			c.parent_comment_id,
 			c.body,
+			c.image_url,
 			c.created_at,
 			c.updated_at
 		FROM comments c
@@ -77,6 +78,7 @@ func fetchCommentsByPost(
 	for rows.Next() {
 		var comment Comment
 		var parentID sql.NullInt64
+		var imageURL sql.NullString
 
 		if err := rows.Scan(
 			&comment.ID,
@@ -85,6 +87,7 @@ func fetchCommentsByPost(
 			&comment.Username,
 			&parentID,
 			&comment.Body,
+			&imageURL,
 			&comment.CreatedAt,
 			&comment.UpdatedAt,
 		); err != nil {
@@ -94,6 +97,9 @@ func fetchCommentsByPost(
 		if parentID.Valid {
 			id := parentID.Int64
 			comment.ParentCommentID = &id
+		}
+		if imageURL.Valid {
+			comment.ImageURL = &imageURL.String
 		}
 
 		comments = append(comments, comment)

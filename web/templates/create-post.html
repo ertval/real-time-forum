@@ -24,7 +24,7 @@
     <form id="create-post-form" novalidate>
 
       <div class="field">
-        <label for="title" class="field-label">Title</label>
+        <label for="title" class="field-label sr-only">Title</label>
         <input
           id="title"
           class="input"
@@ -37,14 +37,40 @@
       </div>
 
       <div class="field">
-        <label for="body" class="field-label">Body</label>
-        <textarea
-          id="body"
-          class="input"
-          name="body"
-          placeholder="Body"
-          rows="8"
-        ></textarea>
+        <label for="body" class="field-label sr-only">Body</label>
+        <div class="textarea-wrap">
+          <textarea
+            id="body"
+            class="input"
+            name="body"
+            placeholder="Write your post..."
+            rows="8"
+          ></textarea>
+          <button
+            type="button"
+            class="attach-button"
+            id="image-button"
+            aria-label="Attach image"
+          >
+            <img src="/static/img/camera.png" alt="" />
+          </button>
+          <input
+            id="image"
+            class="sr-only"
+            type="file"
+            name="image"
+            accept="image/jpeg,image/png,image/gif"
+          />
+        </div>
+        <div class="image-meta">
+          <div id="image-name" class="image-name muted" aria-live="polite"></div>
+          <button type="button" class="image-clear" id="image-clear" aria-label="Remove image" hidden>
+            ×
+          </button>
+        </div>
+        <div id="image-preview" class="image-preview" hidden>
+          <img alt="Selected upload preview" />
+        </div>
       </div>
 
       <!-- MULTI CATEGORY CHECKBOXES -->

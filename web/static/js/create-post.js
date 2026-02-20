@@ -1,10 +1,17 @@
 // web/static/js/create-post.js
-import { API_BASE } from "./utils.js";
+import {
+  API_BASE,
+  buildImageRequestOptions,
+  buildPostMultipartFormData,
+  IMAGE_ACCEPT_ATTR,
+} from "./utils.js";
 import { Auth } from "./auth.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
 import { playUpload } from "./sound-effects.js";
+import { setupImagePicker } from "./image-picker.js";
 
 let currentDraftId = null;
+let draftImageURL = null;
 
 /*-----------------
   LOAD CATEGORIES
@@ -50,10 +57,10 @@ async function renderCategoryCheckboxes() {
 }
 
 function getSelectedCategoryIds() {
+  const host = categoryCheckboxesRef || document.getElementById("categoryCheckboxes");
+  if (!host) return [];
   return Array.from(
-    document.querySelectorAll(
-      "#categoryCheckboxes input[type='checkbox']:checked"
-    )
+    host.querySelectorAll("input[type='checkbox']:checked")
   ).map((el) => Number(el.value));
 }
 
@@ -63,11 +70,18 @@ function getSelectedCategoryIds() {
 
 let draftTimer = null;
 let autosaveEnabled = true;
+let titleInputRef = null;
+let bodyInputRef = null;
+let imageInputRef = null;
+let categoryCheckboxesRef = null;
+let draftSaveInFlight = false;
+let draftSaveQueued = false;
 
 function scheduleDraftSave() {
   if (!autosaveEnabled) return;
 
-  const title = document.getElementById("title")?.value.trim();
+  const title = titleInputRef?.value.trim()
+    ?? document.getElementById("title")?.value.trim();
   if (!title) return;
 
   clearTimeout(draftTimer);
@@ -76,34 +90,72 @@ function scheduleDraftSave() {
 
 async function saveDraft() {
   if (!autosaveEnabled) return;
-
-  const title = document.getElementById("title")?.value.trim();
-  const body = document.getElementById("body")?.value.trim();
-  const categoryIds = getSelectedCategoryIds();
-
-  if (!title || !body) return;
-
-  if (currentDraftId) {
-    await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, category_ids: categoryIds }),
-    });
+  if (draftSaveInFlight) {
+    draftSaveQueued = true;
     return;
   }
 
-  const res = await fetch(`${API_BASE}/posts/draft`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, body, category_ids: categoryIds }),
-  });
+  const title = titleInputRef?.value.trim()
+    ?? document.getElementById("title")?.value.trim();
+  const body = bodyInputRef?.value.trim()
+    ?? document.getElementById("body")?.value.trim();
+  const categoryIds = getSelectedCategoryIds();
+  const pendingImageFile = imageInputRef?.files?.[0]
+    ?? document.getElementById("image")?.files?.[0];
 
-  if (!res.ok) return;
+  if (!title) return;
+  if (!body && !draftImageURL) return;
+  if (pendingImageFile) return;
 
-  const payload = await res.json().catch(() => null);
-  currentDraftId = payload?.data?.id ?? null;
+  draftSaveInFlight = true;
+  try {
+    if (currentDraftId) {
+      await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          body,
+          image_url: draftImageURL,
+          category_ids: categoryIds,
+        }),
+      });
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/posts/draft`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        body,
+        image_url: draftImageURL,
+        category_ids: categoryIds,
+      }),
+    });
+
+    if (!res.ok) return;
+
+    const payload = await res.json().catch(() => null);
+    currentDraftId = payload?.data?.id ?? null;
+  } catch {
+    // Best-effort autosave: network failures should not break user flow.
+  } finally {
+    draftSaveInFlight = false;
+    if (draftSaveQueued) {
+      draftSaveQueued = false;
+      queueMicrotask(saveDraft);
+    }
+  }
+}
+
+async function refreshDraftState() {
+  const data = await fetchDraftRecord();
+  if (!data) return null;
+  applyDraftState(data);
+  return data;
 }
 
 /*---------------
@@ -112,13 +164,7 @@ async function saveDraft() {
 
 async function restoreDraftIfExists() {
   try {
-    const res = await fetch(`${API_BASE}/posts/draft`, {
-      credentials: "include",
-    });
-
-    if (!res.ok || res.status === 401) return;
-
-    const { data } = await res.json();
+    const data = await fetchDraftRecord();
     if (!data) return;
 
     const restore = await uiConfirm(
@@ -133,13 +179,32 @@ async function restoreDraftIfExists() {
 
     if (!restore) return;
 
-    currentDraftId = data.id;
+    applyDraftState(data);
     document.getElementById("title").value = data.title || "";
     document.getElementById("body").value = data.body || "";
     setSelectedCategoryIds(data.category_ids || []);
 
     uiNotify("Draft restored successfully.", { type: "success" });
   } catch {}
+}
+
+async function fetchDraftRecord() {
+  try {
+    const res = await fetch(`${API_BASE}/posts/draft`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const payload = await res.json().catch(() => null);
+    return payload?.data || null;
+  } catch {
+    return null;
+  }
+}
+
+function applyDraftState(data) {
+  currentDraftId = data?.id ?? null;
+  draftImageURL = data?.image_url || null;
 }
 
 /*-------
@@ -149,16 +214,55 @@ async function restoreDraftIfExists() {
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("create-post-form");
   if (!form) return;
+  let isSubmitting = false;
 
   const titleInput = document.getElementById("title");
   const bodyInput = document.getElementById("body");
+  const imageInput = document.getElementById("image");
+  if (imageInput) {
+    imageInput.setAttribute("accept", IMAGE_ACCEPT_ATTR);
+  }
+  const imageButton = document.getElementById("image-button");
+  const imageName = document.getElementById("image-name");
+  const imagePreview = document.getElementById("image-preview");
+  const imageClear = document.getElementById("image-clear");
+  const imagePreviewImg = imagePreview?.querySelector("img");
+  const categoryCheckboxes = document.getElementById("categoryCheckboxes");
+  titleInputRef = titleInput;
+  bodyInputRef = bodyInput;
+  imageInputRef = imageInput;
+  categoryCheckboxesRef = categoryCheckboxes;
+  const submitButtons = Array.from(form.querySelectorAll("button[type='submit']"));
+
+  const setSubmitButtonsDisabled = (disabled) => {
+    submitButtons.forEach(btn => {
+      btn.disabled = disabled;
+    });
+  };
+
+  const imagePicker = setupImagePicker({
+    input: imageInput,
+    triggerButton: imageButton,
+    clearButton: imageClear,
+    nameLabel: imageName,
+    previewContainer: imagePreview,
+    previewImage: imagePreviewImg,
+    persistedUrl: draftImageURL,
+    persistedLabel: "Saved draft image attached",
+    onTooLarge: () => {
+      uiNotify("Image must be 20MB or smaller.", { type: "danger" });
+    },
+    onClearPersisted: () => {
+      draftImageURL = null;
+      scheduleDraftSave();
+    },
+  });
 
   await renderCategoryCheckboxes();
-  document
-    .getElementById("categoryCheckboxes")
-    ?.addEventListener("change", scheduleDraftSave);
+  categoryCheckboxes?.addEventListener("change", scheduleDraftSave);
 
   await restoreDraftIfExists();
+  imagePicker.setPersistedUrl(draftImageURL);
 
   titleInput.addEventListener("input", scheduleDraftSave);
   bodyInput.addEventListener("input", scheduleDraftSave);
@@ -168,110 +272,144 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    isSubmitting = true;
+    setSubmitButtonsDisabled(true);
+    let shouldReleaseLock = true;
 
-    const allowed = await Auth.requireOrPrompt();
-    if (!allowed) return;
+    try {
+      const allowed = await Auth.requireOrPrompt();
+      if (!allowed) return;
 
-    const title = titleInput.value.trim();
-    const body = bodyInput.value.trim();
-    const categoryIds = getSelectedCategoryIds();
-    const action = e.submitter?.value;
+      const title = titleInput.value.trim();
+      const body = bodyInput.value.trim();
+      const categoryIds = getSelectedCategoryIds();
+      const action = e.submitter?.value;
 
-    if (!title) {
-      uiNotify("Title is required.", { type: "warn" });
-      return;
-    }
-
-    if (!body) {
-      uiNotify("Post body is required.", { type: "warn" });
-      return;
-    }
-
-    // Check if at least one category is selected for both actions
-    if (categoryIds.length === 0) {
-      uiNotify("Select at least one category.", { type: "warn" });
-      return;
-    }
-
-    if (action === "draft") {
-      const url = currentDraftId
-        ? `${API_BASE}/posts/draft/${currentDraftId}`
-        : `${API_BASE}/posts/draft`;
-
-      const method = currentDraftId ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          body,
-          category_ids: categoryIds,
-          manual: true,
-        }),
-      });
-
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        uiNotify(payload?.error?.message || "Draft save failed.", {
-          type: "danger",
-        });
+      if (!title) {
+        uiNotify("Title is required.", { type: "warn" });
         return;
       }
 
-      if (!currentDraftId) {
-        const payload = await res.json().catch(() => null);
-        currentDraftId = payload?.data?.id ?? null;
+      const selectedImageFile = imagePicker.getFile();
+      const hasImage = !!selectedImageFile;
+      const hasDraftImage = !!draftImageURL;
+
+      if (!body && !hasImage && !hasDraftImage) {
+        uiNotify("Post body is required.", { type: "warn" });
+        return;
       }
 
-      // Manual draft save → play sound + redirect to My Posts
+      // Check if at least one category is selected for both actions
+      if (categoryIds.length === 0) {
+        uiNotify("Select at least one category.", { type: "warn" });
+        return;
+      }
+
+      if (action === "draft") {
+        const url = currentDraftId
+          ? `${API_BASE}/posts/draft/${currentDraftId}`
+          : `${API_BASE}/posts/draft`;
+
+        const method = currentDraftId ? "PUT" : "POST";
+        const res = await fetch(url, buildImageRequestOptions({
+          method,
+          imageFile: selectedImageFile,
+          buildMultipartBody: imageFile =>
+            buildPostMultipartFormData({
+              title,
+              body,
+              categoryIds,
+              imageFile,
+              manual: true,
+              imageURL: draftImageURL,
+            }),
+          jsonBody: {
+            title,
+            body,
+            image_url: draftImageURL,
+            category_ids: categoryIds,
+            manual: true,
+          },
+        }));
+
+        if (!res.ok) {
+          const payload = await res.json().catch(() => null);
+          uiNotify(payload?.error?.message || "Draft save failed.", {
+            type: "danger",
+          });
+          return;
+        }
+
+        if (hasImage) {
+          imagePicker.clearSelectedFile();
+        }
+        await refreshDraftState();
+        imagePicker.setPersistedUrl(draftImageURL);
+
+        // Manual draft save → play sound + redirect to My Posts
+        playUpload();
+        uiNotify("Draft saved successfully.", { type: "success" });
+
+        shouldReleaseLock = false;
+        setTimeout(() => {
+          window.location.href = "/my-posts";
+        }, 750);
+
+        return;
+      }
+
+      autosaveEnabled = false;
+      clearTimeout(draftTimer);
+
+      const res = await fetch(`${API_BASE}/posts`, buildImageRequestOptions({
+        method: "POST",
+        imageFile: selectedImageFile,
+        buildMultipartBody: imageFile =>
+          buildPostMultipartFormData({
+            title,
+            body,
+            categoryIds,
+            imageFile,
+          }),
+        jsonBody: {
+          title,
+          body,
+          image_url: draftImageURL,
+          category_ids: categoryIds,
+        },
+        jsonHeaders: {
+          Accept: "application/json",
+        },
+      }));
+
+      if (!res.ok) {
+        autosaveEnabled = true;
+        const payload = await res.json().catch(() => null);
+        uiNotify(payload?.error?.message || "Failed to publish post.", { type: "danger" });
+        return;
+      }
+
+      if (currentDraftId) {
+        await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+      }
+
+      // SOUND EFFECT for publish
       playUpload();
-      uiNotify("Draft saved successfully.", { type: "success" });
 
+      shouldReleaseLock = false;
       setTimeout(() => {
-        window.location.href = "/my-posts";
+        window.location.href = "/";
       }, 750);
-
-      return;
+    } finally {
+      if (shouldReleaseLock) {
+        isSubmitting = false;
+        setSubmitButtonsDisabled(false);
+      }
     }
-
-    autosaveEnabled = false;
-    clearTimeout(draftTimer);
-
-    const res = await fetch(`${API_BASE}/posts`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        body,
-        category_ids: categoryIds,
-      }),
-    });
-
-    if (!res.ok) {
-      autosaveEnabled = true;
-      uiNotify("Failed to publish post.", { type: "danger" });
-      return;
-    }
-
-    if (currentDraftId) {
-      await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-    }
-
-    // SOUND EFFECT for publish
-    playUpload();
-
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 750);
   });
 });
 
