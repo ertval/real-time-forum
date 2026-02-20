@@ -52,3 +52,27 @@
 #logout-btn {
     display: none;
 }
+
+/* Settings icon button */
+.icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 120ms ease;
+}
+
+.icon-btn:hover {
+    background: rgba(15, 23, 42, 0.06);
+    transform: rotate(20deg);
+}
+
+.icon-btn:active {
+    transform: scale(0.9);
+}
