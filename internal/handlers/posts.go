@@ -556,6 +556,7 @@ func (p *PostsHandler) handleReaction(
 	)
 	if errors.Is(err, repository.ErrNotFound) {
 		WriteError(w, r, NewError("NOT_FOUND", "target not found", http.StatusNotFound))
+		return
 	}
 	if err != nil {
 		log.Printf("ToggleReaction failed: %v", err)

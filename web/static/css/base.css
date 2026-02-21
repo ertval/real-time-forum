@@ -16,7 +16,7 @@
 
     --primary: #3b82f6;        /* login page blue */
     --primary-hover: #2563eb;
-    --primary-legacy: #007bff; /* your current button blue */
+    --primary-legacy: #007bff; /* button blue */
     --primary-legacy-hover: #0056b3;
 
     --radius-sm: 6px;
@@ -187,13 +187,12 @@ select:focus {
 }
 
 /* ---------- Compatibility layer (so existing classes work) ---------- */
-/* These map your existing button classes to the new .btn system */
 .load-comments,
 .like-btn,
 .dislike-btn {
     height: 40px;
     padding: 0 15px;
-    background: var(--primary-legacy);     /* keeps your current look  [oai_citation:3‡styles.css](sediment://file_00000000e2e4720a92b9894ded1a4f28) */
+    background: var(--primary-legacy);
     color: white;
     border: none;
     border-radius: 5px;
@@ -206,10 +205,9 @@ select:focus {
 .load-comments:hover,
 .like-btn:hover,
 .dislike-btn:hover {
-    background: var(--primary-legacy-hover); /* keeps your current hover  [oai_citation:4‡styles.css](sediment://file_00000000e2e4720a92b9894ded1a4f28) */
+    background: var(--primary-legacy-hover);
 }
 
-/* Unify your current comment textarea styling with the base inputs */
 .comment-input {
     width: 100%;
     max-width: 100%;
