@@ -134,11 +134,14 @@ func applyReactionToggleTx(
 ) (int, error) {
 
 	var idColumn string
+	var conflictTarget string
 	switch targetType {
 	case "post":
 		idColumn = "post_id"
+		conflictTarget = "ON CONFLICT(user_id, post_id) WHERE post_id IS NOT NULL"
 	case "comment":
 		idColumn = "comment_id"
+		conflictTarget = "ON CONFLICT(user_id, comment_id) WHERE comment_id IS NOT NULL"
 	default:
 		return 0, fmt.Errorf("invalid target type: %s", targetType)
 	}
@@ -158,9 +161,9 @@ func applyReactionToggleTx(
 	query := fmt.Sprintf(`
 		INSERT INTO reactions (user_id, %s, value, created_at)
 		VALUES (?, ?, ?, datetime('now'))
-		ON CONFLICT(user_id, %s)
+		%s
 		DO UPDATE SET value = excluded.value
-	`, idColumn, idColumn)
+	`, idColumn, conflictTarget)
 
 	if _, err := tx.ExecContext(
 		ctx,
