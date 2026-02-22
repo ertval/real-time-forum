@@ -27,15 +27,25 @@ var (
 	sampleTextBytes = []byte("not an image")
 )
 
-func multipartRequest(
+const maxUploadBytes = 20 << 20
+
+func jpegBytesOfSize(t *testing.T, size int) []byte {
+	t.Helper()
+	if size < len(sampleJPEGBytes) {
+		t.Fatalf("requested jpeg size %d is smaller than header %d", size, len(sampleJPEGBytes))
+	}
+	b := make([]byte, size)
+	copy(b, sampleJPEGBytes)
+	return b
+}
+
+func buildPostMultipartBody(
 	t *testing.T,
-	h http.Handler,
-	method, path, token string,
 	fields map[string]string,
 	categoryIDs []int64,
 	filename string,
 	fileBytes []byte,
-) *httptest.ResponseRecorder {
+) (payload []byte, contentType string) {
 	t.Helper()
 
 	var body bytes.Buffer
@@ -66,24 +76,15 @@ func multipartRequest(
 		t.Fatalf("close multipart writer: %v", err)
 	}
 
-	req := httptest.NewRequest(method, path, bytes.NewReader(body.Bytes()))
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("Cookie", "session_token="+token)
-
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	return rec
+	return body.Bytes(), writer.FormDataContentType()
 }
 
-func multipartCommentRequest(
+func buildCommentMultipartBody(
 	t *testing.T,
-	h http.Handler,
-	token string,
-	postID int64,
 	fields map[string]string,
 	filename string,
 	fileBytes []byte,
-) *httptest.ResponseRecorder {
+) (payload []byte, contentType string) {
 	t.Helper()
 
 	var body bytes.Buffer
@@ -109,14 +110,55 @@ func multipartCommentRequest(
 		t.Fatalf("close multipart writer: %v", err)
 	}
 
-	path := fmt.Sprintf("/api/v1/posts/%d/comments", postID)
-	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(body.Bytes()))
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	return body.Bytes(), writer.FormDataContentType()
+}
+
+func multipartRequestWithBody(
+	t *testing.T,
+	h http.Handler,
+	method, path, token, contentType string,
+	payload []byte,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := httptest.NewRequest(method, path, bytes.NewReader(payload))
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Cookie", "session_token="+token)
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
+}
+
+func multipartRequest(
+	t *testing.T,
+	h http.Handler,
+	method, path, token string,
+	fields map[string]string,
+	categoryIDs []int64,
+	filename string,
+	fileBytes []byte,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
+	payload, contentType := buildPostMultipartBody(t, fields, categoryIDs, filename, fileBytes)
+	return multipartRequestWithBody(t, h, method, path, token, contentType, payload)
+}
+
+func multipartCommentRequest(
+	t *testing.T,
+	h http.Handler,
+	token string,
+	postID int64,
+	fields map[string]string,
+	filename string,
+	fileBytes []byte,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
+	payload, contentType := buildCommentMultipartBody(t, fields, filename, fileBytes)
+	path := fmt.Sprintf("/api/v1/posts/%d/comments", postID)
+	return multipartRequestWithBody(t, h, http.MethodPost, path, token, contentType, payload)
 }
 
 func decodeEnvelopeDataMap(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
