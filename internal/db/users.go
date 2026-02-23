@@ -5,10 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -16,6 +13,7 @@ const (
 	minUsernameLength = 3
 	maxUsernameLength = 30
 	minPasswordLength = 8
+	maxPasswordLength = 64
 )
 
 type User struct {
@@ -113,122 +111,6 @@ func GetUser(
 			return User{}, fmt.Errorf("user not found")
 		}
 		return User{}, fmt.Errorf("get user: %w", err)
-	}
-
-	return user, nil
-}
-
-/*---------
-  HELPERS
-----------*/
-
-func validateCreateUser(req CreateUserRequest) error {
-	switch {
-	case len(req.Username) < minUsernameLength:
-		return fmt.Errorf("username must be at least %d characters long", minUsernameLength)
-	case len(req.Username) > maxUsernameLength:
-		return fmt.Errorf("username can't be longer than %d characters", maxUsernameLength)
-	case len(req.Password) < minPasswordLength:
-		return fmt.Errorf("password must be at least %d characters long", minPasswordLength)
-	case !strings.Contains(req.Email, "@"):
-		return fmt.Errorf("invalid email address")
-	case strings.Contains(req.Username, "@"):
-		return fmt.Errorf("username can't contain '@'")
-	}
-	return nil
-}
-
-func hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword(
-		[]byte(password),
-		bcrypt.DefaultCost,
-	)
-	if err != nil {
-		return "", fmt.Errorf("hash password: %w", err)
-	}
-	return string(hash), nil
-}
-
-func comparePassword(hash, password string) error {
-	return bcrypt.CompareHashAndPassword(
-		[]byte(hash),
-		[]byte(password),
-	)
-}
-
-func insertUser(
-	ctx context.Context,
-	db *sql.DB,
-	username,
-	email,
-	passwordHash string,
-) (int64, error) {
-
-	result, err := db.ExecContext(ctx,
-		`INSERT INTO users (username, email, password_hash)
-		 VALUES (?, ?, ?)`,
-		username,
-		email,
-		passwordHash,
-	)
-	if err != nil {
-		if isUniqueConstraint(err) {
-			msg := err.Error()
-			switch {
-			case strings.Contains(msg, "username"):
-				return 0, fmt.Errorf("username already exists")
-			case strings.Contains(msg, "email"):
-				return 0, fmt.Errorf("email already exists")
-			}
-		}
-		return 0, fmt.Errorf("insert user: %w", err)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, fmt.Errorf("last insert id: %w", err)
-	}
-
-	return id, nil
-}
-
-func fetchUserForLogin(
-	ctx context.Context,
-	db *sql.DB,
-	req LoginRequest,
-) (User, error) {
-
-	var row *sql.Row
-
-	if strings.TrimSpace(req.Username) != "" {
-		row = db.QueryRowContext(ctx,
-			`SELECT id, username, email, password_hash, is_active
-			 FROM users
-			 WHERE username = ?`,
-			req.Username,
-		)
-	} else {
-		row = db.QueryRowContext(ctx,
-			`SELECT id, username, email, password_hash, is_active
-			 FROM users
-			 WHERE email = ?`,
-			req.Email,
-		)
-	}
-
-	var user User
-	if err := row.Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&user.PasswordHash,
-		&user.IsActive,
-	); err != nil {
-
-		if err == sql.ErrNoRows {
-			return User{}, ErrInvalidCredentials
-		}
-		return User{}, fmt.Errorf("fetch user: %w", err)
 	}
 
 	return user, nil
