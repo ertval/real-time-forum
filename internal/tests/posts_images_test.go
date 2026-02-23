@@ -273,6 +273,96 @@ func TestAPIPostsImageURLVisibleInPublicMyAndLikedLists(t *testing.T) {
 	}
 }
 
+func TestAPIPostsCreate_MultipartUploadSizeBoundary(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	fields := map[string]string{
+		"title": "Boundary upload post",
+		"body":  "",
+	}
+	categoryIDs := []int64{1}
+	filename := "boundary.jpg"
+
+	basePayload, _ := buildPostMultipartBody(t, fields, categoryIDs, filename, []byte{})
+	atLimitFileSize := maxUploadBytes - len(basePayload)
+	if atLimitFileSize < len(sampleJPEGBytes) {
+		t.Fatalf("computed file size at limit too small: %d", atLimitFileSize)
+	}
+
+	atLimitPayload, atLimitContentType := buildPostMultipartBody(
+		t,
+		fields,
+		categoryIDs,
+		filename,
+		jpegBytesOfSize(t, atLimitFileSize),
+	)
+	if got := len(atLimitPayload); got != maxUploadBytes {
+		t.Fatalf("expected exact payload size %d bytes, got %d", maxUploadBytes, got)
+	}
+
+	recAtLimit := multipartRequestWithBody(
+		t,
+		h,
+		http.MethodPost,
+		"/api/v1/posts",
+		token,
+		atLimitContentType,
+		atLimitPayload,
+	)
+	if recAtLimit.Code != http.StatusCreated {
+		t.Fatalf("expected 201 at size limit, got %d body=%s", recAtLimit.Code, recAtLimit.Body.String())
+	}
+
+	post := decodeEnvelopeDataMap(t, recAtLimit)
+	rawURL, ok := post["image_url"]
+	if !ok || rawURL == nil {
+		t.Fatalf("expected image_url for at-limit upload, got post=%v", post)
+	}
+	imageURL, ok := rawURL.(string)
+	if !ok || strings.TrimSpace(imageURL) == "" {
+		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, imageURL) })
+
+	overLimitPayload, overLimitContentType := buildPostMultipartBody(
+		t,
+		fields,
+		categoryIDs,
+		filename,
+		jpegBytesOfSize(t, atLimitFileSize+1),
+	)
+	if got := len(overLimitPayload); got != maxUploadBytes+1 {
+		t.Fatalf("expected over-limit payload size %d bytes, got %d", maxUploadBytes+1, got)
+	}
+
+	recOverLimit := multipartRequestWithBody(
+		t,
+		h,
+		http.MethodPost,
+		"/api/v1/posts",
+		token,
+		overLimitContentType,
+		overLimitPayload,
+	)
+	if recOverLimit.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413 over size limit, got %d body=%s", recOverLimit.Code, recOverLimit.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, recOverLimit)
+	if apiErr == nil {
+		t.Fatalf("expected error envelope, got body=%s", recOverLimit.Body.String())
+	}
+	if apiErr.Code != "PAYLOAD_TOO_LARGE" {
+		t.Fatalf("expected PAYLOAD_TOO_LARGE, got %q", apiErr.Code)
+	}
+	if apiErr.Message != "upload too large" {
+		t.Fatalf("expected message %q, got %q", "upload too large", apiErr.Message)
+	}
+}
+
 func TestAPICommentsCreate_MultipartImage_IncludedInCommentPayloads(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
@@ -284,31 +374,53 @@ func TestAPICommentsCreate_MultipartImage_IncludedInCommentPayloads(t *testing.T
 		"category_ids": []int64{1},
 	})
 
-	rec := multipartCommentRequest(
-		t,
-		h,
-		token,
-		postID,
-		map[string]string{
-			"body": "Comment with image",
-		},
-		"comment.jpg",
-		sampleJPEGBytes,
-	)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+	cases := []struct {
+		name     string
+		filename string
+		content  []byte
+		wantExt  string
+	}{
+		{name: "jpeg", filename: "comment.jpg", content: sampleJPEGBytes, wantExt: ".jpg"},
+		{name: "png", filename: "comment.png", content: samplePNGBytes, wantExt: ".png"},
+		{name: "gif", filename: "comment.gif", content: sampleGIFBytes, wantExt: ".gif"},
 	}
 
-	comment := decodeEnvelopeDataMap(t, rec)
-	rawURL, ok := comment["image_url"]
-	if !ok || rawURL == nil {
-		t.Fatalf("expected image_url in create comment response, got %v", comment)
+	commentImageURLs := make([]string, 0, len(cases))
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			rec := multipartCommentRequest(
+				t,
+				h,
+				token,
+				postID,
+				map[string]string{
+					"body": "Comment with image " + tc.name,
+				},
+				tc.filename,
+				tc.content,
+			)
+			if rec.Code != http.StatusCreated {
+				t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+			}
+
+			comment := decodeEnvelopeDataMap(t, rec)
+			rawURL, ok := comment["image_url"]
+			if !ok || rawURL == nil {
+				t.Fatalf("expected image_url in create comment response, got %v", comment)
+			}
+			commentImageURL, ok := rawURL.(string)
+			if !ok || strings.TrimSpace(commentImageURL) == "" {
+				t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+			}
+			if !strings.HasSuffix(strings.ToLower(commentImageURL), tc.wantExt) {
+				t.Fatalf("expected comment image extension %q, got %q", tc.wantExt, commentImageURL)
+			}
+			commentImageURLs = append(commentImageURLs, commentImageURL)
+			t.Cleanup(func() { cleanupUploadedFromImageURL(t, commentImageURL) })
+		})
 	}
-	commentImageURL, ok := rawURL.(string)
-	if !ok || strings.TrimSpace(commentImageURL) == "" {
-		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
-	}
-	t.Cleanup(func() { cleanupUploadedFromImageURL(t, commentImageURL) })
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/posts/%d/comments", postID), nil)
 	recList := httptest.NewRecorder()
@@ -330,15 +442,17 @@ func TestAPICommentsCreate_MultipartImage_IncludedInCommentPayloads(t *testing.T
 		t.Fatalf("unmarshal comments payload: %v", err)
 	}
 
-	found := false
-	for _, c := range comments {
-		if c["image_url"] == commentImageURL {
-			found = true
-			break
+	for _, wantURL := range commentImageURLs {
+		found := false
+		for _, c := range comments {
+			if c["image_url"] == wantURL {
+				found = true
+				break
+			}
 		}
-	}
-	if !found {
-		t.Fatalf("expected created image_url %q in comments list payload %v", commentImageURL, comments)
+		if !found {
+			t.Fatalf("expected created image_url %q in comments list payload %v", wantURL, comments)
+		}
 	}
 }
 
@@ -353,36 +467,55 @@ func TestAPICommentsCreate_MultipartImageOnly_AllowsEmptyBody(t *testing.T) {
 		"category_ids": []int64{1},
 	})
 
-	rec := multipartCommentRequest(
-		t,
-		h,
-		token,
-		postID,
-		map[string]string{},
-		"comment.jpg",
-		sampleJPEGBytes,
-	)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+	cases := []struct {
+		name     string
+		filename string
+		content  []byte
+		wantExt  string
+	}{
+		{name: "jpeg", filename: "comment.jpg", content: sampleJPEGBytes, wantExt: ".jpg"},
+		{name: "png", filename: "comment.png", content: samplePNGBytes, wantExt: ".png"},
+		{name: "gif", filename: "comment.gif", content: sampleGIFBytes, wantExt: ".gif"},
 	}
 
-	comment := decodeEnvelopeDataMap(t, rec)
-	rawBody, ok := comment["body"]
-	if !ok {
-		t.Fatalf("expected body field in response, got %v", comment)
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			rec := multipartCommentRequest(
+				t,
+				h,
+				token,
+				postID,
+				map[string]string{},
+				tc.filename,
+				tc.content,
+			)
+			if rec.Code != http.StatusCreated {
+				t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+			}
+
+			comment := decodeEnvelopeDataMap(t, rec)
+			rawBody, ok := comment["body"]
+			if !ok {
+				t.Fatalf("expected body field in response, got %v", comment)
+			}
+			if bodyStr, ok := rawBody.(string); !ok || bodyStr != "" {
+				t.Fatalf("expected empty body string for image-only comment, got %T(%v)", rawBody, rawBody)
+			}
+			rawURL, ok := comment["image_url"]
+			if !ok || rawURL == nil {
+				t.Fatalf("expected image_url in create comment response, got %v", comment)
+			}
+			commentImageURL, ok := rawURL.(string)
+			if !ok || strings.TrimSpace(commentImageURL) == "" {
+				t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+			}
+			if !strings.HasSuffix(strings.ToLower(commentImageURL), tc.wantExt) {
+				t.Fatalf("expected comment image extension %q, got %q", tc.wantExt, commentImageURL)
+			}
+			t.Cleanup(func() { cleanupUploadedFromImageURL(t, commentImageURL) })
+		})
 	}
-	if bodyStr, ok := rawBody.(string); !ok || bodyStr != "" {
-		t.Fatalf("expected empty body string for image-only comment, got %T(%v)", rawBody, rawBody)
-	}
-	rawURL, ok := comment["image_url"]
-	if !ok || rawURL == nil {
-		t.Fatalf("expected image_url in create comment response, got %v", comment)
-	}
-	commentImageURL, ok := rawURL.(string)
-	if !ok || strings.TrimSpace(commentImageURL) == "" {
-		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
-	}
-	t.Cleanup(func() { cleanupUploadedFromImageURL(t, commentImageURL) })
 }
 
 func TestAPICommentsCreate_MultipartRejectsUnsupportedImageType(t *testing.T) {
@@ -417,5 +550,97 @@ func TestAPICommentsCreate_MultipartRejectsUnsupportedImageType(t *testing.T) {
 	}
 	if !strings.HasPrefix(apiErr.Message, "unsupported image type") {
 		t.Fatalf("expected unsupported image type message prefix, got %q", apiErr.Message)
+	}
+}
+
+func TestAPICommentsCreate_MultipartUploadSizeBoundary(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Post for comment upload boundary",
+		"body":         "seed body",
+		"category_ids": []int64{1},
+	})
+
+	fields := map[string]string{
+		"body": "",
+	}
+	filename := "comment-boundary.jpg"
+	path := fmt.Sprintf("/api/v1/posts/%d/comments", postID)
+
+	basePayload, _ := buildCommentMultipartBody(t, fields, filename, []byte{})
+	atLimitFileSize := maxUploadBytes - len(basePayload)
+	if atLimitFileSize < len(sampleJPEGBytes) {
+		t.Fatalf("computed file size at limit too small: %d", atLimitFileSize)
+	}
+
+	atLimitPayload, atLimitContentType := buildCommentMultipartBody(
+		t,
+		fields,
+		filename,
+		jpegBytesOfSize(t, atLimitFileSize),
+	)
+	if got := len(atLimitPayload); got != maxUploadBytes {
+		t.Fatalf("expected exact payload size %d bytes, got %d", maxUploadBytes, got)
+	}
+
+	recAtLimit := multipartRequestWithBody(
+		t,
+		h,
+		http.MethodPost,
+		path,
+		token,
+		atLimitContentType,
+		atLimitPayload,
+	)
+	if recAtLimit.Code != http.StatusCreated {
+		t.Fatalf("expected 201 at size limit, got %d body=%s", recAtLimit.Code, recAtLimit.Body.String())
+	}
+
+	comment := decodeEnvelopeDataMap(t, recAtLimit)
+	rawURL, ok := comment["image_url"]
+	if !ok || rawURL == nil {
+		t.Fatalf("expected image_url for at-limit comment upload, got comment=%v", comment)
+	}
+	imageURL, ok := rawURL.(string)
+	if !ok || strings.TrimSpace(imageURL) == "" {
+		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, imageURL) })
+
+	overLimitPayload, overLimitContentType := buildCommentMultipartBody(
+		t,
+		fields,
+		filename,
+		jpegBytesOfSize(t, atLimitFileSize+1),
+	)
+	if got := len(overLimitPayload); got != maxUploadBytes+1 {
+		t.Fatalf("expected over-limit payload size %d bytes, got %d", maxUploadBytes+1, got)
+	}
+
+	recOverLimit := multipartRequestWithBody(
+		t,
+		h,
+		http.MethodPost,
+		path,
+		token,
+		overLimitContentType,
+		overLimitPayload,
+	)
+	if recOverLimit.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413 over size limit, got %d body=%s", recOverLimit.Code, recOverLimit.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, recOverLimit)
+	if apiErr == nil {
+		t.Fatalf("expected error envelope, got body=%s", recOverLimit.Body.String())
+	}
+	if apiErr.Code != "PAYLOAD_TOO_LARGE" {
+		t.Fatalf("expected PAYLOAD_TOO_LARGE, got %q", apiErr.Code)
+	}
+	if apiErr.Message != "upload too large" {
+		t.Fatalf("expected message %q, got %q", "upload too large", apiErr.Message)
 	}
 }
