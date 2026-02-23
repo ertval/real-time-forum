@@ -1,0 +1,168 @@
+/* =========================
+   SETTINGS MODAL
+========================= */
+
+.settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-modal.hidden {
+  display: none;
+}
+
+.settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.settings-card {
+  position: relative;
+  width: 360px;
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  animation: fadeIn 0.2s ease;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+}
+
+#settings-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+  transition: 0.2s ease;
+}
+
+#settings-close:hover {
+  color: #000;
+}
+
+/* =========================
+   SETTING ITEM
+========================= */
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+/* =========================
+   SFX TOGGLE
+========================= */
+
+/* Hide native checkbox */
+#sfxToggle {
+  display: none;
+}
+
+/* Toggle circle */
+.toggleSwitch {
+  width: 50px;
+  height: 50px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1f1f1f; /* default OFF */
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Hover lift */
+.toggleSwitch:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Press */
+#sfxToggle:active + .toggleSwitch {
+  transform: scale(0.92);
+}
+
+/* =========================
+   STATE LOGIC (FIXED)
+========================= */
+
+/* ON = checked */
+#sfxToggle:checked + .toggleSwitch {
+  background-color: #0f9d58;
+  box-shadow:
+    0 0 0 3px rgba(15, 157, 88, 0.25),
+    0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* =========================
+   ICONS
+========================= */
+
+.speaker,
+.mute-speaker {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.25s ease;
+}
+
+.speaker svg,
+.mute-speaker svg {
+  width: 22px;
+}
+
+/* Default OFF */
+.speaker {
+  opacity: 0;
+  z-index: 2;
+}
+
+.mute-speaker {
+  opacity: 1;
+  z-index: 3;
+}
+
+/* ON state (checked) */
+#sfxToggle:checked + .toggleSwitch .speaker {
+  opacity: 1;
+}
+
+#sfxToggle:checked + .toggleSwitch .mute-speaker {
+  opacity: 0;
+}
