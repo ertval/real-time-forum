@@ -19,7 +19,6 @@
   <script src="/static/js/helpers.js" defer></script>
   <script type="module" src="/static/js/ui-messages.js"></script>
   <script type="module" src="/static/js/home.js"></script>
-  <script type="module" src="/static/js/settings.js"></script>
 </head>
 
 <body class="home">
@@ -27,37 +26,6 @@
 
     <!-- HEADER -->
     <div id="header"></div>
-
-    <!-- SETTINGS MODAL (STATIC – ΟΧΙ fetch) -->
-    <!-- ΒΑΛΕ ΕΔΩ ΟΛΟ ΤΟ settings-modal.html CONTENT -->
-    <div id="settings-modal" class="settings-modal hidden">
-      <div class="settings-backdrop"></div>
-
-      <div class="settings-card">
-        <div class="settings-header">
-          <h3>App Settings</h3>
-          <button id="settings-close" type="button">✕</button>
-        </div>
-
-        <div class="settings-body">
-          <div class="setting-item sfx-setting">
-            <span>Sound Effects (SFX)</span>
-
-            <input type="checkbox" id="sfxToggle">
-
-            <label for="sfxToggle" class="sfx-toggle">
-              <div class="speaker">
-
-              </div>
-
-              <div class="mute-speaker">
-
-              </div>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- PAGE CONTENT -->
     <section class="filters">
@@ -108,6 +76,12 @@
         script.src = "/static/js/header-loader.js";
         document.body.appendChild(script);
       });
+  </script>
+
+  <script type="module">
+    import { loadSettingsModal } from "/static/js/settings-loader.js";
+
+    loadSettingsModal();
   </script>
 
 </body>

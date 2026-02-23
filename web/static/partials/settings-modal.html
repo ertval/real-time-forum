@@ -1,4 +1,5 @@
 <!-- static/partials/settings-modal.html -->
+
 <div id="settings-modal" class="settings-modal hidden">
   <div class="settings-backdrop"></div>
 
@@ -9,27 +10,42 @@
     </div>
 
     <div class="settings-body">
-      <div class="setting-item sfx-setting">
-        <span>Sound Effects (SFX)</span>
+      <div class="setting-item">
+        <span>Sound Effects</span>
 
-        <input type="checkbox" id="sfxToggle">
+        <div class="toggle-wrapper">
+          <input type="checkbox" id="sfxToggle" />
 
-        <label for="sfxToggle" class="sfx-toggle">
+          <label for="sfxToggle" class="toggleSwitch">
+
+            <!-- SOUND ON SVG -->
             <div class="speaker">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="color: #1f7a3f;">
-                <path d="M3 9v6h4l5 5V4L7 9H3z"/>
-                <path d="M16 8a4 4 0 010 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
-                </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 75 75">
+                <path d="M39.389,13.769 L22.235,28.606 L6,28.606 L6,47.699 L21.989,47.699 L39.389,62.75 L39.389,13.769z"
+                  style="stroke:#fff;stroke-width:5;stroke-linejoin:round;fill:#fff;">
+                </path>
+                <path d="M48,27.6a19.5,19.5 0 0 1 0,21.4
+                         M55.1,20.5a30,30 0 0 1 0,35.6
+                         M61.6,14a38.8,38.8 0 0 1 0,48.6"
+                  style="fill:none;stroke:#fff;stroke-width:5;stroke-linecap:round">
+                </path>
+              </svg>
             </div>
-            
+
+            <!-- SOUND OFF SVG -->
             <div class="mute-speaker">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="color: #c0392b;">
-                <path d="M3 9v6h4l5 5V4L7 9H3z"/>
-                <line x1="16" y1="8" x2="21" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <line x1="21" y1="8" x2="16" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+              <svg viewBox="0 0 75 75" stroke="#fff" stroke-width="5">
+                <path d="m39,14-17,15H6V48H22l17,15z"
+                  fill="#fff" stroke-linejoin="round">
+                </path>
+                <path d="m49,26 20,24m0-24-20,24"
+                  fill="#fff" stroke-linecap="round">
+                </path>
+              </svg>
             </div>
-        </label>
+
+          </label>
+        </div>
       </div>
     </div>
   </div>
