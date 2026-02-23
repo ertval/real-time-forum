@@ -1,3 +1,4 @@
+// web/static/js/settings.js
 import { initSounds } from "./sound-effects.js";
 
 const SFX_KEY = "app:sfx-enabled";
@@ -53,4 +54,4 @@ function initSettings() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", initSettings);
+export { initSettings };
