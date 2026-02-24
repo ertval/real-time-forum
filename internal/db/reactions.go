@@ -57,7 +57,7 @@ func ToggleReaction(
 		return 0, err
 	}
 
-	// 🔥 side effect separated
+	// side effect separated
 	if newValue != 0 {
 		_ = handleReactionNotificationTx(
 			ctx,
