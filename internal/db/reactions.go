@@ -34,24 +34,9 @@ func ToggleReaction(
 	}
 	defer tx.Rollback()
 
-	// Check target exists
-	switch targetType {
-	case "post":
-		if err := tx.QueryRowContext(ctx, `SELECT 1 FROM posts WHERE id = ?`, objectID).Scan(new(int)); err != nil {
-			if err == sql.ErrNoRows {
-				return 0, ErrNotFound
-			}
-			return 0, fmt.Errorf("check post exists: %w", err)
-		}
-	case "comment":
-		if err := tx.QueryRowContext(ctx, `SELECT 1 FROM comments WHERE id = ?`, objectID).Scan(new(int)); err != nil {
-			if err == sql.ErrNoRows {
-				return 0, ErrNotFound
-			}
-			return 0, fmt.Errorf("check comment exists: %w", err)
-		}
-	default:
-		return 0, fmt.Errorf("invalid target type: %s", targetType)
+	ownerID, err := getReactionTargetOwnerTx(ctx, tx, objectID, targetType)
+	if err != nil {
+		return 0, err
 	}
 
 	current, err := getReactionValueTx(ctx, tx, userID, objectID, targetType)
@@ -70,6 +55,19 @@ func ToggleReaction(
 	)
 	if err != nil {
 		return 0, err
+	}
+
+	// 🔥 side effect separated
+	if newValue != 0 {
+		_ = handleReactionNotificationTx(
+			ctx,
+			tx,
+			ownerID,
+			userID,
+			objectID,
+			newValue,
+			targetType,
+		)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -121,6 +119,49 @@ func getReactionValueTx(
 	}
 
 	return value, nil
+}
+
+func getReactionTargetOwnerTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	objectID int64,
+	targetType string,
+) (int64, error) {
+
+	var ownerID int64
+
+	switch targetType {
+	case "post":
+		err := tx.QueryRowContext(
+			ctx,
+			`SELECT author_id FROM posts WHERE id = ?`,
+			objectID,
+		).Scan(&ownerID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return 0, ErrNotFound
+			}
+			return 0, err
+		}
+
+	case "comment":
+		err := tx.QueryRowContext(
+			ctx,
+			`SELECT user_id FROM comments WHERE id = ?`,
+			objectID,
+		).Scan(&ownerID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return 0, ErrNotFound
+			}
+			return 0, err
+		}
+
+	default:
+		return 0, fmt.Errorf("invalid target type: %s", targetType)
+	}
+
+	return ownerID, nil
 }
 
 func applyReactionToggleTx(

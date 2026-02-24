@@ -114,12 +114,27 @@ func CreateComment(
 		return 0, fmt.Errorf("create comment: %w", err)
 	}
 
-	id, err := res.LastInsertId()
+	commentID, err := res.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
 
-	return id, nil
+	// Notification
+	authorID, err := GetPostAuthorID(ctx, db, input.PostID)
+	if err == nil && authorID != input.UserID {
+
+		_ = InsertNotification(
+			ctx,
+			db,
+			authorID,
+			input.UserID,
+			"comment",
+			nil,
+			&commentID,
+		)
+	}
+
+	return commentID, nil
 }
 
 /*-------------
