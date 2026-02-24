@@ -1,3 +1,5 @@
+-- internal/db/forum_schema.sql
+
 -- ===============================================================
 -- Forum Database Schema (SQLite)
 -- ===============================================================
@@ -137,6 +139,31 @@ CREATE TABLE IF NOT EXISTS reactions (
 );
 
 -- ===============================================================
+-- NOTIFICATIONS
+-- ===============================================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  recipient_id  INTEGER NOT NULL,
+  actor_id      INTEGER NOT NULL,
+  type          TEXT NOT NULL CHECK (type IN ('post_like','post_dislike','comment')),
+  post_id       INTEGER,
+  comment_id    INTEGER,
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  is_read       INTEGER NOT NULL DEFAULT 0 CHECK (is_read IN (0,1)),
+
+  FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+
+   -- Prevent invalid target
+  CHECK (
+    (post_id IS NOT NULL AND comment_id IS NULL) OR
+    (post_id IS NULL AND comment_id IS NOT NULL)
+  )
+);
+
+-- ===============================================================
 -- INDEXES
 -- ===============================================================
 
@@ -167,10 +194,23 @@ CREATE INDEX IF NOT EXISTS idx_reactions_post
 CREATE INDEX IF NOT EXISTS idx_reactions_comment
   ON reactions(comment_id);
 
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient
+  ON notifications(recipient_id);
+
 -- Sessions
 CREATE UNIQUE INDEX IF NOT EXISTS ux_session_single_active
   ON sessions(user_id)
   WHERE is_valid = 1;
+
+  -- Prevent duplicate post reaction notifications
+CREATE UNIQUE INDEX IF NOT EXISTS ux_notification_post_reaction
+  ON notifications(actor_id, recipient_id, type, post_id)
+  WHERE post_id IS NOT NULL;
+
+-- Prevent duplicate comment notifications
+CREATE UNIQUE INDEX IF NOT EXISTS ux_notification_comment
+  ON notifications(actor_id, recipient_id, type, comment_id)
+  WHERE comment_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user
   ON sessions(user_id);
