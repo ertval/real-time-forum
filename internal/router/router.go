@@ -150,6 +150,14 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
+	mux.Handle(
+		apiPrefix+"/posts/disliked",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(posts.ListDislikedPosts)),
+			http.MethodGet,
+		),
+	)
+
 	/*---------
 	   USERS
 	---------*/
@@ -181,6 +189,14 @@ func NewRouter(database *sql.DB) http.Handler {
 		apiPrefix+"/users/me",
 		middleware.AllowMethods(
 			auth(http.HandlerFunc(users.Me)),
+			http.MethodGet,
+		),
+	)
+
+	mux.Handle(
+		apiPrefix+"/users/activity",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(users.GetUserActivity)),
 			http.MethodGet,
 		),
 	)
