@@ -24,17 +24,27 @@ func ListUserNotifications(
 	defer cancel()
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, recipient_id, actor_id, type, post_id, comment_id, created_at, is_read
-		FROM notifications
-		WHERE recipient_id = ?
-		ORDER BY created_at DESC
+		SELECT 
+			n.id,
+			n.recipient_id,
+			n.actor_id,
+			u.username AS actor_username,
+			n.type,
+			n.post_id,
+			n.comment_id,
+			n.created_at,
+			n.is_read
+		FROM notifications n
+		JOIN users u ON u.id = n.actor_id
+		WHERE n.recipient_id = ?
+		ORDER BY n.created_at DESC
 	`, userID)
 	if err != nil {
 		return ListNotificationsResult{}, err
 	}
 	defer rows.Close()
 
-	var result []Notification
+	var list []Notification
 
 	for rows.Next() {
 		var n Notification
@@ -42,16 +52,18 @@ func ListUserNotifications(
 		var commentID sql.NullInt64
 		var isRead int
 
-		if err := rows.Scan(
+		err := rows.Scan(
 			&n.ID,
 			&n.RecipientID,
 			&n.ActorID,
+			&n.ActorUsername,
 			&n.Type,
 			&postID,
 			&commentID,
 			&n.CreatedAt,
 			&isRead,
-		); err != nil {
+		)
+		if err != nil {
 			return ListNotificationsResult{}, err
 		}
 
@@ -63,22 +75,21 @@ func ListUserNotifications(
 		}
 
 		n.IsRead = isRead == 1
-
-		result = append(result, n)
+		list = append(list, n)
 	}
 
 	var unread int
-	err = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM notifications WHERE recipient_id = ? AND is_read = 0`,
-		userID,
-	).Scan(&unread)
-
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) 
+		FROM notifications 
+		WHERE recipient_id = ? AND is_read = 0
+	`, userID).Scan(&unread)
 	if err != nil {
 		return ListNotificationsResult{}, err
 	}
 
 	return ListNotificationsResult{
-		Notifications: result,
+		Notifications: list,
 		UnreadCount:   unread,
 	}, nil
 }

@@ -202,16 +202,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_session_single_active
   ON sessions(user_id)
   WHERE is_valid = 1;
 
-  -- Prevent duplicate post reaction notifications
-CREATE UNIQUE INDEX IF NOT EXISTS ux_notification_post_reaction
-  ON notifications(actor_id, recipient_id, type, post_id)
-  WHERE post_id IS NOT NULL;
-
--- Prevent duplicate comment notifications
-CREATE UNIQUE INDEX IF NOT EXISTS ux_notification_comment
-  ON notifications(actor_id, recipient_id, type, comment_id)
-  WHERE comment_id IS NOT NULL;
-
 CREATE INDEX IF NOT EXISTS idx_sessions_user
   ON sessions(user_id);
 
