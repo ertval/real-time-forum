@@ -106,6 +106,24 @@ function renderDropdown(notifications) {
     }
 
     div.textContent = buildMessage(n);
+
+    /* -------------------------
+       CLICK REDIRECT LOGIC
+    -------------------------- */
+    div.addEventListener("click", () => {
+      if (n.post_id) {
+        if (n.comment_id) {
+          // A comment notification → redirect + highlight
+          window.location.href = `/view-post/${n.post_id}?highlight=${n.comment_id}`;
+        } else {
+          // Post like/dislike or "commented on your post"
+          window.location.href = `/view-post/${n.post_id}`;
+        }
+      } else {
+        console.warn("Notification missing post_id:", n);
+      }
+    });
+
     list.appendChild(div);
   });
 }
@@ -117,7 +135,6 @@ function renderDropdown(notifications) {
 function processNewNotifications(notifications) {
   notifications.forEach(n => {
 
-    // First load → just register existing IDs
     if (!initialized) {
       seenNotificationIds.add(n.id);
       return;
@@ -136,21 +153,20 @@ function processNewNotifications(notifications) {
 /* -------------------------
    MESSAGE BUILDER
 -------------------------- */
-
 function buildMessage(n) {
   switch (n.type) {
     case "post_like":
-      return `${n.actor_username} liked your post ❤️`;
+      return `${n.actor_username} liked your post 👍`;
     case "post_dislike":
-      return `${n.actor_username} disliked your post`;
+      return `${n.actor_username} disliked your post 👎`;
     case "comment":
       return `${n.actor_username} commented on your post 💬`;
     case "comment_like":
-      return `${n.actor_username} liked your comment ❤️`;
+      return `${n.actor_username} liked your comment 👍`;
     case "comment_dislike":
-      return `${n.actor_username} disliked your comment`;
+      return `${n.actor_username} disliked your comment 👎`;
     default:
-      return "New notification";
+      return "New notification 🔔";
   }
 }
 
@@ -174,7 +190,6 @@ export function initNotificationBell() {
     }
   });
 
-  // CLICK OUTSIDE
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
       dropdown.classList.add("hidden");

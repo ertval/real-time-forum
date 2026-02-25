@@ -18,6 +18,22 @@ function getPostIdFromURL() {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
+/*----------------------------------
+  RELIABLE HIGHLIGHT WITH RETRIES
+----------------------------------*/
+
+async function highlightComment(commentId) {
+  for (let i = 0; i < 20; i++) {   // retry ~1 sec total
+    const el = document.getElementById(`comment-${commentId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("highlight-comment");
+      return;
+    }
+    await new Promise(res => setTimeout(res, 50));
+  }
+}
+
 /*------
   INIT
 ------*/
@@ -34,10 +50,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { categoryId } = result;
 
-  // reactions AFTER DOM is ready
   initReactions();
 
-  // navigation only if category exists
   if (categoryId) {
     initPostNavigation(postId, categoryId);
   }
@@ -45,7 +59,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 /*-------------------------------
   LOAD + RENDER SINGLE POST
-  Returns { categoryId } | null
 -------------------------------*/
 
 async function loadAndRenderPost(postId, container) {
@@ -67,8 +80,17 @@ async function loadAndRenderPost(postId, container) {
     container.innerHTML = "";
     container.appendChild(article);
 
-    // comments preview AFTER article exists
+    // Load comments into DOM
     await loadPostCommentsPreview(postId, article);
+
+    /* ----------------------------------------------------
+       HIGHLIGHT COMMENT (WITH RETRIES)
+    ---------------------------------------------------- */
+    const params = new URLSearchParams(window.location.search);
+    const highlight = params.get("highlight");
+    if (highlight) {
+      highlightComment(highlight);
+    }
 
     const categoryId =
       Array.isArray(post.categories) && post.categories.length > 0
@@ -76,6 +98,7 @@ async function loadAndRenderPost(postId, container) {
         : null;
 
     return { categoryId };
+
   } catch (err) {
     console.error("Failed to load post:", err);
     container.innerHTML = `<p class="muted">Failed to load post.</p>`;
@@ -84,7 +107,7 @@ async function loadAndRenderPost(postId, container) {
 }
 
 /*-------------------------------------
-  POST NAVIGATION (BASED ON CATEGORY)
+  POST NAVIGATION
 -------------------------------------*/
 
 async function initPostNavigation(postId, categoryId) {
@@ -93,11 +116,8 @@ async function initPostNavigation(postId, categoryId) {
 
   if (!prevBtn || !nextBtn) return;
 
-  // reset
   prevBtn.hidden = true;
   nextBtn.hidden = true;
-  prevBtn.onclick = null;
-  nextBtn.onclick = null;
 
   try {
     const res = await fetch(
@@ -109,35 +129,21 @@ async function initPostNavigation(postId, categoryId) {
 
     const { prev_id, next_id } = (await res.json()).data || {};
 
-    if (typeof prev_id === "number" && prev_id > 0) {
+    if (prev_id > 0) {
       prevBtn.hidden = false;
-      prevBtn.onclick = () => {
-        window.location.href = `/view-post/${prev_id}`;
-      };
+      prevBtn.onclick = () => (window.location.href = `/view-post/${prev_id}`);
     }
 
-    if (typeof next_id === "number" && next_id > 0) {
+    if (next_id > 0) {
       nextBtn.hidden = false;
-      nextBtn.onclick = () => {
-        window.location.href = `/view-post/${next_id}`;
-      };
+      nextBtn.onclick = () => (window.location.href = `/view-post/${next_id}`);
     }
-
-    /*---------------------
-      KEYBOARD NAVIGATION
-    ---------------------*/
 
     document.addEventListener("keydown", (e) => {
-      const tag = e.target.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
 
-      if (e.key === "ArrowLeft" && !prevBtn.hidden) {
-        prevBtn.click();
-      }
-
-      if (e.key === "ArrowRight" && !nextBtn.hidden) {
-        nextBtn.click();
-      }
+      if (e.key === "ArrowLeft" && !prevBtn.hidden) prevBtn.click();
+      if (e.key === "ArrowRight" && !nextBtn.hidden) nextBtn.click();
     });
 
   } catch (err) {
