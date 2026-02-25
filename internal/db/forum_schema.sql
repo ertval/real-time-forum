@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   recipient_id  INTEGER NOT NULL,
   actor_id      INTEGER NOT NULL,
-  type          TEXT NOT NULL CHECK (type IN ('post_like','post_dislike','comment')),
+  type TEXT NOT NULL CHECK (type IN ('post_like','post_dislike','comment','comment_like','comment_dislike')),  
   post_id       INTEGER,
   comment_id    INTEGER,
   created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
@@ -220,3 +220,6 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires
 
 CREATE INDEX IF NOT EXISTS idx_oauth_user_id
 ON oauth_users(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_unread
+  ON notifications(recipient_id, is_read);

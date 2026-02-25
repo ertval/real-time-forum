@@ -4,6 +4,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -20,6 +21,10 @@ type Notification struct {
 	IsRead      bool   `json:"is_read"`
 }
 
+/* =========================================================
+   PUBLIC INSERT (non-transactional)
+========================================================= */
+
 func InsertNotification(
 	ctx context.Context,
 	db *sql.DB,
@@ -30,7 +35,6 @@ func InsertNotification(
 	commentID *int64,
 ) error {
 
-	// Do not notify yourself
 	if recipientID == actorID {
 		return nil
 	}
@@ -38,11 +42,34 @@ func InsertNotification(
 	ctx, cancel := context.WithTimeout(ctx, notificationTimeout)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, `
-		INSERT OR IGNORE INTO notifications
-		(recipient_id, actor_id, type, post_id, comment_id)
-		VALUES (?, ?, ?, ?, ?)
-	`,
+	var conflictTarget string
+
+	if postID != nil {
+		conflictTarget = `
+			ON CONFLICT(actor_id, recipient_id, type, post_id)
+			WHERE post_id IS NOT NULL
+			DO UPDATE SET
+				created_at = excluded.created_at,
+				is_read = 0
+		`
+	} else {
+		conflictTarget = `
+			ON CONFLICT(actor_id, recipient_id, type, comment_id)
+			WHERE comment_id IS NOT NULL
+			DO UPDATE SET
+				created_at = excluded.created_at,
+				is_read = 0
+		`
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO notifications
+		(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+		VALUES (?, ?, ?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'), 0)
+		%s
+	`, conflictTarget)
+
+	_, err := db.ExecContext(ctx, query,
 		recipientID,
 		actorID,
 		notificationType,
@@ -52,6 +79,10 @@ func InsertNotification(
 
 	return err
 }
+
+/* =========================================================
+   TX VERSION (used inside ToggleReaction)
+========================================================= */
 
 func handleReactionNotificationTx(
 	ctx context.Context,
@@ -71,27 +102,56 @@ func handleReactionNotificationTx(
 	var postID *int64
 	var commentID *int64
 
-	if targetType == "post" {
+	switch targetType {
+
+	case "post":
 		postID = &objectID
 		if newValue == 1 {
 			notificationType = "post_like"
 		} else {
 			notificationType = "post_dislike"
 		}
-	} else {
+
+	case "comment":
 		commentID = &objectID
 		if newValue == 1 {
-			notificationType = "post_like"
+			notificationType = "comment_like"
 		} else {
-			notificationType = "post_dislike"
+			notificationType = "comment_dislike"
 		}
+
+	default:
+		return nil
 	}
 
-	_, err := tx.ExecContext(ctx, `
-		INSERT OR IGNORE INTO notifications
-		(recipient_id, actor_id, type, post_id, comment_id)
-		VALUES (?, ?, ?, ?, ?)
-	`,
+	var conflictTarget string
+
+	if postID != nil {
+		conflictTarget = `
+			ON CONFLICT(actor_id, recipient_id, type, post_id)
+			WHERE post_id IS NOT NULL
+			DO UPDATE SET
+				created_at = excluded.created_at,
+				is_read = 0
+		`
+	} else {
+		conflictTarget = `
+			ON CONFLICT(actor_id, recipient_id, type, comment_id)
+			WHERE comment_id IS NOT NULL
+			DO UPDATE SET
+				created_at = excluded.created_at,
+				is_read = 0
+		`
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO notifications
+		(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+		VALUES (?, ?, ?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'), 0)
+		%s
+	`, conflictTarget)
+
+	_, err := tx.ExecContext(ctx, query,
 		ownerID,
 		userID,
 		notificationType,
