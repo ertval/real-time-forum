@@ -139,23 +139,24 @@ function processNewNotifications(notifications) {
 
 function buildMessage(n) {
   switch (n.type) {
+
     case "post_like":
-      return "Someone liked your post ❤️"
+      return "Someone liked your post ❤️";
 
     case "post_dislike":
-      return "Someone disliked your post"
+      return "Someone disliked your post";
 
     case "comment":
-      return "New comment on your post 💬"
+      return "Someone commented on your post 💬";
 
     case "comment_like":
-      return "Someone liked your comment ❤️"
+      return "Someone liked your comment ❤️";
 
     case "comment_dislike":
-      return "Someone disliked your comment"
+      return "Someone disliked your comment";
 
     default:
-      return "New notification"
+      return "New notification";
   }
 }
 

@@ -1,3 +1,4 @@
+// internal/db/notifications_queries.go
 package db
 
 import (
