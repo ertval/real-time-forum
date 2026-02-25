@@ -480,3 +480,8 @@ body.image-lightbox-open {
     background: rgba(220, 38, 38, 0.14);
   }
 }
+
+.highlight-comment {
+  background: #fff3b0 !important;
+  transition: background 2s ease;
+}
