@@ -176,6 +176,7 @@ func applyReactionToggleTx(
 
 	var idColumn string
 	var conflictTarget string
+
 	switch targetType {
 	case "post":
 		idColumn = "post_id"
@@ -192,7 +193,6 @@ func applyReactionToggleTx(
 			`DELETE FROM reactions WHERE user_id = ? AND %s = ?`,
 			idColumn,
 		)
-
 		if _, err := tx.ExecContext(ctx, query, userID, objectID); err != nil {
 			return 0, fmt.Errorf("delete reaction: %w", err)
 		}
@@ -201,9 +201,11 @@ func applyReactionToggleTx(
 
 	query := fmt.Sprintf(`
 		INSERT INTO reactions (user_id, %s, value, created_at)
-		VALUES (?, ?, ?, datetime('now'))
+		VALUES (?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'))
 		%s
-		DO UPDATE SET value = excluded.value
+		DO UPDATE SET 
+			value = excluded.value,
+			created_at = excluded.created_at
 	`, idColumn, conflictTarget)
 
 	if _, err := tx.ExecContext(

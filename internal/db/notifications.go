@@ -22,7 +22,8 @@ type Notification struct {
 }
 
 /* =========================================================
-   PUBLIC INSERT (non-transactional)
+   PUBLIC INSERT (for creating posts/comments)
+   → keeps conflict ON to avoid duplicate "new comment" spam
 ========================================================= */
 
 func InsertNotification(
@@ -46,28 +47,28 @@ func InsertNotification(
 
 	if postID != nil {
 		conflictTarget = `
-			ON CONFLICT(actor_id, recipient_id, type, post_id)
-			WHERE post_id IS NOT NULL
-			DO UPDATE SET
-				created_at = excluded.created_at,
-				is_read = 0
-		`
+            ON CONFLICT(actor_id, recipient_id, type, post_id)
+            WHERE post_id IS NOT NULL
+            DO UPDATE SET
+                created_at = excluded.created_at,
+                is_read = 0
+        `
 	} else {
 		conflictTarget = `
-			ON CONFLICT(actor_id, recipient_id, type, comment_id)
-			WHERE comment_id IS NOT NULL
-			DO UPDATE SET
-				created_at = excluded.created_at,
-				is_read = 0
-		`
+            ON CONFLICT(actor_id, recipient_id, type, comment_id)
+            WHERE comment_id IS NOT NULL
+            DO UPDATE SET
+                created_at = excluded.created_at,
+                is_read = 0
+        `
 	}
 
 	query := fmt.Sprintf(`
-		INSERT INTO notifications
-		(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
-		VALUES (?, ?, ?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'), 0)
-		%s
-	`, conflictTarget)
+        INSERT INTO notifications
+        (recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+        VALUES (?, ?, ?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'), 0)
+        %s
+    `, conflictTarget)
 
 	_, err := db.ExecContext(ctx, query,
 		recipientID,
@@ -81,7 +82,8 @@ func InsertNotification(
 }
 
 /* =========================================================
-   TX VERSION (used inside ToggleReaction)
+   REACTION NOTIFICATIONS (like/dislike)
+   → ALWAYS CREATE NEW ENTRY, NO CONFLICT
 ========================================================= */
 
 func handleReactionNotificationTx(
@@ -124,32 +126,12 @@ func handleReactionNotificationTx(
 		return nil
 	}
 
-	var conflictTarget string
-
-	if postID != nil {
-		conflictTarget = `
-			ON CONFLICT(actor_id, recipient_id, type, post_id)
-			WHERE post_id IS NOT NULL
-			DO UPDATE SET
-				created_at = excluded.created_at,
-				is_read = 0
-		`
-	} else {
-		conflictTarget = `
-			ON CONFLICT(actor_id, recipient_id, type, comment_id)
-			WHERE comment_id IS NOT NULL
-			DO UPDATE SET
-				created_at = excluded.created_at,
-				is_read = 0
-		`
-	}
-
-	query := fmt.Sprintf(`
-		INSERT INTO notifications
-		(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
-		VALUES (?, ?, ?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'), 0)
-		%s
-	`, conflictTarget)
+	// ALWAYS INSERT NEW NOTIFICATION (no conflict)
+	query := `
+        INSERT INTO notifications
+        (recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+        VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
+    `
 
 	_, err := tx.ExecContext(ctx, query,
 		ownerID,

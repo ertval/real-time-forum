@@ -1,3 +1,4 @@
+// internal/handlers/notifications.go
 package handlers
 
 import (
