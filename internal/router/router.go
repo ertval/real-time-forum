@@ -261,6 +261,29 @@ func NewRouter(database *sql.DB) http.Handler {
 		}
 	})
 
+	/*---------------
+	  NOTIFICATIONS (AUTH REQUIRED)
+	---------------*/
+	notifications := handlers.NewNotificationsHandler(database)
+
+	// GET collection
+	mux.Handle(
+		apiPrefix+"/notifications",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(notifications.HandleNotifications)),
+			http.MethodGet,
+		),
+	)
+
+	// PATCH item + read-all
+	mux.Handle(
+		apiPrefix+"/notifications/",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(notifications.HandleNotifications)),
+			http.MethodPatch,
+		),
+	)
+
 	/*-------------------------
 	  API FALLBACK (JSON 404)
 	-------------------------*/
