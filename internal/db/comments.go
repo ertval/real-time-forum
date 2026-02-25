@@ -1,4 +1,4 @@
-// Internal/db/comments.go
+// internal/db/comments.go
 package db
 
 import (
@@ -119,18 +119,21 @@ func CreateComment(
 		return 0, fmt.Errorf("last insert id: %w", err)
 	}
 
-	// Notification
-	authorID, err := GetPostAuthorID(ctx, db, input.PostID)
-	if err == nil && authorID != input.UserID {
+	/* =====================================================
+	   SEND NOTIFICATION TO POST OWNER
+	 ===================================================== */
+
+	postOwnerID, err := GetPostAuthorID(ctx, db, input.PostID)
+	if err == nil && postOwnerID != input.UserID {
 
 		_ = InsertNotification(
 			ctx,
 			db,
-			authorID,
-			input.UserID,
-			"comment",
-			nil,
-			&commentID,
+			postOwnerID,   // recipient
+			input.UserID,  // actor
+			"comment",     // notification type
+			&input.PostID, // MUST provide postID
+			&commentID,    // also include commentID for redirect
 		)
 	}
 
@@ -213,6 +216,7 @@ type UpdateCommentInput struct {
 }
 
 func UpdateComment(ctx context.Context, db *sql.DB, id int64, in UpdateCommentInput) error {
+
 	setParts := []string{}
 	args := []any{}
 
@@ -255,8 +259,7 @@ func DeleteComment(ctx context.Context, db *sql.DB, id int64) error {
 
 func ensurePostExists(ctx context.Context, db *sql.DB, postID int64) error {
 	var exists bool
-	if err := db.QueryRowContext(
-		ctx,
+	if err := db.QueryRowContext(ctx,
 		`SELECT EXISTS(SELECT 1 FROM posts WHERE id = ?)`,
 		postID,
 	).Scan(&exists); err != nil {

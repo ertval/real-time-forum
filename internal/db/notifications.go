@@ -1,29 +1,27 @@
-// internal/db/notifications.go
 package db
 
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 )
 
 const notificationTimeout = 2 * time.Second
 
 type Notification struct {
-	ID          int64  `json:"id"`
-	RecipientID int64  `json:"recipient_id"`
-	ActorID     int64  `json:"actor_id"`
-	Type        string `json:"type"`
-	PostID      *int64 `json:"post_id,omitempty"`
-	CommentID   *int64 `json:"comment_id,omitempty"`
-	CreatedAt   string `json:"created_at"`
-	IsRead      bool   `json:"is_read"`
+	ID            int64  `json:"id"`
+	RecipientID   int64  `json:"recipient_id"`
+	ActorID       int64  `json:"actor_id"`
+	ActorUsername string `json:"actor_username"`
+	Type          string `json:"type"`
+	PostID        *int64 `json:"post_id,omitempty"`
+	CommentID     *int64 `json:"comment_id,omitempty"`
+	CreatedAt     string `json:"created_at"`
+	IsRead        bool   `json:"is_read"`
 }
 
 /* =========================================================
-   PUBLIC INSERT (for creating posts/comments)
-   → keeps conflict ON to avoid duplicate "new comment" spam
+   MAIN INSERT (POSTS & COMMENTS – NOT REACTIONS)
 ========================================================= */
 
 func InsertNotification(
@@ -43,47 +41,36 @@ func InsertNotification(
 	ctx, cancel := context.WithTimeout(ctx, notificationTimeout)
 	defer cancel()
 
-	var conflictTarget string
+	var finalCommentID *int64
 
-	if postID != nil {
-		conflictTarget = `
-            ON CONFLICT(actor_id, recipient_id, type, post_id)
-            WHERE post_id IS NOT NULL
-            DO UPDATE SET
-                created_at = excluded.created_at,
-                is_read = 0
-        `
+	// IMPORTANT: For post comments, commentID must be NULL to avoid unique index conflicts
+	// The unique index ux_notification_comment only applies when comment_id IS NOT NULL
+	if notificationType == "comment" {
+		finalCommentID = nil
 	} else {
-		conflictTarget = `
-            ON CONFLICT(actor_id, recipient_id, type, comment_id)
-            WHERE comment_id IS NOT NULL
-            DO UPDATE SET
-                created_at = excluded.created_at,
-                is_read = 0
-        `
+		finalCommentID = commentID
 	}
 
-	query := fmt.Sprintf(`
-        INSERT INTO notifications
-        (recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
-        VALUES (?, ?, ?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'), 0)
-        %s
-    `, conflictTarget)
+	query := `
+		INSERT INTO notifications
+			(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+		VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
+	`
 
 	_, err := db.ExecContext(ctx, query,
 		recipientID,
 		actorID,
 		notificationType,
 		postID,
-		commentID,
+		finalCommentID,
 	)
 
 	return err
 }
 
 /* =========================================================
-   REACTION NOTIFICATIONS (like/dislike)
-   → ALWAYS CREATE NEW ENTRY, NO CONFLICT
+   REACTION NOTIFICATIONS (LIKE/DISLIKE)
+   — ALWAYS INSERT NEW, NEVER CONFLICT
 ========================================================= */
 
 func handleReactionNotificationTx(
@@ -126,14 +113,15 @@ func handleReactionNotificationTx(
 		return nil
 	}
 
-	// ALWAYS INSERT NEW NOTIFICATION (no conflict)
 	query := `
-        INSERT INTO notifications
-        (recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
-        VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
-    `
+		INSERT INTO notifications
+			(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+		VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
+	`
 
-	_, err := tx.ExecContext(ctx, query,
+	_, err := tx.ExecContext(
+		ctx,
+		query,
 		ownerID,
 		userID,
 		notificationType,
