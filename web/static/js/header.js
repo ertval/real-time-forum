@@ -4,9 +4,11 @@ import { Auth } from "./auth.js";
 import {
   startNotificationPolling,
   stopNotificationPolling,
+  initNotificationBell,
 } from "./notifications.js";
 
 let pollingStarted = false;
+let bellInitialized = false;
 
 export async function initHeader() {
   await Auth.init();
@@ -29,17 +31,24 @@ export async function initHeader() {
   const username = Auth.user?.username ?? "User";
 
   /* -------------------------
-     START / STOP NOTIFICATIONS
+     NOTIFICATIONS
   -------------------------- */
 
-  if (isAuthed && !pollingStarted) {
-    startNotificationPolling();
-    pollingStarted = true;
-  }
+  if (isAuthed) {
+    if (!pollingStarted) {
+      startNotificationPolling();
+      pollingStarted = true;
+    }
 
-  if (!isAuthed && pollingStarted) {
-    stopNotificationPolling();
-    pollingStarted = false;
+    if (!bellInitialized) {
+      initNotificationBell();
+      bellInitialized = true;
+    }
+  } else {
+    if (pollingStarted) {
+      stopNotificationPolling();
+      pollingStarted = false;
+    }
   }
 
   /* -------------------------

@@ -140,15 +140,60 @@ function processNewNotifications(notifications) {
 function buildMessage(n) {
   switch (n.type) {
     case "post_like":
-      return "Someone liked your post ❤️";
+      return "Someone liked your post ❤️"
 
     case "post_dislike":
-      return "Someone disliked your post";
+      return "Someone disliked your post"
 
     case "comment":
-      return "New comment on your post 💬";
+      return "New comment on your post 💬"
+
+    case "comment_like":
+      return "Someone liked your comment ❤️"
+
+    case "comment_dislike":
+      return "Someone disliked your comment"
 
     default:
-      return "New notification";
+      return "New notification"
+  }
+}
+
+/* -------------------------
+   BELL CLICK HANDLER
+-------------------------- */
+
+export function initNotificationBell() {
+  const bell = document.getElementById("notification-bell");
+  const dropdown = document.getElementById("notification-dropdown");
+
+  if (!bell || !dropdown) return;
+
+  bell.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle("hidden");
+
+    if (!dropdown.classList.contains("hidden")) {
+      await markAllAsRead();
+      updateBadge(0);
+    }
+  });
+
+  // CLICK OUTSIDE
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
+      dropdown.classList.add("hidden");
+    }
+  });
+}
+
+async function markAllAsRead() {
+  try {
+    await fetch(`${API_BASE}/notifications/read-all`, {
+      method: "PATCH",
+      credentials: "include",
+    });
+  } catch (err) {
+    console.error("mark-all error:", err);
   }
 }
