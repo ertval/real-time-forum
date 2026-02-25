@@ -6,17 +6,12 @@
       <a href="/" class="forum-logo">Forum</a>
     </h1>
 
-    <p id="greeting" class="muted" aria-live="polite">
-      <!-- JS will fill -->
-    </p>
+    <p id="greeting" class="muted" aria-live="polite"></p>
   </div>
 
   <div class="page-actions">
-    <a
-      id="login-btn"
-      class="btn btn-secondary"
-      href="/login"
-    >
+
+    <a id="login-btn" class="btn btn-secondary" href="/login">
       Login
     </a>
 
@@ -41,6 +36,26 @@
     <a id="create-post-btn" class="btn btn-primary" href="/create-post">
       Create post
     </a>
+
+    <!-- NOTIFICATIONS -->
+    <div class="notification-wrapper">
+      <button
+        id="notification-btn"
+        class="icon-btn"
+        aria-label="Notifications"
+        type="button"
+      >
+        🔔
+        <span id="notification-badge" class="notification-badge hidden">0</span>
+      </button>
+
+      <div id="notification-dropdown" class="notification-dropdown hidden">
+        <div class="notification-header">
+          Notifications
+        </div>
+        <div id="notification-list"></div>
+      </div>
+    </div>
 
     <!-- SETTINGS BUTTON -->
     <button
