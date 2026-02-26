@@ -1,7 +1,8 @@
-// web/static/js/notifications.js
+// /web/static/js/notifications.js
 
 import { API_BASE } from "./utils.js";
 import { uiNotify } from "./ui-messages.js";
+import { playNotification } from "./sound-effects.js";
 
 let seenNotificationIds = new Set();
 let pollInterval = null;
@@ -10,7 +11,6 @@ let initialized = false;
 /* -------------------------
    START POLLING
 -------------------------- */
-
 export function startNotificationPolling() {
   if (pollInterval) return;
 
@@ -23,7 +23,6 @@ export function startNotificationPolling() {
 /* -------------------------
    STOP POLLING
 -------------------------- */
-
 export function stopNotificationPolling() {
   if (!pollInterval) return;
 
@@ -36,7 +35,6 @@ export function stopNotificationPolling() {
 /* -------------------------
    RESET STATE
 -------------------------- */
-
 function resetState() {
   seenNotificationIds.clear();
   initialized = false;
@@ -45,7 +43,6 @@ function resetState() {
 /* -------------------------
    FETCH
 -------------------------- */
-
 async function fetchNotifications() {
   try {
     const res = await fetch(`${API_BASE}/notifications`, {
@@ -56,7 +53,6 @@ async function fetchNotifications() {
     if (!res.ok) return;
 
     const json = await res.json();
-
     const notifications = json.data?.notifications || [];
     const unreadCount = json.data?.unread_count ?? 0;
 
@@ -74,7 +70,6 @@ async function fetchNotifications() {
 /* -------------------------
    BADGE
 -------------------------- */
-
 function updateBadge(count) {
   const badge = document.getElementById("notification-badge");
   if (!badge) return;
@@ -90,7 +85,6 @@ function updateBadge(count) {
 /* -------------------------
    DROPDOWN
 -------------------------- */
-
 function renderDropdown(notifications) {
   const list = document.getElementById("notification-list");
   if (!list) return;
@@ -107,7 +101,7 @@ function renderDropdown(notifications) {
 
     if (!n.is_read) div.classList.add("unread");
 
-    // ⭐ HTML rendering enabled
+    // HTML rendering enabled
     div.innerHTML = buildMessage(n);
 
     /* -------------------------
@@ -141,7 +135,6 @@ function renderDropdown(notifications) {
 /* -------------------------
    MARK ONE AS READ
 -------------------------- */
-
 async function markOneAsRead(id) {
   try {
     await fetch(`${API_BASE}/notifications/${id}/read`, {
@@ -156,7 +149,6 @@ async function markOneAsRead(id) {
 /* -------------------------
    TOAST LOGIC
 -------------------------- */
-
 function processNewNotifications(notifications) {
   notifications.forEach(n => {
 
@@ -169,8 +161,8 @@ function processNewNotifications(notifications) {
       seenNotificationIds.add(n.id);
 
       if (!n.is_read) {
-        // Render HTML inside uiNotify
         uiNotify(buildMessage(n), { type: "info", html: true });
+        playNotification(); // Play sound only for NEW unread notifications
       }
     }
   });
@@ -179,7 +171,6 @@ function processNewNotifications(notifications) {
 /* -------------------------
    MESSAGE BUILDER
 -------------------------- */
-
 function buildMessage(n) {
   const truncate = (str, len = 20) => {
     if (!str) return "";
@@ -213,7 +204,6 @@ function buildMessage(n) {
 /* -------------------------
    BELL CLICK HANDLER
 -------------------------- */
-
 export function initNotificationBell() {
   const bell = document.getElementById("notification-bell");
   const dropdown = document.getElementById("notification-dropdown");
