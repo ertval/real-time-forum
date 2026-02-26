@@ -18,6 +18,31 @@ function getPostIdFromURL() {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
+/*----------------------------------
+  RELIABLE HIGHLIGHT WITH RETRIES
+----------------------------------*/
+
+async function highlightComment(commentId) {
+  const numericId = Number(commentId);
+  if (!numericId) return;
+
+  for (let i = 0; i < 20; i++) {
+    const el = document.getElementById(`comment-${numericId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("highlight-comment");
+
+      // Auto-hide highlight after 2.5 seconds
+      setTimeout(() => {
+        el.classList.add("fade-out");
+      }, 2500);
+
+      return;
+    }
+    await new Promise(res => setTimeout(res, 50));
+  }
+}
+
 /*------
   INIT
 ------*/
@@ -34,10 +59,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { categoryId } = result;
 
-  // reactions AFTER DOM is ready
   initReactions();
 
-  // navigation only if category exists
   if (categoryId) {
     initPostNavigation(postId, categoryId);
   }
@@ -45,7 +68,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 /*-------------------------------
   LOAD + RENDER SINGLE POST
-  Returns { categoryId } | null
 -------------------------------*/
 
 async function loadAndRenderPost(postId, container) {
@@ -67,24 +89,53 @@ async function loadAndRenderPost(postId, container) {
     container.innerHTML = "";
     container.appendChild(article);
 
-    // comments preview AFTER article exists
+    // Load comments into DOM
     await loadPostCommentsPreview(postId, article);
 
-    const categoryId =
-      Array.isArray(post.categories) && post.categories.length > 0
-        ? post.categories[0].id
-        : null;
+    /* ----------------------------------------------------
+      HIGHLIGHT COMMENT (WITH RETRIES + "last" support)
+    ---------------------------------------------------- */
+    const params = new URLSearchParams(window.location.search);
+    const highlight = params.get("highlight");
 
-    return { categoryId };
-  } catch (err) {
-    console.error("Failed to load post:", err);
-    container.innerHTML = `<p class="muted">Failed to load post.</p>`;
-    return null;
-  }
-}
+        if (highlight) {
+          if (highlight === "last") {
+            // Highlight newest comment
+            for (let i = 0; i < 20; i++) {
+              const all = document.querySelectorAll(".comment");
+              if (all.length > 0) {
+                const last = all[all.length - 1];
+                last.scrollIntoView({ behavior: "smooth", block: "center" });
+                last.classList.add("highlight-comment");
+
+                setTimeout(() => last.classList.add("fade-out"), 1000);
+                setTimeout(() => last.classList.remove("highlight-comment", "fade-out"), 2200);
+                break;
+              }
+              await new Promise(r => setTimeout(r, 50));
+            }
+          } else {
+            // Normal highlight by ID
+            highlightComment(highlight);
+          }
+        }
+
+        const categoryId =
+          Array.isArray(post.categories) && post.categories.length > 0
+            ? post.categories[0].id
+            : null;
+
+        return { categoryId };
+
+      } catch (err) {
+        console.error("Failed to load post:", err);
+        container.innerHTML = `<p class="muted">Failed to load post.</p>`;
+        return null;
+      }
+    }
 
 /*-------------------------------------
-  POST NAVIGATION (BASED ON CATEGORY)
+  POST NAVIGATION
 -------------------------------------*/
 
 async function initPostNavigation(postId, categoryId) {
@@ -93,11 +144,8 @@ async function initPostNavigation(postId, categoryId) {
 
   if (!prevBtn || !nextBtn) return;
 
-  // reset
   prevBtn.hidden = true;
   nextBtn.hidden = true;
-  prevBtn.onclick = null;
-  nextBtn.onclick = null;
 
   try {
     const res = await fetch(
@@ -109,35 +157,21 @@ async function initPostNavigation(postId, categoryId) {
 
     const { prev_id, next_id } = (await res.json()).data || {};
 
-    if (typeof prev_id === "number" && prev_id > 0) {
+    if (prev_id > 0) {
       prevBtn.hidden = false;
-      prevBtn.onclick = () => {
-        window.location.href = `/view-post/${prev_id}`;
-      };
+      prevBtn.onclick = () => (window.location.href = `/view-post/${prev_id}`);
     }
 
-    if (typeof next_id === "number" && next_id > 0) {
+    if (next_id > 0) {
       nextBtn.hidden = false;
-      nextBtn.onclick = () => {
-        window.location.href = `/view-post/${next_id}`;
-      };
+      nextBtn.onclick = () => (window.location.href = `/view-post/${next_id}`);
     }
-
-    /*---------------------
-      KEYBOARD NAVIGATION
-    ---------------------*/
 
     document.addEventListener("keydown", (e) => {
-      const tag = e.target.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
 
-      if (e.key === "ArrowLeft" && !prevBtn.hidden) {
-        prevBtn.click();
-      }
-
-      if (e.key === "ArrowRight" && !nextBtn.hidden) {
-        nextBtn.click();
-      }
+      if (e.key === "ArrowLeft" && !prevBtn.hidden) prevBtn.click();
+      if (e.key === "ArrowRight" && !nextBtn.hidden) nextBtn.click();
     });
 
   } catch (err) {

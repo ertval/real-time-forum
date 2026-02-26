@@ -156,6 +156,7 @@ function renderComment(comment) {
   const div = document.createElement("div");
   div.className = "comment";
   div.dataset.commentId = comment.id;
+  div.id = `comment-${comment.id}`;   
 
   const commentImageUrl =
     typeof comment.image_url === "string" && comment.image_url.trim()
@@ -344,6 +345,23 @@ function maybeRenderCommentForm(container, postId) {
       const list = container.querySelector(".comments-scroll");
       list?.appendChild(renderComment(newComment));
       list.scrollTop = list.scrollHeight;
+
+      /* highlight newly added comment */
+      const newEl = document.getElementById(`comment-${newComment.id}`);
+      if (newEl) {
+        newEl.classList.add("highlight-comment");
+
+        // fade-out starts after 1s
+        setTimeout(() => {
+          newEl.classList.add("fade-out");
+
+          // remove highlight classes once fade-out finishes (~1.2s)
+          setTimeout(() => {
+            newEl.classList.remove("highlight-comment", "fade-out");
+          }, 1200);
+
+        }, 1000);
+      }
     } finally {
       isSubmitting = false;
       if (submitButton instanceof HTMLButtonElement) {

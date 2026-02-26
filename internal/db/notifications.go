@@ -1,4 +1,4 @@
-// internal/db/notifications.go
+// /internal/db/notifications.go
 package db
 
 import (
@@ -10,15 +10,22 @@ import (
 const notificationTimeout = 2 * time.Second
 
 type Notification struct {
-	ID          int64  `json:"id"`
-	RecipientID int64  `json:"recipient_id"`
-	ActorID     int64  `json:"actor_id"`
-	Type        string `json:"type"`
-	PostID      *int64 `json:"post_id,omitempty"`
-	CommentID   *int64 `json:"comment_id,omitempty"`
-	CreatedAt   string `json:"created_at"`
-	IsRead      bool   `json:"is_read"`
+	ID             int64  `json:"id"`
+	RecipientID    int64  `json:"recipient_id"`
+	ActorID        int64  `json:"actor_id"`
+	ActorUsername  string `json:"actor_username"`
+	Type           string `json:"type"`
+	PostID         *int64 `json:"post_id,omitempty"`
+	CommentID      *int64 `json:"comment_id,omitempty"`
+	CreatedAt      string `json:"created_at"`
+	IsRead         bool   `json:"is_read"`
+	PostTitle      string `json:"post_title,omitempty"`
+	CommentExcerpt string `json:"comment_excerpt,omitempty"`
 }
+
+/* =========================================================
+   MAIN INSERT (POSTS & COMMENTS – NOT REACTIONS)
+========================================================= */
 
 func InsertNotification(
 	ctx context.Context,
@@ -30,7 +37,6 @@ func InsertNotification(
 	commentID *int64,
 ) error {
 
-	// Do not notify yourself
 	if recipientID == actorID {
 		return nil
 	}
@@ -38,20 +44,37 @@ func InsertNotification(
 	ctx, cancel := context.WithTimeout(ctx, notificationTimeout)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, `
-		INSERT OR IGNORE INTO notifications
-		(recipient_id, actor_id, type, post_id, comment_id)
-		VALUES (?, ?, ?, ?, ?)
-	`,
+	var finalCommentID *int64
+
+	// IMPORTANT: For post comments, commentID must be NULL to avoid unique index conflicts
+	// The unique index ux_notification_comment only applies when comment_id IS NOT NULL
+	if notificationType == "comment" {
+		finalCommentID = nil
+	} else {
+		finalCommentID = commentID
+	}
+
+	query := `
+		INSERT INTO notifications
+			(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+		VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
+	`
+
+	_, err := db.ExecContext(ctx, query,
 		recipientID,
 		actorID,
 		notificationType,
 		postID,
-		commentID,
+		finalCommentID,
 	)
 
 	return err
 }
+
+/* =========================================================
+   REACTION NOTIFICATIONS (LIKE/DISLIKE)
+   — ALWAYS INSERT NEW, NEVER CONFLICT
+========================================================= */
 
 func handleReactionNotificationTx(
 	ctx context.Context,
@@ -71,27 +94,37 @@ func handleReactionNotificationTx(
 	var postID *int64
 	var commentID *int64
 
-	if targetType == "post" {
+	switch targetType {
+
+	case "post":
 		postID = &objectID
 		if newValue == 1 {
 			notificationType = "post_like"
 		} else {
 			notificationType = "post_dislike"
 		}
-	} else {
+
+	case "comment":
 		commentID = &objectID
 		if newValue == 1 {
-			notificationType = "post_like"
+			notificationType = "comment_like"
 		} else {
-			notificationType = "post_dislike"
+			notificationType = "comment_dislike"
 		}
+
+	default:
+		return nil
 	}
 
-	_, err := tx.ExecContext(ctx, `
-		INSERT OR IGNORE INTO notifications
-		(recipient_id, actor_id, type, post_id, comment_id)
-		VALUES (?, ?, ?, ?, ?)
-	`,
+	query := `
+		INSERT INTO notifications
+			(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
+		VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
+	`
+
+	_, err := tx.ExecContext(
+		ctx,
+		query,
 		ownerID,
 		userID,
 		notificationType,

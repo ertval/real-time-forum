@@ -76,3 +76,104 @@
 .icon-btn:active {
     transform: scale(0.9);
 }
+
+/* --------------------------------------------------
+   NOTIFICATIONS
+-------------------------------------------------- */
+
+.notification-wrapper {
+    position: relative;
+}
+
+/* Badge */
+.notification-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #e11d48;
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    min-width: 18px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.notification-badge.hidden {
+    display: none;
+}
+
+/* Dropdown container */
+.notification-dropdown {
+    position: absolute;
+    right: 0;
+    top: 42px;
+    width: 300px;
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 200;
+}
+
+.notification-dropdown.hidden {
+    display: none;
+}
+
+/* Header */
+.notification-header {
+    padding: 10px 14px;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Each notification row */
+.notification-item {
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1.35;
+    transition: background 0.15s ease, opacity 0.15s ease;
+    color: #111827;
+}
+
+/* Alternate row background */
+.notification-item:nth-child(odd) {
+    background: #f8fafc;
+}
+
+.notification-item:nth-child(even) {
+    background: #ffffff;
+}
+
+/* Hover */
+.notification-item:hover {
+    background: #e2e8f0;
+}
+
+/* Unread state */
+.notification-item.unread {
+    background: #f0f7ff;
+    font-weight: 600;
+}
+
+/* Bold title inside message */
+.notification-item strong {
+    font-weight: 700;
+    color: #1e293b; /* slate-800 */
+}
+
+/* Italic excerpt */
+.notification-item em {
+    font-style: italic;
+    color: #475569; /* slate-600 */
+    opacity: 0.9;
+}
+
+/* Ensure emojis align better */
+.notification-item::after {
+    vertical-align: middle;
+}

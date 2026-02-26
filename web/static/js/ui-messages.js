@@ -65,7 +65,12 @@ export function uiNotify(message, opts = {}) {
 
   const content = document.createElement("div");
   content.className = "ui-toast__content";
-  content.textContent = message;
+
+  if (opts.html === true) {
+    content.innerHTML = message;
+  } else {
+    content.textContent = message;
+  }
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "ui-toast__close";

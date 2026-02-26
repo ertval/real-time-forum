@@ -1,5 +1,14 @@
 // web/static/js/header.js
+
 import { Auth } from "./auth.js";
+import {
+  startNotificationPolling,
+  stopNotificationPolling,
+  initNotificationBell,
+} from "./notifications.js";
+
+let pollingStarted = false;
+let bellInitialized = false;
 
 export async function initHeader() {
   await Auth.init();
@@ -21,22 +30,53 @@ export async function initHeader() {
   const isAuthed = Auth.isAuthenticated;
   const username = Auth.user?.username ?? "User";
 
-  // TEXT
-  greetingEl.textContent = isAuthed ? `Hello, ${username}` : "Hello, Guest";
+  /* -------------------------
+     NOTIFICATIONS
+  -------------------------- */
 
-  // VISIBILITY
+  if (isAuthed) {
+    if (!pollingStarted) {
+      startNotificationPolling();
+      pollingStarted = true;
+    }
+
+    if (!bellInitialized) {
+      initNotificationBell();
+      bellInitialized = true;
+    }
+  } else {
+    if (pollingStarted) {
+      stopNotificationPolling();
+      pollingStarted = false;
+    }
+  }
+
+  /* -------------------------
+     GREETING + BUTTONS
+  -------------------------- */
+
+  greetingEl.textContent = isAuthed
+    ? `Hello, ${username}`
+    : "Hello, Guest";
+
   greetingEl.style.display = "block";
   loginBtn.style.display = isAuthed ? "none" : "inline-flex";
   logoutBtn.style.display = isAuthed ? "inline-flex" : "none";
 
   setAuthedOnlyVisibility(authedOnlyEls, isAuthed);
 
-  // LOGOUT
+  /* -------------------------
+     LOGOUT
+  -------------------------- */
+
   if (isAuthed) {
     bindLogout(logoutBtn);
   }
 
-  // CREATE POST (guest -> modal, authed -> go)
+  /* -------------------------
+     CREATE POST
+  -------------------------- */
+
   if (createPostBtn && !createPostBtn.dataset.bound) {
     createPostBtn.dataset.bound = "1";
 
@@ -49,8 +89,11 @@ export async function initHeader() {
       window.location.assign("/create-post");
     });
   }
-
 }
+
+/* -------------------------
+   AUTHEd VISIBILITY
+-------------------------- */
 
 function setAuthedOnlyVisibility(elements, isAuthed) {
   const displayValue = isAuthed ? "inline-flex" : "none";
@@ -59,25 +102,33 @@ function setAuthedOnlyVisibility(elements, isAuthed) {
   }
 }
 
-/*---------------------------
-  FORUM LOGO POINTING TO /
----------------------------*/
+/* -------------------------
+   FORUM LOGO
+-------------------------- */
+
 function setupForumLogo() {
   const forumTitle = document.getElementById("forum-title");
   if (!forumTitle) return;
 
   forumTitle.style.cursor = "pointer";
-  forumTitle.addEventListener("click", (e) => {
-    e.preventDefault();
-    window.location.assign("/");
-  });
+
+  if (!forumTitle.dataset.bound) {
+    forumTitle.dataset.bound = "1";
+
+    forumTitle.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.assign("/");
+    });
+  }
 }
 
-/*--------
-  LOGOUT
---------*/
+/* -------------------------
+   LOGOUT
+-------------------------- */
+
 function bindLogout(logoutBtn) {
   if (!logoutBtn || logoutBtn.dataset.bound) return;
+
   logoutBtn.dataset.bound = "1";
 
   logoutBtn.addEventListener("click", async (e) => {
@@ -87,6 +138,9 @@ function bindLogout(logoutBtn) {
       method: "POST",
       credentials: "include",
     });
+
+    stopNotificationPolling();
+    pollingStarted = false;
 
     Auth.checked = false;
     Auth.isAuthenticated = false;
