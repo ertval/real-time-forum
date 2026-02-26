@@ -1,3 +1,4 @@
+// /internal/db/notifications.go
 package db
 
 import (
@@ -9,15 +10,17 @@ import (
 const notificationTimeout = 2 * time.Second
 
 type Notification struct {
-	ID            int64  `json:"id"`
-	RecipientID   int64  `json:"recipient_id"`
-	ActorID       int64  `json:"actor_id"`
-	ActorUsername string `json:"actor_username"`
-	Type          string `json:"type"`
-	PostID        *int64 `json:"post_id,omitempty"`
-	CommentID     *int64 `json:"comment_id,omitempty"`
-	CreatedAt     string `json:"created_at"`
-	IsRead        bool   `json:"is_read"`
+	ID             int64  `json:"id"`
+	RecipientID    int64  `json:"recipient_id"`
+	ActorID        int64  `json:"actor_id"`
+	ActorUsername  string `json:"actor_username"`
+	Type           string `json:"type"`
+	PostID         *int64 `json:"post_id,omitempty"`
+	CommentID      *int64 `json:"comment_id,omitempty"`
+	CreatedAt      string `json:"created_at"`
+	IsRead         bool   `json:"is_read"`
+	PostTitle      string `json:"post_title,omitempty"`
+	CommentExcerpt string `json:"comment_excerpt,omitempty"`
 }
 
 /* =========================================================
