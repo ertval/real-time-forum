@@ -10,8 +10,8 @@ import (
 
 const reactionTimeout = 2 * time.Second
 
-// ToggleReaction toggles a user's reaction on a post or comment.
-// targetReaction = 1 (like) or -1 (dislike)
+// ToggleReaction toggles like/dislike for posts or comments.
+// Returns: newReaction (1, -1, or 0 when removed)
 func ToggleReaction(
 	ctx context.Context,
 	db *sql.DB,
@@ -34,16 +34,19 @@ func ToggleReaction(
 	}
 	defer tx.Rollback()
 
+	// Find ownership (who gets notified)
 	ownerID, err := getReactionTargetOwnerTx(ctx, tx, objectID, targetType)
 	if err != nil {
 		return 0, err
 	}
 
+	// Find existing reaction
 	current, err := getReactionValueTx(ctx, tx, userID, objectID, targetType)
 	if err != nil {
 		return 0, err
 	}
 
+	// Apply
 	newValue, err := applyReactionToggleTx(
 		ctx,
 		tx,
@@ -57,7 +60,7 @@ func ToggleReaction(
 		return 0, err
 	}
 
-	// side effect separated
+	// Do NOT send notification if reaction was removed (newValue = 0)
 	if newValue != 0 {
 		_ = handleReactionNotificationTx(
 			ctx,
@@ -77,9 +80,9 @@ func ToggleReaction(
 	return newValue, nil
 }
 
-/*-------------------
-  HELPERS (TX SAFE)
--------------------*/
+/* =========================================================
+   INTERNAL HELPERS (TX SAFE)
+========================================================= */
 
 func getReactionValueTx(
 	ctx context.Context,
@@ -93,16 +96,15 @@ func getReactionValueTx(
 	var err error
 
 	switch targetType {
+
 	case "post":
-		err = tx.QueryRowContext(
-			ctx,
+		err = tx.QueryRowContext(ctx,
 			`SELECT value FROM reactions WHERE user_id = ? AND post_id = ?`,
 			userID, objectID,
 		).Scan(&value)
 
 	case "comment":
-		err = tx.QueryRowContext(
-			ctx,
+		err = tx.QueryRowContext(ctx,
 			`SELECT value FROM reactions WHERE user_id = ? AND comment_id = ?`,
 			userID, objectID,
 		).Scan(&value)
@@ -131,6 +133,7 @@ func getReactionTargetOwnerTx(
 	var ownerID int64
 
 	switch targetType {
+
 	case "post":
 		err := tx.QueryRowContext(
 			ctx,
@@ -176,43 +179,38 @@ func applyReactionToggleTx(
 
 	var idColumn string
 	var conflictTarget string
+
 	switch targetType {
 	case "post":
 		idColumn = "post_id"
 		conflictTarget = "ON CONFLICT(user_id, post_id) WHERE post_id IS NOT NULL"
+
 	case "comment":
 		idColumn = "comment_id"
 		conflictTarget = "ON CONFLICT(user_id, comment_id) WHERE comment_id IS NOT NULL"
+
 	default:
 		return 0, fmt.Errorf("invalid target type: %s", targetType)
 	}
 
+	// If same reaction exists → remove it
 	if current == targetReaction {
-		query := fmt.Sprintf(
-			`DELETE FROM reactions WHERE user_id = ? AND %s = ?`,
-			idColumn,
-		)
-
+		query := fmt.Sprintf(`DELETE FROM reactions WHERE user_id = ? AND %s = ?`, idColumn)
 		if _, err := tx.ExecContext(ctx, query, userID, objectID); err != nil {
 			return 0, fmt.Errorf("delete reaction: %w", err)
 		}
 		return 0, nil
 	}
 
+	// INSERT or UPDATE
 	query := fmt.Sprintf(`
 		INSERT INTO reactions (user_id, %s, value, created_at)
-		VALUES (?, ?, ?, datetime('now'))
+		VALUES (?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ','now'))
 		%s
-		DO UPDATE SET value = excluded.value
+		DO UPDATE SET value = excluded.value, created_at = excluded.created_at
 	`, idColumn, conflictTarget)
 
-	if _, err := tx.ExecContext(
-		ctx,
-		query,
-		userID,
-		objectID,
-		targetReaction,
-	); err != nil {
+	if _, err := tx.ExecContext(ctx, query, userID, objectID, targetReaction); err != nil {
 		return 0, fmt.Errorf("upsert reaction: %w", err)
 	}
 

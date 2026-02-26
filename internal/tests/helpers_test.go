@@ -202,3 +202,19 @@ func extractToken(t *testing.T, rec *httptest.ResponseRecorder) string {
 	}
 	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
 }
+
+func loginTestUser(t *testing.T, h http.Handler, username string) string {
+	body := []byte(`{"username":"` + username + `","password":"password123"}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login failed: %d", rec.Code)
+	}
+
+	return extractToken(t, rec)
+}
