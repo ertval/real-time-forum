@@ -13,15 +13,7 @@ import (
 
 // Normalize pagination for comments
 func normalizeCommentsPagination(params *ListCommentsParams) {
-	if params.Page < 1 {
-		params.Page = 1
-	}
-	if params.PerPage < 1 {
-		params.PerPage = 20
-	}
-	if params.PerPage > 100 {
-		params.PerPage = 100
-	}
+	params.Page, params.PerPage = normalizePagination(params.Page, params.PerPage)
 }
 
 // Count comments for a specific post
