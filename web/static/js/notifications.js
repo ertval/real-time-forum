@@ -115,12 +115,24 @@ function renderDropdown(notifications) {
     div.addEventListener("click", async () => {
       await markOneAsRead(n.id);
 
+      const postId = n.post_id;
+      const commentId = n.comment_id;
+
       if (postId) {
-        if (commentId) {
-          window.location.href = `/view-post/${postId}?highlight=${commentId}`;
-        } else {
-          window.location.href = `/view-post/${postId}`;
+        if (n.type === "comment") {
+          // Comment notification → highlight newest comment
+          window.location.href = `/view-post/${postId}?highlight=last`;
+          return;
         }
+
+        if (commentId) {
+          // Reaction to comment
+          window.location.href = `/view-post/${postId}?highlight=${commentId}`;
+          return;
+        }
+
+        // Post like/dislike
+        window.location.href = `/view-post/${postId}`;
       }
     });
 
