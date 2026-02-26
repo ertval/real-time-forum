@@ -30,12 +30,17 @@ func ListUserNotifications(
 			n.actor_id,
 			u.username AS actor_username,
 			n.type,
-			n.post_id,
+
+			-- ALWAYS RETURN THE REAL POST ID
+			COALESCE(n.post_id, p.id) AS post_id,
+
 			n.comment_id,
 			n.created_at,
 			n.is_read
 		FROM notifications n
 		JOIN users u ON u.id = n.actor_id
+		LEFT JOIN comments c ON c.id = n.comment_id
+		LEFT JOIN posts p ON p.id = c.post_id
 		WHERE n.recipient_id = ?
 		ORDER BY n.created_at DESC
 	`, userID)

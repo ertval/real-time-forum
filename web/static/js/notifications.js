@@ -98,34 +98,49 @@ function renderDropdown(notifications) {
   list.innerHTML = "";
 
   notifications.forEach(n => {
+    const postId = n.post_id;
+    const commentId = n.comment_id;
+
     const div = document.createElement("div");
     div.className = "notification-item";
+    div.style.cursor = "pointer";
 
-    if (!n.is_read) {
-      div.classList.add("unread");
-    }
+    if (!n.is_read) div.classList.add("unread");
 
     div.textContent = buildMessage(n);
 
     /* -------------------------
-       CLICK REDIRECT LOGIC
+       CLICK REDIRECT + MARK READ
     -------------------------- */
-    div.addEventListener("click", () => {
-      if (n.post_id) {
-        if (n.comment_id) {
-          // A comment notification → redirect + highlight
-          window.location.href = `/view-post/${n.post_id}?highlight=${n.comment_id}`;
+    div.addEventListener("click", async () => {
+      await markOneAsRead(n.id);
+
+      if (postId) {
+        if (commentId) {
+          window.location.href = `/view-post/${postId}?highlight=${commentId}`;
         } else {
-          // Post like/dislike or "commented on your post"
-          window.location.href = `/view-post/${n.post_id}`;
+          window.location.href = `/view-post/${postId}`;
         }
-      } else {
-        console.warn("Notification missing post_id:", n);
       }
     });
 
     list.appendChild(div);
   });
+}
+
+/* -------------------------
+   MARK ONE AS READ
+-------------------------- */
+
+async function markOneAsRead(id) {
+  try {
+    await fetch(`${API_BASE}/notifications/${id}/read`, {
+      method: "PATCH",
+      credentials: "include",
+    });
+  } catch (err) {
+    console.error("mark-one error:", err);
+  }
 }
 
 /* -------------------------
@@ -153,6 +168,7 @@ function processNewNotifications(notifications) {
 /* -------------------------
    MESSAGE BUILDER
 -------------------------- */
+
 function buildMessage(n) {
   switch (n.type) {
     case "post_like":

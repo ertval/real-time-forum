@@ -481,7 +481,19 @@ body.image-lightbox-open {
   }
 }
 
+/* -----------------------------------
+   SOFT HIGHLIGHT ON COMMENT
+----------------------------------- */
+
+/* Ultra-soft comment highlight */
 .highlight-comment {
-  background: #fff3b0 !important;
-  transition: background 2s ease;
+  animation: highlightPulse 1.2s ease-out forwards;
+  background-color: #fffbea !important; /* very soft cream */
+  transition: background-color 1s ease-out, border-color 1s ease-out;
+}
+
+/* fade-out after animation */
+.highlight-comment.fade-out {
+  background-color: transparent !important;
+  border-left-color: transparent;
 }
