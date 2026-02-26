@@ -63,6 +63,7 @@ func NewMux() *http.ServeMux {
 	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
 	mux.HandleFunc("/my-posts/", serveTemplate("./web/templates/my-posts.html"))
 	mux.HandleFunc("/my-liked-posts", serveTemplate("./web/templates/my-liked-posts.html"))
+	mux.HandleFunc("/activity", serveTemplate("./web/templates/activity.html"))
 	mux.HandleFunc("/view-post/", serveTemplate("./web/templates/view-post.html"))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
