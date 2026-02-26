@@ -9,10 +9,14 @@ import {
 import { renderPostCard } from "./posts.js";
 import { initReactions } from "./reactions.js";
 import { createPagination } from "./pagination.js";
-import { uiNotify } from "./ui-messages.js";
+import { uiNotify, uiConfirm } from "./ui-messages.js";
+import { playUpload, playDelete } from "./sound-effects.js";
+import { Auth } from "./auth.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 10;
+let editBound = false;
+let deleteBound = false;
 
 function getQueryState() {
   const params = new URLSearchParams(window.location.search);
@@ -77,6 +81,7 @@ function renderPostsSection({
   outputId,
   emptyId,
   countId,
+  currentUserID,
 }) {
   const output = document.getElementById(outputId);
   const empty = document.getElementById(emptyId);
@@ -98,10 +103,13 @@ function renderPostsSection({
   const fragment = document.createDocumentFragment();
 
   for (const post of items) {
+    const isOwner = Number(post.author_id) === Number(currentUserID);
+
     const article = renderPostCard(post, {
       clickable: true,
       showStatusToggle: false,
-      showDelete: false,
+      showDelete: isOwner,
+      showEdit: isOwner,
     });
 
     // Keep activity page lightweight: no comments preview loading for each card.
@@ -203,6 +211,28 @@ function getGlobalTotalPages(data) {
   return totalPages.length ? Math.max(...totalPages) : 1;
 }
 
+function initSectionToggles() {
+  const toggles = document.querySelectorAll("[data-activity-toggle]");
+
+  for (const toggle of toggles) {
+    const controls = toggle.getAttribute("aria-controls");
+    if (!controls) continue;
+
+    const content = document.getElementById(controls);
+    if (!content) continue;
+
+    const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+    content.hidden = !isExpanded;
+
+    toggle.addEventListener("click", () => {
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      const nextExpanded = !expanded;
+      toggle.setAttribute("aria-expanded", String(nextExpanded));
+      content.hidden = !nextExpanded;
+    });
+  }
+}
+
 async function renderActivity(state, pager) {
   const paginationEl = document.getElementById("activity-pagination");
   if (!paginationEl) return;
@@ -219,13 +249,17 @@ async function renderActivity(state, pager) {
     outputId: "created-posts-output",
     emptyId: "created-posts-empty",
     countId: "created-count",
+    currentUserID: activityUserID,
   });
+
+  renderCommentsSection(data.comments);
 
   renderPostsSection({
     section: data.liked_posts,
     outputId: "liked-posts-output",
     emptyId: "liked-posts-empty",
     countId: "liked-count",
+    currentUserID: activityUserID,
   });
 
   renderPostsSection({
@@ -233,9 +267,8 @@ async function renderActivity(state, pager) {
     outputId: "disliked-posts-output",
     emptyId: "disliked-posts-empty",
     countId: "disliked-count",
+    currentUserID: activityUserID,
   });
-
-  renderCommentsSection(data.comments);
 
   initReactions();
 
@@ -244,7 +277,181 @@ async function renderActivity(state, pager) {
   paginationEl.hidden = totalPages <= 1;
 }
 
+let activityUserID = 0;
+
+function initEditPost(refresh) {
+  if (editBound) return;
+  editBound = true;
+
+  document.addEventListener(
+    "click",
+    async (e) => {
+      const btn = e.target.closest(".post-edit");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const postId = btn.dataset.postId;
+      if (!postId) return;
+
+      btn.disabled = true;
+
+      try {
+        const getRes = await fetch(`${API_BASE}/posts/${postId}`, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+
+        if (!getRes.ok) {
+          uiNotify("Failed to load post for editing.", { type: "danger" });
+          return;
+        }
+
+        const getPayload = await getRes.json();
+        const post = getPayload?.data ?? {};
+
+        const currentTitle = String(post.title ?? "");
+        const currentBody = String(post.body ?? "");
+
+        const nextTitleRaw = window.prompt("Edit title", currentTitle);
+        if (nextTitleRaw === null) return;
+        const nextTitle = nextTitleRaw.trim();
+        if (!nextTitle) {
+          uiNotify("Title cannot be empty.", { type: "warn" });
+          return;
+        }
+
+        const nextBodyRaw = window.prompt("Edit body", currentBody);
+        if (nextBodyRaw === null) return;
+        const nextBody = nextBodyRaw.trim();
+        if (!nextBody) {
+          uiNotify("Body cannot be empty.", { type: "warn" });
+          return;
+        }
+
+        const patch = {};
+        if (nextTitle !== currentTitle) patch.title = nextTitle;
+        if (nextBody !== currentBody) patch.body = nextBody;
+
+        if (!Object.keys(patch).length) {
+          uiNotify("No changes to save.", { type: "info" });
+          return;
+        }
+
+        const patchRes = await fetch(`${API_BASE}/posts/${postId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(patch),
+        });
+
+        if (patchRes.status === 401) {
+          uiNotify("You must be logged in.", { type: "warn" });
+          return;
+        }
+        if (patchRes.status === 403) {
+          uiNotify("You can only edit your own posts.", { type: "warn" });
+          return;
+        }
+        if (patchRes.status === 404) {
+          uiNotify("Post not found.", { type: "warn" });
+          await refresh();
+          return;
+        }
+        if (!patchRes.ok) {
+          uiNotify("Failed to update post.", { type: "danger" });
+          return;
+        }
+
+        playUpload();
+        uiNotify("Post updated.", { type: "success" });
+        await refresh();
+      } catch (err) {
+        console.error("Activity edit failed:", err);
+        uiNotify("Failed to update post.", { type: "danger" });
+      } finally {
+        if (document.contains(btn)) btn.disabled = false;
+      }
+    },
+    true
+  );
+}
+
+function initDeletePost(refresh) {
+  if (deleteBound) return;
+  deleteBound = true;
+
+  document.addEventListener(
+    "click",
+    async (e) => {
+      const btn = e.target.closest(".post-delete");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const postId = btn.dataset.postId;
+      if (!postId) return;
+
+      const ok = await uiConfirm("Delete this post? This action cannot be undone.", {
+        type: "danger",
+        title: "Delete post",
+        okText: "Delete",
+        cancelText: "Cancel",
+      });
+      if (!ok) return;
+
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/posts/${postId}`, {
+          method: "DELETE",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+
+        if (res.status === 401) {
+          uiNotify("You must be logged in.", { type: "warn" });
+          return;
+        }
+        if (res.status === 403) {
+          uiNotify("You can only delete your own posts.", { type: "warn" });
+          return;
+        }
+        if (res.status === 404) {
+          uiNotify("Post not found.", { type: "warn" });
+          await refresh();
+          return;
+        }
+        if (!res.ok) {
+          uiNotify("Failed to delete post.", { type: "danger" });
+          return;
+        }
+
+        playDelete();
+        uiNotify("Post deleted.", { type: "success" });
+        await refresh();
+      } catch (err) {
+        console.error("Activity delete failed:", err);
+        uiNotify("Failed to delete post.", { type: "danger" });
+      } finally {
+        if (document.contains(btn)) btn.disabled = false;
+      }
+    },
+    true
+  );
+}
+
 async function startActivityPage() {
+  initSectionToggles();
+
+  await Auth.init();
+  activityUserID = Number(Auth.user?.id || 0);
+
   const prevBtn = document.getElementById("activity-prev-page");
   const nextBtn = document.getElementById("activity-next-page");
   const numbersEl = document.getElementById("activity-page-numbers");
@@ -262,6 +469,10 @@ async function startActivityPage() {
   }
 
   let state = getQueryState();
+
+  const refresh = async () => {
+    await renderActivity(state, pager);
+  };
 
   statusSelect.value = state.status;
   perPageSelect.value = String(state.perPage);
@@ -328,6 +539,9 @@ async function startActivityPage() {
       uiNotify("Failed to load activity.", { type: "danger" });
     }
   });
+
+  initEditPost(refresh);
+  initDeletePost(refresh);
 }
 
 if (document.readyState === "loading") {
