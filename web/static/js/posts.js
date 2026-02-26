@@ -156,6 +156,7 @@ function renderComment(comment) {
   const div = document.createElement("div");
   div.className = "comment";
   div.dataset.commentId = comment.id;
+  div.id = `comment-${comment.id}`;   // <-- 🔥 REQUIRED FOR HIGHLIGHT
 
   const commentImageUrl =
     typeof comment.image_url === "string" && comment.image_url.trim()

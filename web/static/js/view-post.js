@@ -23,11 +23,20 @@ function getPostIdFromURL() {
 ----------------------------------*/
 
 async function highlightComment(commentId) {
-  for (let i = 0; i < 20; i++) {   // retry ~1 sec total
-    const el = document.getElementById(`comment-${commentId}`);
+  const numericId = Number(commentId);
+  if (!numericId) return;
+
+  for (let i = 0; i < 20; i++) {
+    const el = document.getElementById(`comment-${numericId}`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       el.classList.add("highlight-comment");
+
+      // Auto-hide highlight after 1 second
+      setTimeout(() => {
+        el.classList.add("fade-out");
+      }, 2000);
+
       return;
     }
     await new Promise(res => setTimeout(res, 50));
