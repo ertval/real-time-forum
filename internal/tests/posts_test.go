@@ -327,6 +327,81 @@ func TestAPIPostsLiked_DislikeDoesNotCount(t *testing.T) {
 	}
 }
 
+func TestAPIPostsDisliked_ReturnsDislikedPostsWithCorrectPaginationTotal(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Disliked For List",
+		"body":         "Body",
+		"category_ids": []int64{1},
+	})
+
+	// Dislike the post.
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/posts/%d/dislike", postID), nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("dislike failed: %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	// List disliked posts.
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/posts/disliked?page=1&per_page=20", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var env apiEnvelope
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
+		t.Fatalf("unmarshal envelope: %v", err)
+	}
+	if env.Error != nil {
+		t.Fatalf("unexpected error: %+v", env.Error)
+	}
+
+	var posts []map[string]any
+	if err := json.Unmarshal(env.Data, &posts); err != nil {
+		t.Fatalf("unmarshal posts: %v", err)
+	}
+
+	if len(posts) != 1 {
+		t.Fatalf("expected 1 disliked post, got %d", len(posts))
+	}
+	if int64(posts[0]["id"].(float64)) != postID {
+		t.Fatalf("expected disliked post id=%d, got %v", postID, posts[0]["id"])
+	}
+
+	var meta struct {
+		Pagination struct {
+			Total      int `json:"total"`
+			Page       int `json:"page"`
+			PerPage    int `json:"per_page"`
+			TotalPages int `json:"total_pages"`
+		} `json:"pagination"`
+	}
+	if err := json.Unmarshal(env.Meta, &meta); err != nil {
+		t.Fatalf("unmarshal meta: %v", err)
+	}
+
+	if meta.Pagination.Total != 1 {
+		t.Fatalf("expected pagination.total=1 for disliked list, got %d", meta.Pagination.Total)
+	}
+	if meta.Pagination.Page != 1 || meta.Pagination.PerPage != 20 || meta.Pagination.TotalPages != 1 {
+		t.Fatalf(
+			"unexpected pagination values: page=%d per_page=%d total_pages=%d",
+			meta.Pagination.Page,
+			meta.Pagination.PerPage,
+			meta.Pagination.TotalPages,
+		)
+	}
+}
+
 /*----------
  LIST POSTS
 ------------*/

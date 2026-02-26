@@ -47,20 +47,8 @@ type ListPostsResult struct {
 	Total int
 }
 
-func (p *ListPostsParams) ApplyDefaults() {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 20
-	}
-	if p.PerPage > 100 {
-		p.PerPage = 100
-	}
-}
-
 func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsResult, error) {
-	p.ApplyDefaults()
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -329,25 +317,13 @@ type ListPostsByCategoryResult struct {
 	Total int
 }
 
-func (p *ListPostsByCategoryParams) ApplyDefaults() {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 20
-	}
-	if p.PerPage > 100 {
-		p.PerPage = 100
-	}
-}
-
 func ListPostsByCategory(
 	ctx context.Context,
 	db *sql.DB,
 	p ListPostsByCategoryParams,
 ) (ListPostsByCategoryResult, error) {
 
-	p.ApplyDefaults()
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -434,25 +410,13 @@ type ListPostsByAuthorResult struct {
 	Total int
 }
 
-func (p *ListPostsByAuthorParams) ApplyDefaults() {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 20
-	}
-	if p.PerPage > 100 {
-		p.PerPage = 100
-	}
-}
-
 func ListPostsByAuthor(
 	ctx context.Context,
 	db *sql.DB,
 	p ListPostsByAuthorParams,
 ) (ListPostsByAuthorResult, error) {
 
-	p.ApplyDefaults()
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -537,127 +501,70 @@ func ListPostsByAuthor(
   LIST POSTS LIKED BY USER
 ---------------------------*/
 
-type ListPostsLikedByUserParams struct {
-	UserID  int64
-	Page    int
-	PerPage int
+type ListPostsByUserReactionParams struct {
+	UserID   int64
+	Page     int
+	PerPage  int
+	Reaction int
 }
 
-type ListPostsLikedByUserResult struct {
+type ListPostsByUserReactionResult struct {
 	Posts []Post
 	Total int
 }
 
-func (p *ListPostsLikedByUserParams) ApplyDefaults() {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 20
-	}
-	if p.PerPage > 100 {
-		p.PerPage = 100
-	}
-}
-
-func ListPostsLikedByUser(
+func ListPostsByUserReaction(
 	ctx context.Context,
 	db *sql.DB,
-	p ListPostsLikedByUserParams,
-) (ListPostsLikedByUserResult, error) {
+	p ListPostsByUserReactionParams,
+) (ListPostsByUserReactionResult, error) {
 
-	p.ApplyDefaults()
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	total, err := countLikedPostsByUser(ctx, db, p.UserID)
+	total, err := countPostsByUserReaction(ctx, db, p.UserID, p.Reaction)
 	if err != nil {
-		return ListPostsLikedByUserResult{}, err
+		return ListPostsByUserReactionResult{}, err
 	}
 
-	posts, err := fetchLikedPostsByUser(ctx, db, p)
+	posts, err := fetchPostsByReaction(ctx, db, p)
 	if err != nil {
-		return ListPostsLikedByUserResult{}, err
+		return ListPostsByUserReactionResult{}, err
 	}
 
 	if err := attachPostCategories(ctx, db, posts); err != nil {
-		return ListPostsLikedByUserResult{}, err
+		return ListPostsByUserReactionResult{}, err
 	}
 	if err := attachPostReactions(ctx, db, posts); err != nil {
-		return ListPostsLikedByUserResult{}, err
+		return ListPostsByUserReactionResult{}, err
 	}
 
-	return ListPostsLikedByUserResult{Posts: posts, Total: total}, nil
+	return ListPostsByUserReactionResult{Posts: posts, Total: total}, nil
 }
 
-func countLikedPostsByUser(ctx context.Context, db *sql.DB, userID int64) (int, error) {
+func countPostsByUserReaction(
+	ctx context.Context,
+	db *sql.DB,
+	userID int64,
+	reaction int,
+) (int, error) {
+	if reaction != ReactionLike && reaction != ReactionDislike {
+		return 0, fmt.Errorf("invalid reaction: %d", reaction)
+	}
+
 	var total int
 	if err := db.QueryRowContext(ctx, `
 		SELECT COUNT(DISTINCT r.post_id)
 		FROM reactions r
 		WHERE r.user_id = ?
 		  AND r.post_id IS NOT NULL
-		  AND r.value = 1
-	`, userID).Scan(&total); err != nil {
+		  AND r.value = ?
+	`, userID, reaction).Scan(&total); err != nil {
 		return 0, err
 	}
 	return total, nil
-}
-
-func fetchLikedPostsByUser(ctx context.Context, db *sql.DB, p ListPostsLikedByUserParams) ([]Post, error) {
-	offset := (p.Page - 1) * p.PerPage
-
-	rows, err := db.QueryContext(ctx, `
-		SELECT
-			p.id,
-			p.author_id,
-			u.username,
-			p.title,
-			p.image_url,
-			p.body,
-			p.created_at,
-			p.updated_at
-		FROM posts p
-		JOIN users u ON u.id = p.author_id
-		JOIN reactions r ON r.post_id = p.id
-		WHERE r.user_id = ?
-		AND r.value = 1
-		ORDER BY r.created_at ASC
-		LIMIT ? OFFSET ?
-	`, p.UserID, p.PerPage, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	posts := make([]Post, 0)
-	for rows.Next() {
-		var post Post
-		var imageURL sql.NullString
-		if err := rows.Scan(
-			&post.ID,
-			&post.AuthorID,
-			&post.Author,
-			&post.Title,
-			&imageURL,
-			&post.Body,
-			&post.CreatedAt,
-			&post.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		if imageURL.Valid {
-			post.ImageURL = &imageURL.String
-		}
-		posts = append(posts, post)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return posts, nil
 }
 
 /*--------------------

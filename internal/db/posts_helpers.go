@@ -7,6 +7,9 @@ import (
 	"fmt"
 )
 
+const ReactionLike = 1
+const ReactionDislike = -1
+
 /*-------------------------------
   COUNT POSTS (PUBLISHED ONLY)
 -------------------------------*/
@@ -149,4 +152,69 @@ func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post) error {
 		posts[i].Dislikes = dislikes
 	}
 	return nil
+}
+
+/*---------------------
+  FETCH REACTED POSTS
+---------------------*/
+
+// fetchPostsByReaction fetches according to reaction selected,
+// like -> p.Reaction = 1, dislike -> p.Reaction = -1
+func fetchPostsByReaction(
+	ctx context.Context,
+	db *sql.DB,
+	p ListPostsByUserReactionParams,
+) ([]Post, error) {
+	offset := (p.Page - 1) * p.PerPage
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT
+			p.id,
+			p.author_id,
+			u.username,
+			p.title,
+			p.image_url,
+			p.body,
+			p.created_at,
+			p.updated_at
+		FROM posts p
+		JOIN users u ON u.id = p.author_id
+		JOIN reactions r ON r.post_id = p.id
+		WHERE r.user_id = ?
+		AND r.value = ?
+		ORDER BY r.created_at ASC
+		LIMIT ? OFFSET ?
+	`, p.UserID, p.Reaction, p.PerPage, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	posts := make([]Post, 0)
+	for rows.Next() {
+		var post Post
+		var imageURL sql.NullString
+		if err := rows.Scan(
+			&post.ID,
+			&post.AuthorID,
+			&post.Author,
+			&post.Title,
+			&imageURL,
+			&post.Body,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		if imageURL.Valid {
+			post.ImageURL = &imageURL.String
+		}
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }
