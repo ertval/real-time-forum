@@ -41,6 +41,16 @@ func InsertNotification(
 	ctx, cancel := context.WithTimeout(ctx, notificationTimeout)
 	defer cancel()
 
+	var finalCommentID *int64
+
+	// IMPORTANT: For post comments, commentID must be NULL to avoid unique index conflicts
+	// The unique index ux_notification_comment only applies when comment_id IS NOT NULL
+	if notificationType == "comment" {
+		finalCommentID = nil
+	} else {
+		finalCommentID = commentID
+	}
+
 	query := `
 		INSERT INTO notifications
 			(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
@@ -52,7 +62,7 @@ func InsertNotification(
 		actorID,
 		notificationType,
 		postID,
-		commentID,
+		finalCommentID,
 	)
 
 	return err

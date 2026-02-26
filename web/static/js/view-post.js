@@ -32,10 +32,10 @@ async function highlightComment(commentId) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       el.classList.add("highlight-comment");
 
-      // Auto-hide highlight after 1 second
+      // Auto-hide highlight after 2.5 seconds
       setTimeout(() => {
         el.classList.add("fade-out");
-      }, 2000);
+      }, 2500);
 
       return;
     }
@@ -93,27 +93,46 @@ async function loadAndRenderPost(postId, container) {
     await loadPostCommentsPreview(postId, article);
 
     /* ----------------------------------------------------
-       HIGHLIGHT COMMENT (WITH RETRIES)
+      HIGHLIGHT COMMENT (WITH RETRIES + "last" support)
     ---------------------------------------------------- */
     const params = new URLSearchParams(window.location.search);
     const highlight = params.get("highlight");
-    if (highlight) {
-      highlightComment(highlight);
+
+        if (highlight) {
+          if (highlight === "last") {
+            // Highlight newest comment
+            for (let i = 0; i < 20; i++) {
+              const all = document.querySelectorAll(".comment");
+              if (all.length > 0) {
+                const last = all[all.length - 1];
+                last.scrollIntoView({ behavior: "smooth", block: "center" });
+                last.classList.add("highlight-comment");
+
+                setTimeout(() => last.classList.add("fade-out"), 1000);
+                setTimeout(() => last.classList.remove("highlight-comment", "fade-out"), 2200);
+                break;
+              }
+              await new Promise(r => setTimeout(r, 50));
+            }
+          } else {
+            // Normal highlight by ID
+            highlightComment(highlight);
+          }
+        }
+
+        const categoryId =
+          Array.isArray(post.categories) && post.categories.length > 0
+            ? post.categories[0].id
+            : null;
+
+        return { categoryId };
+
+      } catch (err) {
+        console.error("Failed to load post:", err);
+        container.innerHTML = `<p class="muted">Failed to load post.</p>`;
+        return null;
+      }
     }
-
-    const categoryId =
-      Array.isArray(post.categories) && post.categories.length > 0
-        ? post.categories[0].id
-        : null;
-
-    return { categoryId };
-
-  } catch (err) {
-    console.error("Failed to load post:", err);
-    container.innerHTML = `<p class="muted">Failed to load post.</p>`;
-    return null;
-  }
-}
 
 /*-------------------------------------
   POST NAVIGATION
