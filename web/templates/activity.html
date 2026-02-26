@@ -1,0 +1,106 @@
+<!-- web/templates/activity.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Activity</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/header.css" />
+  <link rel="stylesheet" href="/static/css/home.css" />
+  <link rel="stylesheet" href="/static/css/posts.css" />
+  <link rel="stylesheet" href="/static/css/pagination.css" />
+  <link rel="stylesheet" href="/static/css/activity.css" />
+  <link rel="stylesheet" href="/static/css/auth-modal.css" />
+  <link rel="stylesheet" href="/static/css/ui-messages.css" />
+
+  <script src="/static/js/helpers.js" defer></script>
+  <script type="module" src="/static/js/ui-messages.js"></script>
+  <script type="module" src="/static/js/activity-page.js"></script>
+</head>
+
+<body class="activity-page">
+  <main class="container">
+    <div id="header"></div>
+
+    <section class="filters activity-filters">
+      <div class="filter-group">
+        <label for="activity-status-filter">Created Post Status</label>
+        <select id="activity-status-filter" name="status">
+          <option value="all">All</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="activity-per-page">Items Per Section</label>
+        <select id="activity-per-page" name="per_page">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="activity-sections">
+      <section class="activity-section card card-pad">
+        <div class="activity-section-head">
+          <h2>Created Posts</h2>
+          <span id="created-count" class="activity-count">0</span>
+        </div>
+        <div id="created-posts-output" class="activity-posts-output"></div>
+        <div id="created-posts-empty" class="empty-state" hidden>
+          <h3>No created posts</h3>
+          <p>Your posts will appear here.</p>
+        </div>
+      </section>
+
+      <section class="activity-section card card-pad">
+        <div class="activity-section-head">
+          <h2>Liked Posts</h2>
+          <span id="liked-count" class="activity-count">0</span>
+        </div>
+        <div id="liked-posts-output" class="activity-posts-output"></div>
+        <div id="liked-posts-empty" class="empty-state" hidden>
+          <h3>No liked posts</h3>
+          <p>Posts you liked will appear here.</p>
+        </div>
+      </section>
+
+      <section class="activity-section card card-pad">
+        <div class="activity-section-head">
+          <h2>Disliked Posts</h2>
+          <span id="disliked-count" class="activity-count">0</span>
+        </div>
+        <div id="disliked-posts-output" class="activity-posts-output"></div>
+        <div id="disliked-posts-empty" class="empty-state" hidden>
+          <h3>No disliked posts</h3>
+          <p>Posts you disliked will appear here.</p>
+        </div>
+      </section>
+
+      <section class="activity-section card card-pad">
+        <div class="activity-section-head">
+          <h2>My Comments</h2>
+          <span id="comments-count" class="activity-count">0</span>
+        </div>
+        <div id="comments-output" class="activity-comments-output"></div>
+        <div id="comments-empty" class="empty-state" hidden>
+          <h3>No comments yet</h3>
+          <p>Comments you write will appear here.</p>
+        </div>
+      </section>
+    </section>
+
+    <nav class="pagination" id="activity-pagination" hidden>
+      <button class="btn" id="activity-prev-page">‹</button>
+      <div id="activity-page-numbers" class="page-numbers"></div>
+      <button class="btn" id="activity-next-page">›</button>
+    </nav>
+  </main>
+</body>
+</html>
