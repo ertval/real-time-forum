@@ -10,7 +10,7 @@ import { renderPostCard } from "./posts.js";
 import { initReactions } from "./reactions.js";
 import { createPagination } from "./pagination.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
-import { playUpload, playDelete } from "./sound-effects.js";
+import { playDelete } from "./sound-effects.js";
 import { Auth } from "./auth.js";
 
 const DEFAULT_PAGE = 1;
@@ -279,13 +279,13 @@ async function renderActivity(state, pager) {
 
 let activityUserID = 0;
 
-function initEditPost(refresh) {
+function initEditPostNavigation() {
   if (editBound) return;
   editBound = true;
 
   document.addEventListener(
     "click",
-    async (e) => {
+    (e) => {
       const btn = e.target.closest(".post-edit");
       if (!btn) return;
 
@@ -295,87 +295,10 @@ function initEditPost(refresh) {
       const postId = btn.dataset.postId;
       if (!postId) return;
 
-      btn.disabled = true;
-
-      try {
-        const getRes = await fetch(`${API_BASE}/posts/${postId}`, {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-
-        if (!getRes.ok) {
-          uiNotify("Failed to load post for editing.", { type: "danger" });
-          return;
-        }
-
-        const getPayload = await getRes.json();
-        const post = getPayload?.data ?? {};
-
-        const currentTitle = String(post.title ?? "");
-        const currentBody = String(post.body ?? "");
-
-        const nextTitleRaw = window.prompt("Edit title", currentTitle);
-        if (nextTitleRaw === null) return;
-        const nextTitle = nextTitleRaw.trim();
-        if (!nextTitle) {
-          uiNotify("Title cannot be empty.", { type: "warn" });
-          return;
-        }
-
-        const nextBodyRaw = window.prompt("Edit body", currentBody);
-        if (nextBodyRaw === null) return;
-        const nextBody = nextBodyRaw.trim();
-        if (!nextBody) {
-          uiNotify("Body cannot be empty.", { type: "warn" });
-          return;
-        }
-
-        const patch = {};
-        if (nextTitle !== currentTitle) patch.title = nextTitle;
-        if (nextBody !== currentBody) patch.body = nextBody;
-
-        if (!Object.keys(patch).length) {
-          uiNotify("No changes to save.", { type: "info" });
-          return;
-        }
-
-        const patchRes = await fetch(`${API_BASE}/posts/${postId}`, {
-          method: "PATCH",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(patch),
-        });
-
-        if (patchRes.status === 401) {
-          uiNotify("You must be logged in.", { type: "warn" });
-          return;
-        }
-        if (patchRes.status === 403) {
-          uiNotify("You can only edit your own posts.", { type: "warn" });
-          return;
-        }
-        if (patchRes.status === 404) {
-          uiNotify("Post not found.", { type: "warn" });
-          await refresh();
-          return;
-        }
-        if (!patchRes.ok) {
-          uiNotify("Failed to update post.", { type: "danger" });
-          return;
-        }
-
-        playUpload();
-        uiNotify("Post updated.", { type: "success" });
-        await refresh();
-      } catch (err) {
-        console.error("Activity edit failed:", err);
-        uiNotify("Failed to update post.", { type: "danger" });
-      } finally {
-        if (document.contains(btn)) btn.disabled = false;
-      }
+      const next = encodeURIComponent(
+        `${window.location.pathname}${window.location.search}`
+      );
+      window.location.href = `/edit-post/${postId}?next=${next}`;
     },
     true
   );
@@ -540,7 +463,7 @@ async function startActivityPage() {
     }
   });
 
-  initEditPost(refresh);
+  initEditPostNavigation();
   initDeletePost(refresh);
 }
 
