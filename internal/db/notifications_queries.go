@@ -1,4 +1,3 @@
-// internal/db/notifications_queries.go
 package db
 
 import (
@@ -31,18 +30,41 @@ func ListUserNotifications(
 			u.username AS actor_username,
 			n.type,
 
-			-- ALWAYS RETURN THE REAL POST ID
+			-- Always return the correct post ID
 			COALESCE(n.post_id, p.id) AS post_id,
 
 			n.comment_id,
 			n.created_at,
-			n.is_read
+			n.is_read,
+
+			-- Post title for all notification types
+			COALESCE(p.title, '') AS post_title,
+
+			-- Comment excerpt logic:
+			CASE 
+				-- Actual comment (like/dislike)
+				WHEN n.comment_id IS NOT NULL AND c.body IS NOT NULL 
+					THEN SUBSTR(c.body, 1, 20)
+
+				-- New comment on post (type = 'comment'), no comment_id stored
+				WHEN n.type = 'comment' THEN (
+					SELECT SUBSTR(body, 1, 20)
+					FROM comments 
+					WHERE post_id = COALESCE(n.post_id, p.id)
+					ORDER BY created_at DESC
+					LIMIT 1
+				)
+
+				ELSE ''
+			END AS comment_excerpt
+
 		FROM notifications n
 		JOIN users u ON u.id = n.actor_id
 		LEFT JOIN comments c ON c.id = n.comment_id
-		LEFT JOIN posts p ON p.id = c.post_id
+		LEFT JOIN posts p ON p.id = COALESCE(n.post_id, c.post_id)
+
 		WHERE n.recipient_id = ?
-		ORDER BY n.created_at DESC
+		ORDER BY n.created_at DESC;
 	`, userID)
 	if err != nil {
 		return ListNotificationsResult{}, err
@@ -67,6 +89,8 @@ func ListUserNotifications(
 			&commentID,
 			&n.CreatedAt,
 			&isRead,
+			&n.PostTitle,
+			&n.CommentExcerpt,
 		)
 		if err != nil {
 			return ListNotificationsResult{}, err

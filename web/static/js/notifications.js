@@ -107,7 +107,8 @@ function renderDropdown(notifications) {
 
     if (!n.is_read) div.classList.add("unread");
 
-    div.textContent = buildMessage(n);
+    // ⭐ HTML rendering enabled
+    div.innerHTML = buildMessage(n);
 
     /* -------------------------
        CLICK REDIRECT + MARK READ
@@ -115,18 +116,15 @@ function renderDropdown(notifications) {
     div.addEventListener("click", async () => {
       await markOneAsRead(n.id);
 
-      const postId = n.post_id;
-      const commentId = n.comment_id;
-
       if (postId) {
         if (n.type === "comment") {
-          // Comment notification → highlight newest comment
+          // New comment notification → highlight last comment
           window.location.href = `/view-post/${postId}?highlight=last`;
           return;
         }
 
         if (commentId) {
-          // Reaction to comment
+          // Comment reaction → highlight specific comment
           window.location.href = `/view-post/${postId}?highlight=${commentId}`;
           return;
         }
@@ -171,7 +169,8 @@ function processNewNotifications(notifications) {
       seenNotificationIds.add(n.id);
 
       if (!n.is_read) {
-        uiNotify(buildMessage(n), { type: "info" });
+        // Render HTML inside uiNotify
+        uiNotify(buildMessage(n), { type: "info", html: true });
       }
     }
   });
@@ -182,17 +181,30 @@ function processNewNotifications(notifications) {
 -------------------------- */
 
 function buildMessage(n) {
+  const truncate = (str, len = 20) => {
+    if (!str) return "";
+    return str.length > len ? str.slice(0, len) + "…" : str;
+  };
+
+  const title = `<strong>${truncate(n.post_title)}</strong>`;
+  const excerpt = `<em>${truncate(n.comment_excerpt)}</em>`;
+
   switch (n.type) {
     case "post_like":
-      return `${n.actor_username} liked your post 👍`;
+      return `${n.actor_username} liked your post: ${title} 👍`;
+
     case "post_dislike":
-      return `${n.actor_username} disliked your post 👎`;
+      return `${n.actor_username} disliked your post: ${title} 👎`;
+
     case "comment":
-      return `${n.actor_username} commented on your post 💬`;
+      return `${n.actor_username} commented ${excerpt} on ${title} 💬`;
+
     case "comment_like":
-      return `${n.actor_username} liked your comment 👍`;
+      return `${n.actor_username} liked your comment: ${excerpt} 👍`;
+
     case "comment_dislike":
-      return `${n.actor_username} disliked your comment 👎`;
+      return `${n.actor_username} disliked your comment: ${excerpt} 👎`;
+
     default:
       return "New notification 🔔";
   }
