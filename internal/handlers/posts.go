@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	repository "forum/internal/db"
+	"forum/internal/middleware"
 )
 
 type PostsHandler struct {
@@ -50,6 +51,9 @@ func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
 
+	// ⭐ Get logged-in user ID (0 if guest)
+	userID, _ := middleware.GetUserID(r.Context())
+
 	// Filter by category (optional)
 	if categoryIDStr := r.URL.Query().Get("category_id"); categoryIDStr != "" {
 		categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
@@ -66,6 +70,7 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 				Page:       page,
 				PerPage:    perPage,
 			},
+			userID, // ⭐ pass userID
 		)
 		if err != nil {
 			log.Printf("failed to list posts by category: %v", err)
@@ -96,6 +101,7 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 			Page:    page,
 			PerPage: perPage,
 		},
+		userID, // ⭐ pass userID
 	)
 	if err != nil {
 		log.Printf("failed to list posts: %v", err)

@@ -171,7 +171,7 @@ func DeleteCategory(ctx context.Context, db *sql.DB, id int64) error {
   LIST CATEGORIES WITH POSTS (SUBFORUM VIEW)
 --------------------------------------------*/
 
-func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPosts, error) {
+func ListCategoriesWithPosts(ctx context.Context, db *sql.DB, userID int64) ([]CategoryWithPosts, error) {
 	ctx, cancel := context.WithTimeout(ctx, categoryTimeout)
 	defer cancel()
 
@@ -236,7 +236,7 @@ func ListCategoriesWithPosts(ctx context.Context, db *sql.DB) ([]CategoryWithPos
 		if err := attachPostCategories(ctx, db, result[i].Posts); err != nil {
 			return nil, err
 		}
-		if err := attachPostReactions(ctx, db, result[i].Posts); err != nil {
+		if err := attachPostReactions(ctx, db, result[i].Posts, userID); err != nil {
 			return nil, err
 		}
 	}
