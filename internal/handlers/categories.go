@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	repository "forum/internal/db"
+	"forum/internal/middleware"
 )
 
 type CategoriesHandler struct {
@@ -238,6 +239,7 @@ func (c *CategoriesHandler) deleteCategory(w http.ResponseWriter, r *http.Reques
   GET /api/v1/categories/view
 --------------------------------------------*/
 
+// GET /api/v1/categories/view
 func (c *CategoriesHandler) ListCategoriesWithPosts(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -247,9 +249,13 @@ func (c *CategoriesHandler) ListCategoriesWithPosts(
 		return
 	}
 
+	// Extract logged-in user ID (or 0 if guest)
+	userID, _ := middleware.GetUserID(r.Context())
+
 	result, err := repository.ListCategoriesWithPosts(
 		r.Context(),
 		c.conn,
+		userID, // ⭐ MUST PASS userID
 	)
 	if err != nil {
 		writeHandlerError(w, r, err, "failed to list categories with posts")

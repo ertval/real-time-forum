@@ -142,7 +142,20 @@ func getCategoriesByPostID(
   ATTACH REACTIONS
 -------------------*/
 
-func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post) error {
+func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post, userID int64) error {
+	if userID <= 0 {
+		for i := range posts {
+			likes, dislikes, err := CountReactionsForPost(ctx, db, posts[i].ID)
+			if err != nil {
+				return err
+			}
+			posts[i].Likes = likes
+			posts[i].Dislikes = dislikes
+			posts[i].MyReaction = 0
+		}
+		return nil
+	}
+
 	for i := range posts {
 		likes, dislikes, err := CountReactionsForPost(ctx, db, posts[i].ID)
 		if err != nil {
@@ -150,7 +163,14 @@ func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post) error {
 		}
 		posts[i].Likes = likes
 		posts[i].Dislikes = dislikes
+
+		react, err := GetUserReactionForPost(ctx, db, userID, posts[i].ID)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		posts[i].MyReaction = react
 	}
+
 	return nil
 }
 
@@ -217,4 +237,30 @@ func fetchPostsByReaction(
 	}
 
 	return posts, nil
+}
+
+func getUserReactionForPost(ctx context.Context, db *sql.DB, userID, postID int64) (int, error) {
+	var value int
+	err := db.QueryRowContext(ctx,
+		`SELECT value FROM reactions WHERE user_id = ? AND post_id = ?`,
+		userID, postID,
+	).Scan(&value)
+
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	return value, err
+}
+
+func GetUserReactionForPost(ctx context.Context, db *sql.DB, userID, postID int64) (int, error) {
+	var val int
+	err := db.QueryRowContext(ctx, `
+		SELECT value FROM reactions
+		WHERE user_id = ? AND post_id = ?
+	`, userID, postID).Scan(&val)
+
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	return val, err
 }
