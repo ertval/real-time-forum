@@ -2,39 +2,13 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
+	"forum/internal/middleware"
 	"log"
 	"net/http"
 
 	repository "forum/internal/db"
-	"forum/internal/middleware"
 )
-
-type UsersHandler struct {
-	conn *sql.DB
-}
-
-func NewUsersHandler(database *sql.DB) *UsersHandler {
-	return &UsersHandler{conn: database}
-}
-
-/*------------------
-  INTERNAL HELPERS
-------------------*/
-
-func resolveUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
-	id, err := parseID(r.URL.Path, "/api/v1/users/")
-	if err != nil || id <= 0 {
-		WriteError(w, r, NewError(
-			"BAD_REQUEST",
-			"invalid user ID",
-			http.StatusBadRequest,
-		))
-		return 0, false
-	}
-	return id, true
-}
 
 /*--------------------------------
   GET /api/v1/users/{id}
@@ -59,6 +33,31 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			"user not found",
 			http.StatusNotFound,
 		))
+		return
+	}
+
+	WriteOK(w, user, nil)
+}
+
+/*-----------------------
+  GET /api/v1/users/me
+-----------------------*/
+
+func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		WriteError(w, r, NewError(
+			"UNAUTHORIZED",
+			"login required",
+			http.StatusUnauthorized,
+		))
+		return
+	}
+
+	user, err := repository.GetUser(r.Context(), u.conn, userID)
+	if err != nil {
+		log.Printf("[USERS][ME] failed: %v", err)
+		writeHandlerError(w, r, err, "failed to load user")
 		return
 	}
 
@@ -178,31 +177,6 @@ func (u *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	WriteOK(w, map[string]any{
 		"message": "Login successful",
 	}, nil)
-}
-
-/*-----------------------
-  GET /api/v1/users/me
------------------------*/
-
-func (u *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
-	userID, err := middleware.GetUserID(r.Context())
-	if err != nil {
-		WriteError(w, r, NewError(
-			"UNAUTHORIZED",
-			"login required",
-			http.StatusUnauthorized,
-		))
-		return
-	}
-
-	user, err := repository.GetUser(r.Context(), u.conn, userID)
-	if err != nil {
-		log.Printf("[USERS][ME] failed: %v", err)
-		writeHandlerError(w, r, err, "failed to load user")
-		return
-	}
-
-	WriteOK(w, user, nil)
 }
 
 /*---------------------------
