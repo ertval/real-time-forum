@@ -9,60 +9,14 @@ import { Auth } from "./auth.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
 import { playUpload } from "./sound-effects.js";
 import { setupImagePicker } from "./image-picker.js";
+import {
+  renderCategoryCheckboxes,
+  getSelectedCategoryIds,
+  setSelectedCategoryIds,
+} from "./post-form.js";
 
 let currentDraftId = null;
 let draftImageURL = null;
-
-/*-----------------
-  LOAD CATEGORIES
------------------*/
-
-async function loadCategories() {
-  try {
-    const res = await fetch(`${API_BASE}/categories`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch {
-    return [];
-  }
-}
-
-async function renderCategoryCheckboxes() {
-  const host = document.getElementById("categoryCheckboxes");
-  if (!host) return;
-
-  const payload = await loadCategories();
-  const categories = Array.isArray(payload?.data) ? payload.data : payload;
-
-  host.innerHTML = "";
-
-  categories.forEach((c) => {
-    const label = document.createElement("label");
-    label.className = "category-checkbox";
-
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.value = c.id;
-
-    const span = document.createElement("span");
-    span.textContent = c.name;
-
-    label.appendChild(input);
-    label.appendChild(span);
-    host.appendChild(label);
-  });
-}
-
-function getSelectedCategoryIds() {
-  const host = categoryCheckboxesRef || document.getElementById("categoryCheckboxes");
-  if (!host) return [];
-  return Array.from(
-    host.querySelectorAll("input[type='checkbox']:checked")
-  ).map((el) => Number(el.value));
-}
 
 /*----------
   AUTOSAVE
@@ -76,6 +30,10 @@ let imageInputRef = null;
 let categoryCheckboxesRef = null;
 let draftSaveInFlight = false;
 let draftSaveQueued = false;
+
+function getCategoryHost() {
+  return categoryCheckboxesRef || document.getElementById("categoryCheckboxes");
+}
 
 function scheduleDraftSave() {
   if (!autosaveEnabled) return;
@@ -99,7 +57,7 @@ async function saveDraft() {
     ?? document.getElementById("title")?.value.trim();
   const body = bodyInputRef?.value.trim()
     ?? document.getElementById("body")?.value.trim();
-  const categoryIds = getSelectedCategoryIds();
+  const categoryIds = getSelectedCategoryIds(getCategoryHost());
   const pendingImageFile = imageInputRef?.files?.[0]
     ?? document.getElementById("image")?.files?.[0];
 
@@ -182,7 +140,10 @@ async function restoreDraftIfExists() {
     applyDraftState(data);
     document.getElementById("title").value = data.title || "";
     document.getElementById("body").value = data.body || "";
-    setSelectedCategoryIds(data.category_ids || []);
+    setSelectedCategoryIds(
+      document.getElementById("categoryCheckboxes"),
+      data.category_ids || []
+    );
 
     uiNotify("Draft restored successfully.", { type: "success" });
   } catch {}
@@ -258,7 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     },
   });
 
-  await renderCategoryCheckboxes();
+  await renderCategoryCheckboxes(categoryCheckboxes);
   categoryCheckboxes?.addEventListener("change", scheduleDraftSave);
 
   await restoreDraftIfExists();
@@ -283,7 +244,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const title = titleInput.value.trim();
       const body = bodyInput.value.trim();
-      const categoryIds = getSelectedCategoryIds();
+      const categoryIds = getSelectedCategoryIds(categoryCheckboxes);
       const action = e.submitter?.value;
 
       if (!title) {
@@ -412,12 +373,3 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
-
-function setSelectedCategoryIds(ids = []) {
-  const set = new Set((ids || []).map(Number));
-  document
-    .querySelectorAll("#categoryCheckboxes input[type='checkbox']")
-    .forEach((cb) => {
-      cb.checked = set.has(Number(cb.value));
-    });
-}

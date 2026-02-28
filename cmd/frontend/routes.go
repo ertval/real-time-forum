@@ -58,11 +58,14 @@ func NewMux() *http.ServeMux {
 	---------------------------*/
 
 	mux.HandleFunc("/create-post", serveTemplate("./web/templates/create-post.html"))
+	mux.HandleFunc("/edit-post", serveTemplate("./web/templates/edit-post.html"))
+	mux.HandleFunc("/edit-post/", serveTemplate("./web/templates/edit-post.html"))
 	mux.HandleFunc("/forgot-password", serveTemplate("./web/templates/forgot-password.html"))
 	mux.HandleFunc("/login", serveTemplate("./web/templates/login.html"))
 	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
 	mux.HandleFunc("/my-posts/", serveTemplate("./web/templates/my-posts.html"))
 	mux.HandleFunc("/my-liked-posts", serveTemplate("./web/templates/my-liked-posts.html"))
+	mux.HandleFunc("/activity", serveTemplate("./web/templates/activity.html"))
 	mux.HandleFunc("/view-post/", serveTemplate("./web/templates/view-post.html"))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
