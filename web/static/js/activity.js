@@ -76,6 +76,33 @@ function asPagination(section) {
   return section?.pagination ?? {};
 }
 
+function asPositiveID(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : 0;
+}
+
+function resolveActivityViewerID(data, fallbackID = 0) {
+  const fromAuth = asPositiveID(Auth.user?.id);
+  if (fromAuth) return fromAuth;
+
+  const fromFallback = asPositiveID(fallbackID);
+  if (fromFallback) return fromFallback;
+
+  const createdItems = asItems(data?.created_posts);
+  if (createdItems.length) {
+    const fromCreated = asPositiveID(createdItems[0]?.author_id);
+    if (fromCreated) return fromCreated;
+  }
+
+  const commentItems = asItems(data?.comments);
+  if (commentItems.length) {
+    const fromComments = asPositiveID(commentItems[0]?.user_id);
+    if (fromComments) return fromComments;
+  }
+
+  return 0;
+}
+
 function renderPostsSection({
   section,
   outputId,
@@ -243,13 +270,17 @@ async function renderActivity(state, pager) {
   if (!payload) return;
 
   const data = payload?.data ?? {};
+  const currentUserID = resolveActivityViewerID(data, activityUserID);
+  if (currentUserID > 0) {
+    activityUserID = currentUserID;
+  }
 
   renderPostsSection({
     section: data.created_posts,
     outputId: "created-posts-output",
     emptyId: "created-posts-empty",
     countId: "created-count",
-    currentUserID: activityUserID,
+    currentUserID,
   });
 
   renderCommentsSection(data.comments);
@@ -259,7 +290,7 @@ async function renderActivity(state, pager) {
     outputId: "liked-posts-output",
     emptyId: "liked-posts-empty",
     countId: "liked-count",
-    currentUserID: activityUserID,
+    currentUserID,
   });
 
   renderPostsSection({
@@ -267,7 +298,7 @@ async function renderActivity(state, pager) {
     outputId: "disliked-posts-output",
     emptyId: "disliked-posts-empty",
     countId: "disliked-count",
-    currentUserID: activityUserID,
+    currentUserID,
   });
 
   initReactions();
@@ -373,7 +404,7 @@ async function startActivityPage() {
   initSectionToggles();
 
   await Auth.init();
-  activityUserID = Number(Auth.user?.id || 0);
+  activityUserID = asPositiveID(Auth.user?.id);
 
   const prevBtn = document.getElementById("activity-prev-page");
   const nextBtn = document.getElementById("activity-next-page");
