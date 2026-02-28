@@ -32,7 +32,7 @@ func StartupCheckConfig() startupcheck.Config {
 		},
 
 		MinJSFiles:   0,  // disabled
-		ExactJSFiles: 30, // enforced
+		ExactJSFiles: 31, // enforced
 	}
 }
 
