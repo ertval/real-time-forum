@@ -71,17 +71,6 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	/*----------------------------
-	  POSTS - PUBLIC COLLECTIONS
-	----------------------------*/
-	mux.Handle(
-		apiPrefix+"/posts/public",
-		middleware.AllowMethods(
-			http.HandlerFunc(posts.ListPublicPosts),
-			http.MethodGet,
-		),
-	)
-
 	/*-------------
 	  POSTS DRAFT
 	-------------*/
