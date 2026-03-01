@@ -109,7 +109,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			posts.HandlePosts(w, r)
+			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 		case http.MethodPost:
 			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 		default:
