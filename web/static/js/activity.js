@@ -1,9 +1,11 @@
 // web/static/js/activity.js
 import {
   API_BASE,
+  buildImageRequestOptions,
   formatCreatedAt,
   resolveUsername,
   escapeHTML,
+  IMAGE_ACCEPT_ATTR,
   toPositiveInt,
 } from "./utils.js";
 import { renderPostCard, reactionTemplate } from "./posts.js";
@@ -12,13 +14,16 @@ import { createPagination } from "./pagination.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
 import { playDelete, playUpload } from "./sound-effects.js";
 import { Auth } from "./auth.js";
+import { setupImagePicker } from "./image-picker.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 10;
 let editBound = false;
 let deleteBound = false;
 let commentDeleteBound = false;
+let commentEditBound = false;
 let statusToggleBound = false;
+let activeCommentEditor = null;
 
 function getQueryState() {
   const params = new URLSearchParams(window.location.search);
@@ -105,6 +110,37 @@ function resolveActivityViewerID(data, fallbackID = 0) {
   return 0;
 }
 
+function activityCommentContentTemplate(commentBody, commentImageURL, username) {
+  const body =
+    typeof commentBody === "string" && commentBody.trim()
+      ? `<p class="activity-comment-body">${escapeHTML(commentBody)}</p>`
+      : `<p class="activity-comment-body muted">No text body</p>`;
+
+  const imageMarkup =
+    typeof commentImageURL === "string" && commentImageURL.trim()
+      ? `
+          <div class="activity-comment-image-wrap">
+            <img
+              class="activity-comment-image"
+              src="${escapeHTML(commentImageURL)}"
+              alt="Comment image by ${escapeHTML(username)}"
+              loading="lazy"
+            />
+          </div>
+        `
+      : "";
+
+  return `${body}${imageMarkup}`;
+}
+
+function closeActiveCommentEditor({ playCancelSound = false } = {}) {
+  if (!activeCommentEditor || typeof activeCommentEditor.close !== "function") {
+    return;
+  }
+  activeCommentEditor.close({ playCancelSound });
+  activeCommentEditor = null;
+}
+
 function renderPostsSection({
   section,
   outputId,
@@ -171,6 +207,24 @@ function renderCommentsSection(section) {
 
   for (const comment of items) {
     const commentID = Number(comment.id) || 0;
+    const commentBody =
+      typeof comment.body === "string" ? comment.body : "";
+    const commentImageURL =
+      typeof comment.image_url === "string" && comment.image_url.trim()
+        ? comment.image_url.trim()
+        : "";
+    const username = resolveUsername(comment);
+    const editButtonMarkup =
+      commentID > 0
+        ? `
+          <button
+            class="btn btn-outline btn-sm comment-edit"
+            data-comment-id="${commentID}"
+          >
+            Edit
+          </button>
+        `
+        : "";
     const deleteButtonMarkup =
       commentID > 0
         ? `
@@ -185,26 +239,13 @@ function renderCommentsSection(section) {
 
     const article = document.createElement("article");
     article.className = "activity-comment card card-pad";
+    article.dataset.commentId = String(commentID);
+    article.dataset.commentBody = commentBody;
+    if (commentImageURL) {
+      article.dataset.commentImageUrl = commentImageURL;
+    }
 
     const post = comment.post || {};
-    const body =
-      typeof comment.body === "string" && comment.body.trim()
-        ? `<p class="activity-comment-body">${escapeHTML(comment.body)}</p>`
-        : `<p class="activity-comment-body muted">No text body</p>`;
-
-    const imageMarkup =
-      typeof comment.image_url === "string" && comment.image_url.trim()
-        ? `
-          <div class="activity-comment-image-wrap">
-            <img
-              class="activity-comment-image"
-              src="${escapeHTML(comment.image_url)}"
-              alt="Comment image by ${escapeHTML(resolveUsername(comment))}"
-              loading="lazy"
-            />
-          </div>
-        `
-        : "";
 
     article.innerHTML = `
       <header class="activity-comment-head">
@@ -220,18 +261,20 @@ function renderCommentsSection(section) {
 
         <div class="activity-comment-head-right">
           <time class="muted">${formatCreatedAt(comment.created_at)}</time>
+          ${editButtonMarkup}
           ${deleteButtonMarkup}
         </div>
       </header>
 
       <p class="activity-comment-author muted">
-        By ${escapeHTML(resolveUsername(comment))}
+        By ${escapeHTML(username)}
       </p>
 
-      ${body}
-      ${imageMarkup}
+      <section class="activity-comment-content">
+        ${activityCommentContentTemplate(commentBody, commentImageURL, username)}
+      </section>
 
-      <footer>
+      <footer class="activity-comment-footer">
         <div
           class="activity-comment-reactions comment"
           data-comment-id="${commentID}"
@@ -286,6 +329,7 @@ async function renderActivity(state, pager) {
   const paginationEl = document.getElementById("activity-pagination");
   if (!paginationEl) return;
 
+  closeActiveCommentEditor();
   paginationEl.hidden = true;
 
   const payload = await loadActivity(state);
@@ -417,6 +461,261 @@ function initDeletePost(refresh) {
       } finally {
         if (document.contains(btn)) btn.disabled = false;
       }
+    },
+    true
+  );
+}
+
+function openCommentInlineEditor(article, refresh) {
+  if (!(article instanceof HTMLElement)) return;
+
+  const commentId = article.dataset.commentId;
+  if (!commentId) return;
+
+  if (activeCommentEditor?.commentId === commentId) return;
+
+  closeActiveCommentEditor();
+
+  const content = article.querySelector(".activity-comment-content");
+  const footer = article.querySelector(".activity-comment-footer");
+  if (!(content instanceof HTMLElement)) return;
+
+  const originalBody = article.dataset.commentBody ?? "";
+  const originalImageURL = article.dataset.commentImageUrl ?? "";
+  const originalMarkup = content.innerHTML;
+
+  article.classList.add("is-editing");
+  if (footer instanceof HTMLElement) {
+    footer.hidden = true;
+  }
+
+  content.innerHTML = `
+    <form class="comment-form activity-comment-edit-form" data-comment-edit-form novalidate>
+      <div class="comment-textarea-wrap">
+        <textarea rows="3" placeholder="Edit your comment..."></textarea>
+        <button type="button" class="comment-image-btn" aria-label="Attach image">
+          <img src="/static/img/camera.png" alt="" />
+        </button>
+        <input type="file" class="comment-image-input" accept="${IMAGE_ACCEPT_ATTR}" hidden />
+      </div>
+
+      <div class="comment-image-row">
+        <span class="comment-image-name muted" aria-live="polite"></span>
+        <button type="button" class="image-clear" aria-label="Remove selected image" hidden>x</button>
+      </div>
+
+      <div class="comment-image-preview activity-comment-edit-preview" hidden>
+        <img alt="Selected comment image preview" />
+      </div>
+
+      <p class="comment-error" role="alert" hidden></p>
+
+      <div class="activity-comment-edit-actions">
+        <button type="submit" class="btn btn-primary btn-sm comment-update">Update</button>
+        <button type="button" class="btn btn-outline btn-sm comment-cancel-edit">Cancel</button>
+      </div>
+    </form>
+  `;
+
+  const form = content.querySelector("[data-comment-edit-form]");
+  if (!(form instanceof HTMLFormElement)) {
+    content.innerHTML = originalMarkup;
+    article.classList.remove("is-editing");
+    if (footer instanceof HTMLElement) {
+      footer.hidden = false;
+    }
+    return;
+  }
+
+  const textarea = form.querySelector("textarea");
+  const imageButton = form.querySelector(".comment-image-btn");
+  const imageInput = form.querySelector(".comment-image-input");
+  const imageName = form.querySelector(".comment-image-name");
+  const imageClear = form.querySelector(".image-clear");
+  const imagePreview = form.querySelector(".comment-image-preview");
+  const imagePreviewImg = imagePreview?.querySelector("img");
+  const errorEl = form.querySelector(".comment-error");
+  const updateBtn = form.querySelector(".comment-update");
+  const cancelBtn = form.querySelector(".comment-cancel-edit");
+
+  if (textarea instanceof HTMLTextAreaElement) {
+    textarea.value = originalBody;
+  }
+
+  let clearedPersistedImage = false;
+  const picker = setupImagePicker({
+    input: imageInput,
+    triggerButton: imageButton,
+    clearButton: imageClear,
+    nameLabel: imageName,
+    previewContainer: imagePreview,
+    previewImage: imagePreviewImg,
+    persistedUrl: originalImageURL || null,
+    persistedLabel: originalImageURL ? "Current image" : "",
+    onTooLarge: () => {
+      uiNotify("Image must be 20MB or smaller.", { type: "danger" });
+    },
+    onClearPersisted: () => {
+      clearedPersistedImage = true;
+    },
+  });
+
+  const closeEditor = ({ playCancelSound = false, restore = true } = {}) => {
+    picker?.destroy?.();
+    if (restore && document.contains(article)) {
+      content.innerHTML = originalMarkup;
+      article.classList.remove("is-editing");
+      if (footer instanceof HTMLElement) {
+        footer.hidden = false;
+      }
+    }
+    if (playCancelSound) {
+      playDelete();
+    }
+  };
+
+  activeCommentEditor = { commentId, close: closeEditor };
+
+  let isSubmitting = false;
+  const setBusy = (busy) => {
+    if (updateBtn instanceof HTMLButtonElement) {
+      updateBtn.disabled = busy;
+    }
+    if (cancelBtn instanceof HTMLButtonElement) {
+      cancelBtn.disabled = busy;
+    }
+    if (imageButton instanceof HTMLButtonElement) {
+      imageButton.disabled = busy;
+    }
+  };
+
+  cancelBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isSubmitting) return;
+
+    if (activeCommentEditor?.commentId === commentId) {
+      activeCommentEditor = null;
+    }
+    closeEditor({ playCancelSound: true, restore: true });
+  });
+
+  ["click", "mousedown", "keydown"].forEach((evt) =>
+    form.addEventListener(evt, (e) => e.stopPropagation())
+  );
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isSubmitting) return;
+
+    const body = textarea instanceof HTMLTextAreaElement ? textarea.value.trim() : "";
+    const imageFile = picker?.getFile?.() || null;
+    const keepsExistingImage =
+      !!originalImageURL && !clearedPersistedImage && !imageFile;
+    const hasAnyImage = !!imageFile || keepsExistingImage;
+
+    if (!body && !hasAnyImage) {
+      if (errorEl instanceof HTMLElement) {
+        errorEl.textContent = "Cannot save an empty comment.";
+        errorEl.hidden = false;
+      }
+      return;
+    }
+    if (errorEl instanceof HTMLElement) {
+      errorEl.hidden = true;
+    }
+
+    isSubmitting = true;
+    setBusy(true);
+
+    try {
+      const requestOptions = buildImageRequestOptions({
+        method: "PATCH",
+        imageFile,
+        buildMultipartBody: (file) => {
+          const formData = new FormData();
+          formData.append("body", body);
+          formData.append("image", file);
+          return formData;
+        },
+        jsonBody: {
+          body,
+          ...(clearedPersistedImage && !imageFile ? { remove_image: true } : {}),
+        },
+        multipartHeaders: { Accept: "application/json" },
+        jsonHeaders: { Accept: "application/json" },
+      });
+
+      const res = await fetch(`${API_BASE}/comments/${commentId}`, requestOptions);
+      const payload = await res.json().catch(() => null);
+      const message = payload?.error?.message || "Failed to update comment.";
+
+      if (res.status === 401) {
+        uiNotify("You must be logged in.", { type: "warn" });
+        return;
+      }
+      if (res.status === 403) {
+        uiNotify("You can only update your own comments.", { type: "warn" });
+        return;
+      }
+      if (res.status === 404) {
+        uiNotify("Comment not found.", { type: "warn" });
+        if (activeCommentEditor?.commentId === commentId) {
+          activeCommentEditor = null;
+        }
+        closeEditor({ restore: false });
+        await refresh();
+        return;
+      }
+      if (!res.ok) {
+        if (errorEl instanceof HTMLElement) {
+          errorEl.textContent = message;
+          errorEl.hidden = false;
+        } else {
+          uiNotify(message, { type: "danger" });
+        }
+        return;
+      }
+
+      playUpload();
+      uiNotify("Comment updated.", { type: "success" });
+      if (activeCommentEditor?.commentId === commentId) {
+        activeCommentEditor = null;
+      }
+      closeEditor({ restore: false });
+      await refresh();
+    } catch (err) {
+      console.error("Activity comment update failed:", err);
+      if (errorEl instanceof HTMLElement) {
+        errorEl.textContent = "Failed to update comment.";
+        errorEl.hidden = false;
+      } else {
+        uiNotify("Failed to update comment.", { type: "danger" });
+      }
+    } finally {
+      isSubmitting = false;
+      setBusy(false);
+    }
+  });
+}
+
+function initEditComment(refresh) {
+  if (commentEditBound) return;
+  commentEditBound = true;
+
+  document.addEventListener(
+    "click",
+    (e) => {
+      const btn = e.target.closest(".comment-edit");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const article = btn.closest(".activity-comment");
+      if (!(article instanceof HTMLElement)) return;
+      openCommentInlineEditor(article, refresh);
     },
     true
   );
@@ -654,6 +953,7 @@ async function startActivityPage() {
   initEditPostNavigation();
   initStatusToggle(refresh);
   initDeletePost(refresh);
+  initEditComment(refresh);
   initDeleteComment(refresh);
 }
 
