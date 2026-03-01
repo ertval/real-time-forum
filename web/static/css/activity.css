@@ -111,6 +111,14 @@
   gap: 12px;
 }
 
+.activity-comment-head-right {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .activity-comment-post-wrap p {
   margin: 0 0 4px;
 }
@@ -168,5 +176,10 @@
 @media (max-width: 768px) {
   .activity-comment-head {
     flex-direction: column;
+  }
+
+  .activity-comment-head-right {
+    width: 100%;
+    justify-content: space-between;
   }
 }
