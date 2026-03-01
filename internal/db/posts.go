@@ -4,10 +4,13 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
+
+var ErrInvalidPostCategoryUpdate = errors.New("invalid post category update")
 
 /*-------
   MODEL
@@ -93,6 +96,7 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 			p.title,
 			p.image_url,
 			p.body,
+			p.status,
 			p.created_at,
 			p.updated_at
 		FROM posts p
@@ -105,6 +109,7 @@ func GetPost(ctx context.Context, db *sql.DB, id int64) (Post, error) {
 		&post.Title,
 		&imageURL,
 		&post.Body,
+		&post.Status,
 		&post.CreatedAt,
 		&post.UpdatedAt,
 	)
@@ -200,11 +205,40 @@ func CreatePostWithCategories(
 -------------*/
 
 type UpdatePostInput struct {
-	Title *string
-	Body  *string
+	Title             *string
+	Body              *string
+	ImageURL          *string
+	HasImageUpdate    bool
+	CategoryIDs       []int64
+	HasCategoryUpdate bool
 }
 
 func UpdatePostContent(ctx context.Context, db *sql.DB, id int64, in UpdatePostInput) error {
+	if in.Title == nil && in.Body == nil && !in.HasImageUpdate && !in.HasCategoryUpdate {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if in.HasCategoryUpdate {
+		if err := validateCategoriesTx(ctx, tx, in.CategoryIDs); err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidPostCategoryUpdate, err)
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM post_categories WHERE post_id = ?`, id); err != nil {
+			return err
+		}
+		if err := insertPostCategoriesTx(ctx, tx, id, in.CategoryIDs); err != nil {
+			return err
+		}
+	}
+
 	set := []string{}
 	args := []any{}
 
@@ -218,7 +252,12 @@ func UpdatePostContent(ctx context.Context, db *sql.DB, id int64, in UpdatePostI
 		args = append(args, *in.Body)
 	}
 
-	if len(set) == 0 {
+	if in.HasImageUpdate {
+		set = append(set, "image_url = ?")
+		args = append(args, in.ImageURL)
+	}
+
+	if len(set) == 0 && !in.HasCategoryUpdate {
 		return nil
 	}
 
@@ -226,11 +265,7 @@ func UpdatePostContent(ctx context.Context, db *sql.DB, id int64, in UpdatePostI
 	args = append(args, id)
 
 	query := `UPDATE posts SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
-
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
-	res, err := db.ExecContext(ctx, query, args...)
+	res, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -238,6 +273,10 @@ func UpdatePostContent(ctx context.Context, db *sql.DB, id int64, in UpdatePostI
 	rows, _ := res.RowsAffected()
 	if rows == 0 {
 		return sql.ErrNoRows
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 
 	return nil

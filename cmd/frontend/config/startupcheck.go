@@ -12,8 +12,10 @@ func StartupCheckConfig() startupcheck.Config {
 			"templates/login.html",
 			"templates/register.html",
 			"templates/create-post.html",
+			"templates/edit-post.html",
 			"templates/my-posts.html",
 			"templates/my-liked-posts.html",
+			"templates/activity.html",
 			"templates/view-post.html",
 			"static/partials/header.html",
 			"errors/error.html",
@@ -30,7 +32,7 @@ func StartupCheckConfig() startupcheck.Config {
 		},
 
 		MinJSFiles:   0,  // disabled
-		ExactJSFiles: 27, // enforced
+		ExactJSFiles: 31, // enforced
 	}
 }
 

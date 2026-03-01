@@ -25,7 +25,12 @@ let lastFocusedElement = null;
 
 export function renderPostCard(
   post,
-  { clickable = true, showStatusToggle = false, showDelete = false } = {}
+  {
+    clickable = true,
+    showStatusToggle = false,
+    showDelete = false,
+    showEdit = false,
+  } = {}
 ) {
   const article = document.createElement("article");
   article.className = "post card card-pad";
@@ -68,6 +73,7 @@ export function renderPostCard(
       <div class="post-header-right">
         <time class="muted">${formatCreatedAt(post.created_at)}</time>
         ${showStatusToggle ? statusToggleTemplate(post) : ""}
+        ${showEdit ? editPostTemplate(post) : ""}
         ${showDelete ? deletePostTemplate(post) : ""}
       </div>
     </header>
@@ -452,6 +458,15 @@ function deletePostTemplate(post) {
     <button class="btn btn-danger btn-sm post-delete"
       data-post-id="${post.id}">
       Delete
+    </button>
+  `;
+}
+
+function editPostTemplate(post) {
+  return `
+    <button class="btn btn-outline btn-sm post-edit"
+      data-post-id="${post.id}">
+      Edit
     </button>
   `;
 }

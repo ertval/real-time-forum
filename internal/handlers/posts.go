@@ -366,40 +366,139 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 		return
 	}
 
-	if !p.requirePostAuthor(w, r, postID, userID) {
+	existingPost, err := repository.GetPost(r.Context(), p.conn, postID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			notFound(w, r)
+			return
+		}
+		log.Printf("failed to load post for update: %v", err)
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading post", http.StatusInternalServerError))
+		return
+	}
+	if existingPost.AuthorID != userID {
+		WriteError(w, r, NewError(
+			"FORBIDDEN",
+			"not allowed",
+			http.StatusForbidden,
+		))
 		return
 	}
 
-	var req struct {
-		Title  *string `json:"title"`
-		Body   *string `json:"body"`
-		Status *string `json:"status"`
+	updateReq := struct {
+		Title             *string
+		Body              *string
+		Status            *string
+		CategoryIDs       []int64
+		HasCategoryUpdate bool
+		ImageURL          *string
+		HasImageUpdate    bool
+		RemoveImage       bool
+
+		UploadFile     multipart.File
+		UploadMime     string
+		UploadPath     string
+		HasImageUpload bool
+	}{}
+
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		cleanupMultipartForm, ok := parseMultipartForm(w, r)
+		if !ok {
+			return
+		}
+		defer cleanupMultipartForm()
+
+		if value, exists := multipartFirstValue(r.MultipartForm, "title"); exists {
+			updateReq.Title = value
+		}
+		if value, exists := multipartFirstValue(r.MultipartForm, "body"); exists {
+			updateReq.Body = value
+		}
+		if value, exists := multipartFirstValue(r.MultipartForm, "status"); exists {
+			updateReq.Status = value
+		}
+		if values, exists := multipartFieldValues(r.MultipartForm, "category_ids"); exists {
+			ids, err := parseCategoryIDs(values)
+			if err != nil {
+				WriteError(w, r, NewError("BAD_REQUEST", "invalid category_id", http.StatusBadRequest))
+				return
+			}
+			updateReq.CategoryIDs = ids
+			updateReq.HasCategoryUpdate = true
+		}
+		if value, exists := multipartFirstTrimmedValue(r.MultipartForm, "image_url"); exists {
+			if value != nil && *value == "" {
+				updateReq.ImageURL = nil
+			} else {
+				updateReq.ImageURL = value
+			}
+			updateReq.HasImageUpdate = true
+		}
+		removeImage, err := multipartOptionalBool(r.MultipartForm, "remove_image")
+		if err != nil {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid remove_image flag", http.StatusBadRequest))
+			return
+		}
+		if removeImage != nil {
+			updateReq.RemoveImage = *removeImage
+		}
+
+		file, mime, hasUpload, ok := parseImageUpload(w, r)
+		if !ok {
+			return
+		}
+		if hasUpload {
+			updateReq.UploadFile = file
+			defer updateReq.UploadFile.Close()
+			updateReq.UploadMime = mime
+			updateReq.HasImageUpload = true
+		}
+	} else {
+		var req struct {
+			Title       *string  `json:"title"`
+			Body        *string  `json:"body"`
+			Status      *string  `json:"status"`
+			CategoryIDs *[]int64 `json:"category_ids"`
+			ImageURL    *string  `json:"image_url"`
+			RemoveImage *bool    `json:"remove_image"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
+			return
+		}
+
+		updateReq.Title = req.Title
+		updateReq.Body = req.Body
+		updateReq.Status = req.Status
+		if req.CategoryIDs != nil {
+			updateReq.CategoryIDs = *req.CategoryIDs
+			updateReq.HasCategoryUpdate = true
+		}
+		if req.ImageURL != nil {
+			trimmed := strings.TrimSpace(*req.ImageURL)
+			if trimmed == "" {
+				updateReq.ImageURL = nil
+			} else {
+				updateReq.ImageURL = &trimmed
+			}
+			updateReq.HasImageUpdate = true
+		}
+		if req.RemoveImage != nil {
+			updateReq.RemoveImage = *req.RemoveImage
+		}
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
-		return
-	}
-
-	if req.Title != nil && strings.TrimSpace(*req.Title) == "" {
+	if updateReq.Title != nil && strings.TrimSpace(*updateReq.Title) == "" {
 		WriteError(w, r, NewError("BAD_REQUEST", "title required", http.StatusBadRequest))
 		return
 	}
 
-	if req.Body != nil && strings.TrimSpace(*req.Body) == "" {
-		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
-		return
-	}
-
-	if req.Title == nil && req.Body == nil && req.Status == nil {
-		WriteError(w, r, NewError("BAD_REQUEST", "nothing to update", http.StatusBadRequest))
-		return
-	}
-
-	if req.Status != nil {
-		status := strings.ToLower(strings.TrimSpace(*req.Status))
-
-		if status != "draft" && status != "published" {
+	normalizedStatus := ""
+	if updateReq.Status != nil {
+		normalizedStatus = strings.ToLower(strings.TrimSpace(*updateReq.Status))
+		if normalizedStatus != "draft" && normalizedStatus != "published" {
 			WriteError(w, r, NewError(
 				"BAD_REQUEST",
 				"invalid status",
@@ -407,13 +506,132 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 			))
 			return
 		}
+	}
 
+	if updateReq.HasCategoryUpdate {
+		for _, cid := range updateReq.CategoryIDs {
+			if cid <= 0 {
+				WriteError(w, r, NewError("BAD_REQUEST", "invalid category_id", http.StatusBadRequest))
+				return
+			}
+		}
+	}
+
+	if updateReq.UploadFile != nil {
+		savedImageURL, imagePath, err := saveUploadedImage(updateReq.UploadFile, updateReq.UploadMime)
+		if err != nil {
+			log.Printf("failed to save updated image: %v", err)
+			WriteError(w, r, NewError(
+				"INTERNAL_SERVER_ERROR",
+				"error saving image",
+				http.StatusInternalServerError,
+			))
+			return
+		}
+		updateReq.ImageURL = &savedImageURL
+		updateReq.HasImageUpdate = true
+		updateReq.UploadPath = imagePath
+	}
+
+	if updateReq.RemoveImage && !updateReq.HasImageUpload {
+		updateReq.ImageURL = nil
+		updateReq.HasImageUpdate = true
+	}
+
+	hasContentUpdate := updateReq.Title != nil || updateReq.Body != nil || updateReq.HasImageUpdate || updateReq.HasCategoryUpdate
+	if !hasContentUpdate && updateReq.Status == nil {
+		WriteError(w, r, NewError("BAD_REQUEST", "nothing to update", http.StatusBadRequest))
+		return
+	}
+
+	finalBody := strings.TrimSpace(existingPost.Body)
+	if updateReq.Body != nil {
+		finalBody = strings.TrimSpace(*updateReq.Body)
+	}
+
+	finalImageURL := existingPost.ImageURL
+	if updateReq.HasImageUpdate {
+		finalImageURL = updateReq.ImageURL
+	}
+
+	if finalBody == "" && finalImageURL == nil {
+		if updateReq.UploadPath != "" {
+			_ = os.Remove(updateReq.UploadPath)
+		}
+		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
+		return
+	}
+
+	finalStatus := strings.ToLower(strings.TrimSpace(existingPost.Status))
+	if finalStatus == "" {
+		finalStatus = "published"
+	}
+	if updateReq.Status != nil {
+		finalStatus = normalizedStatus
+	}
+
+	finalCategoryCount := len(existingPost.Categories)
+	if updateReq.HasCategoryUpdate {
+		seen := make(map[int64]struct{}, len(updateReq.CategoryIDs))
+		for _, cid := range updateReq.CategoryIDs {
+			if cid <= 0 {
+				continue
+			}
+			seen[cid] = struct{}{}
+		}
+		finalCategoryCount = len(seen)
+	}
+
+	if finalStatus == "published" && finalCategoryCount == 0 && updateReq.HasCategoryUpdate {
+		if updateReq.UploadPath != "" {
+			_ = os.Remove(updateReq.UploadPath)
+		}
+		WriteError(w, r, NewError(
+			"BAD_REQUEST",
+			"at least one category is required",
+			http.StatusBadRequest,
+		))
+		return
+	}
+
+	if hasContentUpdate {
+		if err := repository.UpdatePostContent(
+			r.Context(),
+			p.conn,
+			postID,
+			repository.UpdatePostInput{
+				Title:             updateReq.Title,
+				Body:              updateReq.Body,
+				ImageURL:          updateReq.ImageURL,
+				HasImageUpdate:    updateReq.HasImageUpdate,
+				CategoryIDs:       updateReq.CategoryIDs,
+				HasCategoryUpdate: updateReq.HasCategoryUpdate,
+			},
+		); err != nil {
+			if updateReq.UploadPath != "" {
+				_ = os.Remove(updateReq.UploadPath)
+			}
+			if errors.Is(err, sql.ErrNoRows) {
+				WriteError(w, r, NewError("NOT_FOUND", "error updating post", http.StatusNotFound))
+				return
+			}
+			if errors.Is(err, repository.ErrInvalidPostCategoryUpdate) {
+				WriteError(w, r, NewError("BAD_REQUEST", "invalid category_id", http.StatusBadRequest))
+				return
+			}
+			log.Printf("failed to update post content: %v", err)
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
+			return
+		}
+	}
+
+	if updateReq.Status != nil {
 		if err := repository.UpdatePostStatus(
 			r.Context(),
 			p.conn,
 			postID,
 			0, // authorID ignored for now
-			status,
+			normalizedStatus,
 		); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				WriteError(w, r, NewError("NOT_FOUND", "error updating post", http.StatusNotFound))
@@ -429,22 +647,12 @@ func (p *PostsHandler) updatePost(w http.ResponseWriter, r *http.Request, postID
 		}
 	}
 
-	if req.Title != nil || req.Body != nil {
-		if err := repository.UpdatePostContent(
-			r.Context(),
-			p.conn,
-			postID,
-			repository.UpdatePostInput{Title: req.Title, Body: req.Body},
-		); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				WriteError(w, r, NewError("NOT_FOUND", "error updating post", http.StatusNotFound))
-				return
-			}
-			log.Printf("failed to update post: %v", err)
-			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating post", http.StatusInternalServerError))
-			return
+	if imageURLToCleanup, shouldCleanup := replacedOrRemovedImageURL(existingPost.ImageURL, finalImageURL); shouldCleanup {
+		if err := maybeDeleteUploadedImageByURL(r.Context(), p.conn, imageURLToCleanup); err != nil {
+			log.Printf("failed to cleanup replaced post image (post_id=%d, image_url=%q): %v", postID, imageURLToCleanup, err)
 		}
 	}
+
 	WriteOK(w, map[string]string{"status": "updated"}, nil)
 }
 
