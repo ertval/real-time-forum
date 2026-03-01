@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 /*------------------
@@ -120,4 +121,66 @@ func attachCommentReactions(
 		comments[i].Dislikes = dislikes
 	}
 	return nil
+}
+
+func attachCommentMyReactions(
+	ctx context.Context,
+	db *sql.DB,
+	comments []Comment,
+	viewerID int64,
+) error {
+
+	if viewerID <= 0 || len(comments) == 0 {
+		return nil
+	}
+
+	// Collect comment IDs
+	commentIDs := make([]int64, 0, len(comments))
+	index := make(map[int64]*Comment)
+
+	for i := range comments {
+		commentIDs = append(commentIDs, comments[i].ID)
+		index[comments[i].ID] = &comments[i]
+	}
+
+	query := `
+		SELECT comment_id, reaction
+		FROM reactions
+		WHERE user_id = ?
+		  AND target_type = 'comment'
+		  AND comment_id IN (` + placeholders(len(commentIDs)) + `)
+	`
+
+	args := make([]any, 0, len(commentIDs)+1)
+	args = append(args, viewerID)
+	for _, id := range commentIDs {
+		args = append(args, id)
+	}
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var commentID int64
+		var reaction int
+		if err := rows.Scan(&commentID, &reaction); err != nil {
+			return err
+		}
+
+		if c, ok := index[commentID]; ok {
+			c.MyReaction = reaction
+		}
+	}
+
+	return rows.Err()
+}
+
+func placeholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return strings.TrimRight(strings.Repeat("?,", n), ",")
 }
