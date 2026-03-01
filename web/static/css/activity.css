@@ -155,6 +155,12 @@
   font-weight: 600;
 }
 
+.activity-comment-reactions.comment {
+  margin-top: 8px;
+  padding: 0;
+  border-bottom: 0;
+}
+
 #activity-pagination {
   margin-top: 28px;
 }
