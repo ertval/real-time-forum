@@ -6,7 +6,7 @@ import {
   escapeHTML,
   toPositiveInt,
 } from "./utils.js";
-import { renderPostCard } from "./posts.js";
+import { renderPostCard, reactionTemplate } from "./posts.js";
 import { initReactions } from "./reactions.js";
 import { createPagination } from "./pagination.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
@@ -214,9 +214,13 @@ function renderCommentsSection(section) {
       ${body}
       ${imageMarkup}
 
-      <footer class="activity-comment-stats">
-        <span>Likes: ${Number(comment.likes) || 0}</span>
-        <span>Dislikes: ${Number(comment.dislikes) || 0}</span>
+      <footer>
+        <div
+          class="activity-comment-reactions comment"
+          data-comment-id="${Number(comment.id) || 0}"
+        >
+          ${reactionTemplate(comment, true)}
+        </div>
       </footer>
     `;
 
