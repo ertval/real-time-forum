@@ -29,7 +29,7 @@ func setOAuthStateCookie(w http.ResponseWriter, state string) {
 		Value:    state,
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   300,
 	})
 }
@@ -71,7 +71,7 @@ func createSessionAndRedirect(
 		Value:    session.Token,
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		Expires:  session.ExpiresAt,
 	})
 

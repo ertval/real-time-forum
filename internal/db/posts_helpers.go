@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 const ReactionLike = 1
@@ -143,19 +144,11 @@ func getCategoriesByPostID(
 -------------------*/
 
 func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post, userID int64) error {
-	if userID <= 0 {
-		for i := range posts {
-			likes, dislikes, err := CountReactionsForPost(ctx, db, posts[i].ID)
-			if err != nil {
-				return err
-			}
-			posts[i].Likes = likes
-			posts[i].Dislikes = dislikes
-			posts[i].MyReaction = 0
-		}
+	if len(posts) == 0 {
 		return nil
 	}
 
+	// Always attach total counts
 	for i := range posts {
 		likes, dislikes, err := CountReactionsForPost(ctx, db, posts[i].ID)
 		if err != nil {
@@ -163,12 +156,53 @@ func attachPostReactions(ctx context.Context, db *sql.DB, posts []Post, userID i
 		}
 		posts[i].Likes = likes
 		posts[i].Dislikes = dislikes
+		posts[i].MyReaction = 0
+	}
 
-		react, err := GetUserReactionForPost(ctx, db, userID, posts[i].ID)
-		if err != nil && err != sql.ErrNoRows {
+	if userID <= 0 {
+		return nil
+	}
+
+	// Collect post IDs
+	ids := make([]any, 0, len(posts))
+	placeholders := make([]string, 0, len(posts))
+
+	for _, p := range posts {
+		ids = append(ids, p.ID)
+		placeholders = append(placeholders, "?")
+	}
+
+	query := fmt.Sprintf(`
+		SELECT post_id, value
+		FROM reactions
+		WHERE user_id = ?
+		AND post_id IN (%s)
+		AND post_id IS NOT NULL
+	`, strings.Join(placeholders, ","))
+
+	args := append([]any{userID}, ids...)
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	reactionMap := make(map[int64]int)
+
+	for rows.Next() {
+		var postID int64
+		var val int
+		if err := rows.Scan(&postID, &val); err != nil {
 			return err
 		}
-		posts[i].MyReaction = react
+		reactionMap[postID] = val
+	}
+
+	for i := range posts {
+		if val, ok := reactionMap[posts[i].ID]; ok {
+			posts[i].MyReaction = val
+		}
 	}
 
 	return nil
@@ -239,24 +273,13 @@ func fetchPostsByReaction(
 	return posts, nil
 }
 
-func getUserReactionForPost(ctx context.Context, db *sql.DB, userID, postID int64) (int, error) {
-	var value int
-	err := db.QueryRowContext(ctx,
-		`SELECT value FROM reactions WHERE user_id = ? AND post_id = ?`,
-		userID, postID,
-	).Scan(&value)
-
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-	return value, err
-}
-
 func GetUserReactionForPost(ctx context.Context, db *sql.DB, userID, postID int64) (int, error) {
 	var val int
 	err := db.QueryRowContext(ctx, `
 		SELECT value FROM reactions
-		WHERE user_id = ? AND post_id = ?
+		WHERE user_id = ?
+		AND post_id = ?
+		AND post_id IS NOT NULL
 	`, userID, postID).Scan(&val)
 
 	if err == sql.ErrNoRows {
