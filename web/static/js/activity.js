@@ -17,6 +17,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 10;
 let editBound = false;
 let deleteBound = false;
+let commentDeleteBound = false;
 let statusToggleBound = false;
 
 function getQueryState() {
@@ -169,6 +170,19 @@ function renderCommentsSection(section) {
   const fragment = document.createDocumentFragment();
 
   for (const comment of items) {
+    const commentID = Number(comment.id) || 0;
+    const deleteButtonMarkup =
+      commentID > 0
+        ? `
+          <button
+            class="btn btn-danger btn-sm comment-delete"
+            data-comment-id="${commentID}"
+          >
+            Delete
+          </button>
+        `
+        : "";
+
     const article = document.createElement("article");
     article.className = "activity-comment card card-pad";
 
@@ -204,7 +218,10 @@ function renderCommentsSection(section) {
           </a>
         </div>
 
-        <time class="muted">${formatCreatedAt(comment.created_at)}</time>
+        <div class="activity-comment-head-right">
+          <time class="muted">${formatCreatedAt(comment.created_at)}</time>
+          ${deleteButtonMarkup}
+        </div>
       </header>
 
       <p class="activity-comment-author muted">
@@ -217,7 +234,7 @@ function renderCommentsSection(section) {
       <footer>
         <div
           class="activity-comment-reactions comment"
-          data-comment-id="${Number(comment.id) || 0}"
+          data-comment-id="${commentID}"
         >
           ${reactionTemplate(comment, true)}
         </div>
@@ -405,6 +422,74 @@ function initDeletePost(refresh) {
   );
 }
 
+function initDeleteComment(refresh) {
+  if (commentDeleteBound) return;
+  commentDeleteBound = true;
+
+  document.addEventListener(
+    "click",
+    async (e) => {
+      const btn = e.target.closest(".comment-delete");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const commentId = btn.dataset.commentId;
+      if (!commentId) return;
+
+      const ok = await uiConfirm(
+        "Delete this comment? This action cannot be undone.",
+        {
+          type: "danger",
+          title: "Delete comment",
+          okText: "Delete",
+          cancelText: "Cancel",
+        }
+      );
+      if (!ok) return;
+
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/comments/${commentId}`, {
+          method: "DELETE",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+
+        if (res.status === 401) {
+          uiNotify("You must be logged in.", { type: "warn" });
+          return;
+        }
+        if (res.status === 403) {
+          uiNotify("You can only delete your own comments.", { type: "warn" });
+          return;
+        }
+        if (res.status === 404) {
+          uiNotify("Comment not found.", { type: "warn" });
+          await refresh();
+          return;
+        }
+        if (!res.ok) {
+          uiNotify("Failed to delete comment.", { type: "danger" });
+          return;
+        }
+
+        playDelete();
+        uiNotify("Comment deleted.", { type: "success" });
+        await refresh();
+      } catch (err) {
+        console.error("Activity comment delete failed:", err);
+        uiNotify("Failed to delete comment.", { type: "danger" });
+      } finally {
+        if (document.contains(btn)) btn.disabled = false;
+      }
+    },
+    true
+  );
+}
+
 function initStatusToggle(refresh) {
   if (statusToggleBound) return;
   statusToggleBound = true;
@@ -569,6 +654,7 @@ async function startActivityPage() {
   initEditPostNavigation();
   initStatusToggle(refresh);
   initDeletePost(refresh);
+  initDeleteComment(refresh);
 }
 
 if (document.readyState === "loading") {
