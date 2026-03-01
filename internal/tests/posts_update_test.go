@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -228,4 +229,128 @@ func TestAPIPostUpdate_UpdatedAtIsSet(t *testing.T) {
 		t.Fatalf("expected updated_at to change after update, before=%q after=%q",
 			updatedAtBefore, updatedAtAfter)
 	}
+}
+
+func TestAPIPostUpdate_MultipartImageAndCategories(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	if _, err := db.Exec(`INSERT OR IGNORE INTO categories (id, name) VALUES (2, 'Tech')`); err != nil {
+		t.Fatalf("seed category 2: %v", err)
+	}
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Original title",
+		"body":         "Original body",
+		"category_ids": []int64{1},
+	})
+
+	rec := multipartRequest(
+		t,
+		h,
+		http.MethodPatch,
+		fmt.Sprintf("/api/v1/posts/%d", postID),
+		token,
+		map[string]string{
+			"title": "Updated title",
+			"body":  "",
+		},
+		[]int64{2},
+		"updated.png",
+		samplePNGBytes,
+	)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	post := getPost(t, h, postID)
+	if got := post["title"]; got != "Updated title" {
+		t.Fatalf("expected updated title, got %v", got)
+	}
+	if got := post["body"]; got != "" {
+		t.Fatalf("expected empty body after image-only update, got %v", got)
+	}
+
+	imageURL, ok := post["image_url"].(string)
+	if !ok || imageURL == "" {
+		t.Fatalf("expected image_url after multipart update, got %v", post["image_url"])
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, imageURL) })
+
+	categories := extractCategoryIDsFromPost(t, post)
+	if len(categories) != 1 || categories[0] != 2 {
+		t.Fatalf("expected categories [2], got %v", categories)
+	}
+}
+
+func TestAPIPostUpdate_RemoveImage(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	createRec := multipartRequest(
+		t,
+		h,
+		http.MethodPost,
+		"/api/v1/posts",
+		token,
+		map[string]string{
+			"title": "Image post",
+			"body":  "",
+		},
+		[]int64{1},
+		"initial.jpg",
+		sampleJPEGBytes,
+	)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", createRec.Code, createRec.Body.String())
+	}
+
+	createdPost := decodeEnvelopeDataMap(t, createRec)
+	postID := int64(createdPost["id"].(float64))
+
+	rec := patchPost(t, h, token, postID, map[string]any{
+		"title":        "No image now",
+		"body":         "Body text after removing image",
+		"category_ids": []int64{1},
+		"remove_image": true,
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	post := getPost(t, h, postID)
+	if got := post["image_url"]; got != nil {
+		t.Fatalf("expected image_url to be nil after remove_image update, got %v", got)
+	}
+}
+
+func extractCategoryIDsFromPost(t *testing.T, post map[string]any) []int64 {
+	t.Helper()
+
+	raw, ok := post["categories"]
+	if !ok {
+		return nil
+	}
+	list, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("expected categories array, got %T", raw)
+	}
+
+	ids := make([]int64, 0, len(list))
+	for _, item := range list {
+		category, ok := item.(map[string]any)
+		if !ok {
+			t.Fatalf("expected category object, got %T", item)
+		}
+		idRaw, ok := category["id"]
+		if !ok {
+			t.Fatalf("missing category id in %v", category)
+		}
+		ids = append(ids, int64(idRaw.(float64)))
+	}
+
+	return ids
 }

@@ -111,6 +111,52 @@ func parseCategoryIDs(values []string) ([]int64, error) {
 	return ids, nil
 }
 
+func multipartFieldValues(form *multipart.Form, key string) ([]string, bool) {
+	if form == nil {
+		return nil, false
+	}
+	values, exists := form.Value[key]
+	if !exists {
+		return nil, false
+	}
+	return values, true
+}
+
+func multipartFirstValue(form *multipart.Form, key string) (*string, bool) {
+	values, exists := multipartFieldValues(form, key)
+	if !exists {
+		return nil, false
+	}
+
+	value := ""
+	if len(values) > 0 {
+		value = values[0]
+	}
+	return &value, true
+}
+
+func multipartFirstTrimmedValue(form *multipart.Form, key string) (*string, bool) {
+	value, exists := multipartFirstValue(form, key)
+	if !exists {
+		return nil, false
+	}
+	trimmed := strings.TrimSpace(*value)
+	return &trimmed, true
+}
+
+func multipartOptionalBool(form *multipart.Form, key string) (*bool, error) {
+	raw, exists := multipartFirstTrimmedValue(form, key)
+	if !exists || raw == nil || *raw == "" {
+		return nil, nil
+	}
+
+	parsed, err := strconv.ParseBool(*raw)
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
+}
+
 func parseMultipartForm(w http.ResponseWriter, r *http.Request) (func(), bool) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
