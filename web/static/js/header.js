@@ -23,6 +23,7 @@ export async function initHeader() {
   const authedOnlyEls = [
     document.getElementById("my-posts-btn"),
     document.getElementById("my-liked-posts-btn"),
+    document.getElementById("my-activity-btn"),
   ].filter(Boolean);
 
   if (!greetingEl || !loginBtn || !logoutBtn) return;
