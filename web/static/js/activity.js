@@ -10,13 +10,14 @@ import { renderPostCard } from "./posts.js";
 import { initReactions } from "./reactions.js";
 import { createPagination } from "./pagination.js";
 import { uiNotify, uiConfirm } from "./ui-messages.js";
-import { playDelete } from "./sound-effects.js";
+import { playDelete, playUpload } from "./sound-effects.js";
 import { Auth } from "./auth.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 10;
 let editBound = false;
 let deleteBound = false;
+let statusToggleBound = false;
 
 function getQueryState() {
   const params = new URLSearchParams(window.location.search);
@@ -134,7 +135,7 @@ function renderPostsSection({
 
     const article = renderPostCard(post, {
       clickable: true,
-      showStatusToggle: false,
+      showStatusToggle: isOwner,
       showDelete: isOwner,
       showEdit: isOwner,
     });
@@ -400,6 +401,73 @@ function initDeletePost(refresh) {
   );
 }
 
+function initStatusToggle(refresh) {
+  if (statusToggleBound) return;
+  statusToggleBound = true;
+
+  document.addEventListener(
+    "click",
+    async (e) => {
+      const btn = e.target.closest(".post-status-toggle");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const postId = btn.dataset.postId;
+      const currentStatus = btn.dataset.currentStatus;
+      if (!postId || !currentStatus) return;
+
+      const nextStatus = currentStatus === "draft" ? "published" : "draft";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/posts/${postId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        });
+
+        if (res.status === 401) {
+          uiNotify("You must be logged in.", { type: "warn" });
+          return;
+        }
+
+        if (res.status === 403) {
+          uiNotify("You can only update your own posts.", { type: "warn" });
+          return;
+        }
+
+        if (res.status === 404) {
+          uiNotify("Post not found.", { type: "warn" });
+          await refresh();
+          return;
+        }
+
+        if (!res.ok) {
+          uiNotify("Failed to update post status.", { type: "danger" });
+          return;
+        }
+
+        playUpload();
+        btn.dataset.currentStatus = nextStatus;
+        btn.textContent = nextStatus === "draft" ? "Publish" : "Draft";
+        await refresh();
+      } catch (err) {
+        console.error("Activity status toggle failed:", err);
+        uiNotify("Failed to update post status.", { type: "danger" });
+      } finally {
+        if (document.contains(btn)) btn.disabled = false;
+      }
+    },
+    true
+  );
+}
+
 async function startActivityPage() {
   initSectionToggles();
 
@@ -495,6 +563,7 @@ async function startActivityPage() {
   });
 
   initEditPostNavigation();
+  initStatusToggle(refresh);
   initDeletePost(refresh);
 }
 

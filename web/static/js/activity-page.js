@@ -14,10 +14,15 @@ async function loadHeader() {
   document.getElementById("my-activity-btn")?.remove();
 }
 
-function loadModuleScript(src) {
+function loadModuleScript(src, version = "") {
   const s = document.createElement("script");
   s.type = "module";
-  s.src = src;
+  if (version) {
+    const sep = src.includes("?") ? "&" : "?";
+    s.src = `${src}${sep}v=${encodeURIComponent(version)}`;
+  } else {
+    s.src = src;
+  }
   document.body.appendChild(s);
 }
 
@@ -44,8 +49,9 @@ async function requireAuth() {
   const isAuthed = await requireAuth();
   if (!isAuthed) return;
 
-  loadModuleScript("/static/js/header-loader.js");
-  loadModuleScript("/static/js/activity.js");
+  const version = String(Date.now());
+  loadModuleScript("/static/js/header-loader.js", version);
+  loadModuleScript("/static/js/activity.js", version);
 })().catch((err) => {
   console.error("Activity page bootstrap failed:", err);
   alert("Failed to load activity page.");
