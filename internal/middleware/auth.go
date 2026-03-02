@@ -54,6 +54,40 @@ func Auth(database *sql.DB) func(http.Handler) http.Handler {
 	}
 }
 
+// OptionalAuth injects userID into context if session exists,
+// but does NOT block guests.
+func OptionalAuth(database *sql.DB) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			token := ""
+
+			// Cookie first
+			if cookie, err := r.Cookie("session_token"); err == nil {
+				token = cookie.Value
+			}
+
+			// Authorization header fallback
+			if token == "" {
+				auth := r.Header.Get("Authorization")
+				if strings.HasPrefix(auth, "Bearer ") {
+					token = strings.TrimPrefix(auth, "Bearer ")
+				}
+			}
+
+			if token != "" {
+				session, err := db.GetSessionByToken(r.Context(), database, token)
+				if err == nil {
+					ctx := context.WithValue(r.Context(), UserIDKey, session.UserID)
+					r = r.WithContext(ctx)
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // GetUserID extracts authenticated user ID from context.
 func GetUserID(ctx context.Context) (int64, error) {
 	id, ok := ctx.Value(UserIDKey).(int64)
@@ -70,6 +104,6 @@ func clearSessionCookie(w http.ResponseWriter) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	})
 }

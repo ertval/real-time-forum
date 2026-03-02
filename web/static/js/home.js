@@ -81,6 +81,8 @@ async function renderPosts(state, pager, paginationEl) {
     await loadPostCommentsPreview(post.id, card);
   }
 
+  initReactions();
+  
   if (state.perPage === 0) return;
 
   const pagination = payload?.meta?.pagination;
@@ -139,7 +141,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   await renderPosts(state, pager, paginationEl);
-  initReactions();
 
   window.addEventListener("popstate", () => {
     state = getQueryState();

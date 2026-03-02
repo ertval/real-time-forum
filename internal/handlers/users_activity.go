@@ -9,6 +9,10 @@ import (
 	"forum/internal/middleware"
 )
 
+/* -------------------------
+   RESPONSE STRUCTURES
+--------------------------*/
+
 type postsActivitySection struct {
 	Items      []repository.Post `json:"items"`
 	Pagination *PaginationMeta   `json:"pagination"`
@@ -26,6 +30,10 @@ type userActivityResponse struct {
 	Comments      commentsActivitySection `json:"comments"`
 }
 
+/* -------------------------
+   HANDLER
+--------------------------*/
+
 func (u *UsersHandler) GetUserActivity(w http.ResponseWriter, r *http.Request) {
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
@@ -41,11 +49,18 @@ func (u *UsersHandler) GetUserActivity(w http.ResponseWriter, r *http.Request) {
 
 	statusPtr, err := parsePostStatusFilter(r)
 	if err != nil {
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
+		WriteError(w, r, NewError(
+			"BAD_REQUEST",
+			"invalid status",
+			http.StatusBadRequest,
+		))
 		return
 	}
 
-	created, err := repository.ListPostsByAuthor(
+	/* -------------------------
+	   CREATED POSTS
+	--------------------------*/
+	createdResult, err := repository.ListPostsByAuthor(
 		r.Context(),
 		u.conn,
 		repository.ListPostsByAuthorParams{
@@ -54,14 +69,18 @@ func (u *UsersHandler) GetUserActivity(w http.ResponseWriter, r *http.Request) {
 			PerPage:  perPage,
 			Status:   statusPtr,
 		},
+		userID,
 	)
 	if err != nil {
-		log.Printf("failed to list created posts for activity: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading user activity", http.StatusInternalServerError))
+		log.Printf("user activity - created posts error: %v", err)
+		internalActivityError(w, r)
 		return
 	}
 
-	liked, err := repository.ListPostsByUserReaction(
+	/* -------------------------
+	   LIKED POSTS
+	--------------------------*/
+	likedResult, err := repository.ListPostsByUserReaction(
 		r.Context(),
 		u.conn,
 		repository.ListPostsByUserReactionParams{
@@ -70,14 +89,18 @@ func (u *UsersHandler) GetUserActivity(w http.ResponseWriter, r *http.Request) {
 			PerPage:  perPage,
 			Reaction: repository.ReactionLike,
 		},
+		userID,
 	)
 	if err != nil {
-		log.Printf("failed to list liked posts for activity: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading user activity", http.StatusInternalServerError))
+		log.Printf("user activity - liked posts error: %v", err)
+		internalActivityError(w, r)
 		return
 	}
 
-	disliked, err := repository.ListPostsByUserReaction(
+	/* -------------------------
+	   DISLIKED POSTS
+	--------------------------*/
+	dislikedResult, err := repository.ListPostsByUserReaction(
 		r.Context(),
 		u.conn,
 		repository.ListPostsByUserReactionParams{
@@ -86,14 +109,18 @@ func (u *UsersHandler) GetUserActivity(w http.ResponseWriter, r *http.Request) {
 			PerPage:  perPage,
 			Reaction: repository.ReactionDislike,
 		},
+		userID,
 	)
 	if err != nil {
-		log.Printf("failed to list disliked posts for activity: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading user activity", http.StatusInternalServerError))
+		log.Printf("user activity - disliked posts error: %v", err)
+		internalActivityError(w, r)
 		return
 	}
 
-	comments, err := repository.ListUserCommentsWithPost(
+	/* -------------------------
+	   COMMENTS
+	--------------------------*/
+	commentsResult, err := repository.ListUserCommentsWithPost(
 		r.Context(),
 		u.conn,
 		repository.ListUserCommentsWithPostParams{
@@ -103,38 +130,59 @@ func (u *UsersHandler) GetUserActivity(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		log.Printf("failed to list comments for activity: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading user activity", http.StatusInternalServerError))
+		log.Printf("user activity - comments error: %v", err)
+		internalActivityError(w, r)
 		return
 	}
 
 	resp := userActivityResponse{
 		CreatedPosts: postsActivitySection{
-			Items:      created.Posts,
-			Pagination: makePaginationMeta(page, perPage, created.Total),
+			Items:      createdResult.Posts,
+			Pagination: makePaginationMeta(page, perPage, createdResult.Total),
 		},
 		LikedPosts: postsActivitySection{
-			Items:      liked.Posts,
-			Pagination: makePaginationMeta(page, perPage, liked.Total),
+			Items:      likedResult.Posts,
+			Pagination: makePaginationMeta(page, perPage, likedResult.Total),
 		},
 		DislikedPosts: postsActivitySection{
-			Items:      disliked.Posts,
-			Pagination: makePaginationMeta(page, perPage, disliked.Total),
+			Items:      dislikedResult.Posts,
+			Pagination: makePaginationMeta(page, perPage, dislikedResult.Total),
 		},
 		Comments: commentsActivitySection{
-			Items:      comments.Comments,
-			Pagination: makePaginationMeta(page, perPage, comments.Total),
+			Items:      commentsResult.Comments,
+			Pagination: makePaginationMeta(page, perPage, commentsResult.Total),
 		},
 	}
 
 	WriteOK(w, resp, nil)
 }
 
+/* -------------------------
+   HELPERS
+--------------------------*/
+
+func internalActivityError(w http.ResponseWriter, r *http.Request) {
+	WriteError(w, r, NewError(
+		"INTERNAL_SERVER_ERROR",
+		"error loading user activity",
+		http.StatusInternalServerError,
+	))
+}
+
 func makePaginationMeta(page, perPage, total int) *PaginationMeta {
+	if perPage <= 0 {
+		perPage = 1
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + perPage - 1) / perPage
+	}
+
 	return &PaginationMeta{
 		Page:       page,
 		PerPage:    perPage,
 		Total:      total,
-		TotalPages: (total + perPage - 1) / perPage,
+		TotalPages: totalPages,
 	}
 }
