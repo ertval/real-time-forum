@@ -196,7 +196,7 @@ func fetchValidSession(
 		JOIN users u ON u.id = s.user_id
 		WHERE s.token = ?
 		  AND s.is_valid = 1
-		  AND s.expires_at > datetime('now')
+		  AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%SZ','now')
 	`
 
 	var session Session

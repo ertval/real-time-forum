@@ -30,6 +30,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to open in-memory sqlite: %v", err)
 	}
 
+	dbConn.SetMaxOpenConns(1)
+	dbConn.SetMaxIdleConns(1)
+
 	// Load schema
 	schemaPath := filepath.Join("..", "db", "forum_schema.sql")
 	schemaBytes, err := os.ReadFile(schemaPath)
@@ -214,6 +217,22 @@ func loginTestUser(t *testing.T, h http.Handler, username string) string {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("login failed: %d", rec.Code)
+	}
+
+	return extractToken(t, rec)
+}
+
+func loginTestUserByEmail(t *testing.T, h http.Handler, email string) string {
+	body := []byte(`{"email":"` + email + `","password":"password123"}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login failed: %d body=%s", rec.Code, rec.Body.String())
 	}
 
 	return extractToken(t, rec)
