@@ -4,7 +4,6 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
-	"strconv"
 	"strings"
 
 	repository "forum/internal/db"
@@ -51,15 +50,19 @@ func (h *NotificationsHandler) HandleNotifications(w http.ResponseWriter, r *htt
 
 		if strings.HasSuffix(path, "/read") {
 			idStr := strings.TrimSuffix(path, "/read")
-			id, err := strconv.ParseInt(idStr, 10, 64)
+			id, err := parsePositiveID(idStr)
 			if err != nil {
 				WriteError(w, r, NewError("BAD_REQUEST", "invalid notification id", http.StatusBadRequest))
 				return
 			}
 
-			err = repository.MarkNotificationRead(r.Context(), h.conn, userID, id)
+			updated, err := repository.MarkNotificationRead(r.Context(), h.conn, userID, id)
 			if err != nil {
 				WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "failed to mark read", http.StatusInternalServerError))
+				return
+			}
+			if !updated {
+				WriteError(w, r, NewError("NOT_FOUND", "notification not found", http.StatusNotFound))
 				return
 			}
 

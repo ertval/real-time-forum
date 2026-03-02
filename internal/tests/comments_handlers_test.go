@@ -58,6 +58,29 @@ func TestHandleComment_UnknownAction_NotFound(t *testing.T) {
 	}
 }
 
+func TestHandleComment_InvalidID_BadRequest(t *testing.T) {
+	p := &handlers.PostsHandler{}
+
+	paths := []string{
+		"/api/v1/comments/abc",
+		"/api/v1/comments/0",
+		"/api/v1/comments/-1",
+		"/api/v1/comments/0/like",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rr := httptest.NewRecorder()
+			p.HandleComment(rr, req)
+
+			if rr.Code != http.StatusBadRequest {
+				t.Fatalf("expected %d, got %d. body=%s", http.StatusBadRequest, rr.Code, rr.Body.String())
+			}
+		})
+	}
+}
+
 func TestHandlePost_Comments_WrongMethod_MethodNotAllowed(t *testing.T) {
 	p := &handlers.PostsHandler{}
 

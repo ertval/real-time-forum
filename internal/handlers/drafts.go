@@ -168,14 +168,14 @@ func (p *PostsHandler) HandleDraftByID(w http.ResponseWriter, r *http.Request) {
 
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) == 0 {
-		WriteError(w, r, NewError("BAD_REQUEST", "missing draft id", 400))
+		WriteError(w, r, NewError("BAD_REQUEST", "missing draft id", http.StatusBadRequest))
 		return
 	}
 	idStr := parts[len(parts)-1]
 
-	draftID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || draftID <= 0 {
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid draft id", 400))
+	draftID, err := parsePositiveID(idStr)
+	if err != nil {
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid draft id", http.StatusBadRequest))
 		return
 	}
 

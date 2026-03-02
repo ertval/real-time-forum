@@ -38,7 +38,7 @@ func resolvePostRoute(w http.ResponseWriter, r *http.Request) (postID int64, act
 		return 0, "", false
 	}
 
-	id, err := strconv.ParseInt(parts[0], 10, 64)
+	id, err := parsePositiveID(parts[0])
 	if err != nil {
 		WriteError(w, r, NewError("BAD_REQUEST", "invalid post id", http.StatusBadRequest))
 		return 0, "", false
