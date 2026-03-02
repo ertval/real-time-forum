@@ -20,9 +20,7 @@ export async function initHeader() {
   const logoutBtn = document.getElementById("logout-btn");
   const createPostBtn = document.getElementById("create-post-btn");
 
-  const authedOnlyEls = [
-    document.getElementById("my-posts-btn"),
-    document.getElementById("my-liked-posts-btn"),
+  const authedOnlyEls = [,
     document.getElementById("my-activity-btn"),
   ].filter(Boolean);
 
