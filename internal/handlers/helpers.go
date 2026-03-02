@@ -3,7 +3,6 @@ package handlers
 
 import (
 	"forum/internal/middleware"
-	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,18 +35,6 @@ func sanitizeSort(r *http.Request) string {
 	default:
 		return "newest"
 	}
-}
-
-func buildPaginationInfo(page, perPage, total int, extra map[string]any) map[string]any {
-	paginationInfo := map[string]any{
-		"page":     page,
-		"per_page": perPage,
-		"total":    total,
-	}
-	if extra != nil {
-		maps.Copy(paginationInfo, extra)
-	}
-	return paginationInfo
 }
 
 /*-----------------
