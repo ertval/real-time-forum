@@ -27,6 +27,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	  MIDDLEWARE
 	------------*/
 	auth := middleware.Auth(database)
+	optionalAuth := middleware.OptionalAuth(database)
 
 	frontendOrigin := os.Getenv("FRONTEND_URL")
 	if frontendOrigin == "" {
@@ -109,7 +110,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			posts.HandlePosts(w, r)
+			optionalAuth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 		case http.MethodPost:
 			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 		default:
@@ -123,7 +124,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			posts.HandlePost(w, r)
+			optionalAuth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
 		case http.MethodPost, http.MethodPatch, http.MethodDelete:
 			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
 		default:
@@ -253,7 +254,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			posts.HandleComment(w, r)
+			optionalAuth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
 		case http.MethodPost, http.MethodPatch, http.MethodDelete:
 			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
 		default:

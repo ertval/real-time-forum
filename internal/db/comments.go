@@ -25,6 +25,7 @@ type Comment struct {
 	UpdatedAt       string  `json:"updated_at,omitempty"`
 	Likes           int     `json:"likes"`
 	Dislikes        int     `json:"dislikes"`
+	MyReaction      int     `json:"my_reaction"`
 }
 
 type ListCommentsParams struct {
@@ -45,26 +46,36 @@ type ListCommentsResult struct {
 func ListCommentsByPost(
 	ctx context.Context,
 	db *sql.DB,
-	params ListCommentsParams,
+	p ListCommentsParams,
+	viewerID int64,
 ) (ListCommentsResult, error) {
 
-	normalizeCommentsPagination(&params)
+	// use p not params
+	normalizeCommentsPagination(&p)
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	total, err := countCommentsByPost(ctx, db, params.PostID)
+	total, err := countCommentsByPost(ctx, db, p.PostID)
 	if err != nil {
 		return ListCommentsResult{}, err
 	}
 
-	comments, err := fetchCommentsByPost(ctx, db, params)
+	comments, err := fetchCommentsByPost(ctx, db, p)
 	if err != nil {
 		return ListCommentsResult{}, err
 	}
 
+	// total reactions
 	if err := attachCommentReactions(ctx, db, comments); err != nil {
 		return ListCommentsResult{}, err
+	}
+
+	// CRITICAL PART
+	if viewerID > 0 {
+		if err := attachCommentMyReactions(ctx, db, comments, viewerID); err != nil {
+			return ListCommentsResult{}, err
+		}
 	}
 
 	return ListCommentsResult{
