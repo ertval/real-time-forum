@@ -255,7 +255,7 @@ func (c *CategoriesHandler) ListCategoriesWithPosts(
 	result, err := repository.ListCategoriesWithPosts(
 		r.Context(),
 		c.conn,
-		userID, // ⭐ MUST PASS userID
+		userID,
 	)
 	if err != nil {
 		writeHandlerError(w, r, err, "failed to list categories with posts")
