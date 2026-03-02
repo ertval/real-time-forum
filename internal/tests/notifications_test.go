@@ -1,11 +1,15 @@
-// internal/tests/notifications_test.go
+// tests/notifications_test.go
+
 package tests
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
+	"time"
 
+	dbpkg "forum/internal/db"
 	repository "forum/internal/db"
 )
 
@@ -13,31 +17,29 @@ import (
   Helpers (local to this test file)
 --------------------------------------------------*/
 
-func createTestUser(t *testing.T, db *sql.DB, username string) int64 {
+func createTestUser(t *testing.T, dbConn *sql.DB, username string) (int64, string) {
 	t.Helper()
 
-	res, err := db.Exec(`
-		INSERT INTO users (username, email, password_hash)
-		VALUES (?, ?, ?)
-	`, username, username+"@test.com", "hash")
+	email := fmt.Sprintf("%s_%d@example.com", username, time.Now().UnixNano())
+
+	userID, err := dbpkg.CreateUser(context.Background(), dbConn, dbpkg.CreateUserRequest{
+		Username: username,
+		Email:    email,
+		Password: "password123",
+	})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		t.Fatalf("last insert id: %v", err)
-	}
-
-	return id
+	return userID, email
 }
 
-func createTestPost(t *testing.T, db *sql.DB, authorID int64) int64 {
+func createTestPost(t *testing.T, dbConn *sql.DB, authorID int64) int64 {
 	t.Helper()
 
-	res, err := db.Exec(`
-		INSERT INTO posts (author_id, title, body)
-		VALUES (?, 'title', 'body')
+	res, err := dbConn.Exec(`
+		INSERT INTO posts (author_id, title, body, status)
+		VALUES (?, 'title', 'body', 'published')
 	`, authorID)
 	if err != nil {
 		t.Fatalf("create post: %v", err)
@@ -51,11 +53,11 @@ func createTestPost(t *testing.T, db *sql.DB, authorID int64) int64 {
 	return id
 }
 
-func countNotifications(t *testing.T, db *sql.DB) int {
+func countNotifications(t *testing.T, dbConn *sql.DB) int {
 	t.Helper()
 
 	var count int
-	err := db.QueryRow(`SELECT COUNT(*) FROM notifications`).Scan(&count)
+	err := dbConn.QueryRow(`SELECT COUNT(*) FROM notifications`).Scan(&count)
 	if err != nil {
 		t.Fatalf("count notifications: %v", err)
 	}
@@ -68,66 +70,66 @@ func countNotifications(t *testing.T, db *sql.DB) int {
 --------------------------------------------------*/
 
 func TestNotification_OnPostLike(t *testing.T) {
-	db := setupTestDB(t)
+	dbConn := setupTestDB(t)
 	ctx := context.Background()
 
-	authorID := createTestUser(t, db, "author")
-	userID := createTestUser(t, db, "user")
-	postID := createTestPost(t, db, authorID)
+	authorID, _ := createTestUser(t, dbConn, "author")
+	userID, _ := createTestUser(t, dbConn, "user")
+	postID := createTestPost(t, dbConn, authorID)
 
-	_, err := repository.ToggleReaction(ctx, db, userID, postID, 1, "post")
+	_, err := repository.ToggleReaction(ctx, dbConn, userID, postID, 1, "post")
 	if err != nil {
 		t.Fatalf("toggle reaction: %v", err)
 	}
 
-	if count := countNotifications(t, db); count != 1 {
+	if count := countNotifications(t, dbConn); count != 1 {
 		t.Fatalf("expected 1 notification, got %d", count)
 	}
 }
 
 func TestNotification_NoDuplicateOnRepeatedLike(t *testing.T) {
-	db := setupTestDB(t)
+	dbConn := setupTestDB(t)
 	ctx := context.Background()
 
-	authorID := createTestUser(t, db, "author")
-	userID := createTestUser(t, db, "user")
-	postID := createTestPost(t, db, authorID)
+	authorID, _ := createTestUser(t, dbConn, "author")
+	userID, _ := createTestUser(t, dbConn, "user")
+	postID := createTestPost(t, dbConn, authorID)
 
 	// like
-	_, _ = repository.ToggleReaction(ctx, db, userID, postID, 1, "post")
+	_, _ = repository.ToggleReaction(ctx, dbConn, userID, postID, 1, "post")
 	// remove
-	_, _ = repository.ToggleReaction(ctx, db, userID, postID, 1, "post")
+	_, _ = repository.ToggleReaction(ctx, dbConn, userID, postID, 1, "post")
 	// like again
-	_, _ = repository.ToggleReaction(ctx, db, userID, postID, 1, "post")
+	_, _ = repository.ToggleReaction(ctx, dbConn, userID, postID, 1, "post")
 
-	if count := countNotifications(t, db); count != 1 {
+	if count := countNotifications(t, dbConn); count != 1 {
 		t.Fatalf("expected 1 notification after repeated likes, got %d", count)
 	}
 }
 
 func TestNotification_NoSelfNotification(t *testing.T) {
-	db := setupTestDB(t)
+	dbConn := setupTestDB(t)
 	ctx := context.Background()
 
-	authorID := createTestUser(t, db, "author")
-	postID := createTestPost(t, db, authorID)
+	authorID, _ := createTestUser(t, dbConn, "author")
+	postID := createTestPost(t, dbConn, authorID)
 
-	_, _ = repository.ToggleReaction(ctx, db, authorID, postID, 1, "post")
+	_, _ = repository.ToggleReaction(ctx, dbConn, authorID, postID, 1, "post")
 
-	if count := countNotifications(t, db); count != 0 {
+	if count := countNotifications(t, dbConn); count != 0 {
 		t.Fatalf("expected 0 self-notifications, got %d", count)
 	}
 }
 
 func TestNotification_OnComment(t *testing.T) {
-	db := setupTestDB(t)
+	dbConn := setupTestDB(t)
 	ctx := context.Background()
 
-	authorID := createTestUser(t, db, "author")
-	userID := createTestUser(t, db, "user")
-	postID := createTestPost(t, db, authorID)
+	authorID, _ := createTestUser(t, dbConn, "author")
+	userID, _ := createTestUser(t, dbConn, "user")
+	postID := createTestPost(t, dbConn, authorID)
 
-	_, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+	_, err := repository.CreateComment(ctx, dbConn, repository.CreateCommentInput{
 		PostID: postID,
 		UserID: userID,
 		Body:   "hello",
@@ -136,7 +138,7 @@ func TestNotification_OnComment(t *testing.T) {
 		t.Fatalf("create comment: %v", err)
 	}
 
-	if count := countNotifications(t, db); count != 1 {
+	if count := countNotifications(t, dbConn); count != 1 {
 		t.Fatalf("expected 1 notification for comment, got %d", count)
 	}
 }

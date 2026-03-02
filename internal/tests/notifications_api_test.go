@@ -1,4 +1,4 @@
-// internal/tests/notifications_api_test.go
+// tests/notifications_api_test.go
 package tests
 
 import (
@@ -12,10 +12,10 @@ import (
 )
 
 type notificationsResponse struct {
-	Data []any `json:"data"`
-	Meta struct {
-		UnreadCount int `json:"unread_count"`
-	} `json:"meta"`
+	Data struct {
+		Notifications []any `json:"notifications"`
+		UnreadCount   int   `json:"unread_count"`
+	} `json:"data"`
 }
 
 func TestNotifications_AuthRequired(t *testing.T) {
@@ -35,18 +35,17 @@ func TestNotifications_GetAndUnreadCount(t *testing.T) {
 	h, database := newTestAPI(t)
 	ctx := context.Background()
 
-	author := createTestUser(t, database, "author")
-	user := createTestUser(t, database, "user")
-	post := createTestPost(t, database, author)
+	authorID, authorEmail := createTestUser(t, database, "author")
+	userID, _ := createTestUser(t, database, "user")
+	postID := createTestPost(t, database, authorID)
 
-	// user likes author's post
-	_, err := repository.ToggleReaction(ctx, database, user, post, 1, "post")
+	_, err := repository.ToggleReaction(ctx, database, userID, postID, 1, "post")
 	if err != nil {
 		t.Fatalf("toggle reaction: %v", err)
 	}
 
-	// LOGIN AS AUTHOR (recipient!)
-	token := loginTestUser(t, h, "author")
+	// Login with EMAIL
+	token := loginTestUserByEmail(t, h, authorEmail)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/notifications", nil)
 	req.Header.Set("Cookie", "session_token="+token)
@@ -63,8 +62,12 @@ func TestNotifications_GetAndUnreadCount(t *testing.T) {
 		t.Fatalf("invalid json: %v", err)
 	}
 
-	if resp.Meta.UnreadCount != 1 {
-		t.Fatalf("expected unread_count 1, got %d", resp.Meta.UnreadCount)
+	if resp.Data.UnreadCount != 1 {
+		t.Fatalf("expected unread_count 1, got %d", resp.Data.UnreadCount)
+	}
+
+	if len(resp.Data.Notifications) != 1 {
+		t.Fatalf("expected 1 notification in list, got %d", len(resp.Data.Notifications))
 	}
 }
 
@@ -72,13 +75,13 @@ func TestNotifications_ReadOne(t *testing.T) {
 	h, database := newTestAPI(t)
 	ctx := context.Background()
 
-	author := createTestUser(t, database, "author")
-	user := createTestUser(t, database, "user")
-	post := createTestPost(t, database, author)
+	authorID, authorEmail := createTestUser(t, database, "author")
+	userID, _ := createTestUser(t, database, "user")
+	postID := createTestPost(t, database, authorID)
 
-	_, _ = repository.ToggleReaction(ctx, database, user, post, 1, "post")
+	_, _ = repository.ToggleReaction(ctx, database, userID, postID, 1, "post")
 
-	token := loginTestUser(t, h, "author")
+	token := loginTestUserByEmail(t, h, authorEmail)
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/v1/notifications/1/read", nil)
 	req.Header.Set("Cookie", "session_token="+token)
@@ -86,8 +89,8 @@ func TestNotifications_ReadOne(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rec.Code)
 	}
 }
 
@@ -95,13 +98,13 @@ func TestNotifications_ReadAll(t *testing.T) {
 	h, database := newTestAPI(t)
 	ctx := context.Background()
 
-	author := createTestUser(t, database, "author")
-	user := createTestUser(t, database, "user")
-	post := createTestPost(t, database, author)
+	authorID, authorEmail := createTestUser(t, database, "author")
+	userID, _ := createTestUser(t, database, "user")
+	postID := createTestPost(t, database, authorID)
 
-	_, _ = repository.ToggleReaction(ctx, database, user, post, 1, "post")
+	_, _ = repository.ToggleReaction(ctx, database, userID, postID, 1, "post")
 
-	token := loginTestUser(t, h, "author")
+	token := loginTestUserByEmail(t, h, authorEmail)
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/v1/notifications/read-all", nil)
 	req.Header.Set("Cookie", "session_token="+token)
@@ -109,7 +112,7 @@ func TestNotifications_ReadAll(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rec.Code)
 	}
 }
