@@ -3,6 +3,7 @@ import { initHeader } from "./header.js";
 import { Auth } from "./auth.js";
 import { loadAuthModal } from "./auth-modal.js";
 import { closeAuthModal } from "./auth-modal.js";
+import { initSettings } from "./settings.js";
 
 (async function bootstrap() {
   await loadAuthModal();
@@ -12,6 +13,7 @@ import { closeAuthModal } from "./auth-modal.js";
     Auth.startSessionWatcher();
   }
 
+  initSettings();
   initHeader();
 })();
 
