@@ -101,7 +101,7 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 			Page:    page,
 			PerPage: perPage,
 		},
-		userID, // ⭐ pass userID
+		userID,
 	)
 	if err != nil {
 		log.Printf("failed to list posts: %v", err)
@@ -1096,7 +1096,7 @@ func (p *PostsHandler) ListDislikedPosts(w http.ResponseWriter, r *http.Request)
 			PerPage:  perPage,
 			Reaction: repository.ReactionDislike,
 		},
-		userID, // 👈 FIX: added viewerID
+		userID,
 	)
 	if err != nil {
 		log.Printf("failed to list disliked posts: %v", err)

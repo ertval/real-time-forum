@@ -584,7 +584,6 @@ func ListPostsByUserReaction(
 		return ListPostsByUserReactionResult{}, err
 	}
 
-	// ⭐ CORRECT hydration using posts + userID
 	if err := attachPostReactions(ctx, db, posts, userID); err != nil {
 		return ListPostsByUserReactionResult{}, err
 	}
