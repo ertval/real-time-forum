@@ -128,18 +128,26 @@ func MarkNotificationRead(
 	db *sql.DB,
 	userID,
 	notificationID int64,
-) error {
+) (bool, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, notificationsQueryTimeout)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		UPDATE notifications
 		SET is_read = 1
 		WHERE id = ? AND recipient_id = ?
 	`, notificationID, userID)
+	if err != nil {
+		return false, err
+	}
 
-	return err
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return rows > 0, nil
 }
 
 func MarkAllNotificationsRead(

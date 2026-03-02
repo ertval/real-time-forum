@@ -215,6 +215,44 @@ func TestAPIDraftCreate_AllowsExtensionMimeMismatchWhenDetectedTypeSupported(t *
 	}
 }
 
+func TestAPIDraftByID_InvalidID_BadRequest(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	paths := []string{
+		"/api/v1/posts/draft/abc",
+		"/api/v1/posts/draft/0",
+		"/api/v1/posts/draft/-1",
+		"/api/v1/posts/draft/",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(
+				http.MethodPut,
+				path,
+				strings.NewReader(`{"title":"Draft","body":"Body","category_ids":[1],"manual":true}`),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Cookie", "session_token="+token)
+
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+			}
+
+			apiErr := decodeErrorEnvelope(t, rec)
+			if apiErr == nil || apiErr.Code != "BAD_REQUEST" {
+				t.Fatalf("expected BAD_REQUEST error, got %+v body=%s", apiErr, rec.Body.String())
+			}
+		})
+	}
+}
+
 func TestCreatePostTemplate_HasImagePreviewControls(t *testing.T) {
 	path := "../../web/templates/create-post.html"
 	b, err := os.ReadFile(path)

@@ -3,7 +3,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -14,7 +13,7 @@ func resolveCommentRoute(w http.ResponseWriter, r *http.Request) (commentID int6
 		notFound(w, r)
 		return 0, "", false
 	}
-	id, err := strconv.ParseInt(parts[0], 10, 64)
+	id, err := parsePositiveID(parts[0])
 	if err != nil {
 		WriteError(w, r, NewError("BAD_REQUEST", "invalid comment id", http.StatusBadRequest))
 		return 0, "", false
