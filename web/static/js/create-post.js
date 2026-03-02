@@ -308,13 +308,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         await refreshDraftState();
         imagePicker.setPersistedUrl(draftImageURL);
 
-        // Manual draft save → play sound + redirect to My Posts
+        // Manual draft save → play sound + redirect to My activity
         playUpload();
         uiNotify("Draft saved successfully.", { type: "success" });
 
         shouldReleaseLock = false;
         setTimeout(() => {
-          window.location.href = "/my-posts";
+          window.location.href = "/activity";
         }, 750);
 
         return;

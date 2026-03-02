@@ -28,6 +28,7 @@ type Post struct {
 	Status     string         `json:"status"`
 	Likes      int            `json:"likes"`
 	Dislikes   int            `json:"dislikes"`
+	MyReaction int            `json:"my_reaction"`
 	Categories []PostCategory `json:"categories"`
 }
 
@@ -50,7 +51,7 @@ type ListPostsResult struct {
 	Total int
 }
 
-func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsResult, error) {
+func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams, userID int64) (ListPostsResult, error) {
 	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -69,7 +70,7 @@ func ListPosts(ctx context.Context, db *sql.DB, p ListPostsParams) (ListPostsRes
 	if err := attachPostCategories(ctx, db, posts); err != nil {
 		return ListPostsResult{}, err
 	}
-	if err := attachPostReactions(ctx, db, posts); err != nil {
+	if err := attachPostReactions(ctx, db, posts, userID); err != nil {
 		return ListPostsResult{}, err
 	}
 
@@ -360,6 +361,7 @@ func ListPostsByCategory(
 	ctx context.Context,
 	db *sql.DB,
 	p ListPostsByCategoryParams,
+	userID int64,
 ) (ListPostsByCategoryResult, error) {
 
 	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
@@ -426,7 +428,7 @@ func ListPostsByCategory(
 	if err := attachPostCategories(ctx, db, posts); err != nil {
 		return ListPostsByCategoryResult{}, err
 	}
-	if err := attachPostReactions(ctx, db, posts); err != nil {
+	if err := attachPostReactions(ctx, db, posts, userID); err != nil {
 		return ListPostsByCategoryResult{}, err
 	}
 
@@ -453,6 +455,7 @@ func ListPostsByAuthor(
 	ctx context.Context,
 	db *sql.DB,
 	p ListPostsByAuthorParams,
+	userID int64,
 ) (ListPostsByAuthorResult, error) {
 
 	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
@@ -460,7 +463,7 @@ func ListPostsByAuthor(
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// Build WHERE clause + args (shared by COUNT and SELECT)
+	// Build WHERE
 	where := "WHERE p.author_id = ?"
 	args := []any{p.AuthorID}
 
@@ -471,33 +474,32 @@ func ListPostsByAuthor(
 
 	var total int
 	if err := db.QueryRowContext(ctx, `
-		SELECT COUNT(*)
-		FROM posts p 
-	`+where, args...).Scan(&total); err != nil {
+        SELECT COUNT(*)
+        FROM posts p
+    `+where, args...).Scan(&total); err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
 
 	offset := (p.Page - 1) * p.PerPage
-
 	selectArgs := append(append([]any{}, args...), p.PerPage, offset)
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT
-			p.id,
-			p.author_id,
-			u.username,
-			p.title,
-			p.image_url,
-			p.body,
-			p.created_at,
-			p.updated_at,
-			p.status
-		FROM posts p
-		JOIN users u ON u.id = p.author_id
-		`+where+`
-		ORDER BY p.created_at DESC
-		LIMIT ? OFFSET ?
-	`, selectArgs...)
+        SELECT
+            p.id,
+            p.author_id,
+            u.username,
+            p.title,
+            p.image_url,
+            p.body,
+            p.created_at,
+            p.updated_at,
+            p.status
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        `+where+`
+        ORDER BY p.created_at DESC
+        LIMIT ? OFFSET ?
+    `, selectArgs...)
 	if err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
@@ -507,6 +509,7 @@ func ListPostsByAuthor(
 	for rows.Next() {
 		var post Post
 		var imageURL sql.NullString
+
 		if err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
@@ -520,16 +523,19 @@ func ListPostsByAuthor(
 		); err != nil {
 			return ListPostsByAuthorResult{}, err
 		}
+
 		if imageURL.Valid {
 			post.ImageURL = &imageURL.String
 		}
+
 		posts = append(posts, post)
 	}
 
 	if err := attachPostCategories(ctx, db, posts); err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
-	if err := attachPostReactions(ctx, db, posts); err != nil {
+
+	if err := attachPostReactions(ctx, db, posts, userID); err != nil {
 		return ListPostsByAuthorResult{}, err
 	}
 
@@ -556,6 +562,7 @@ func ListPostsByUserReaction(
 	ctx context.Context,
 	db *sql.DB,
 	p ListPostsByUserReactionParams,
+	userID int64,
 ) (ListPostsByUserReactionResult, error) {
 
 	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
@@ -576,7 +583,8 @@ func ListPostsByUserReaction(
 	if err := attachPostCategories(ctx, db, posts); err != nil {
 		return ListPostsByUserReactionResult{}, err
 	}
-	if err := attachPostReactions(ctx, db, posts); err != nil {
+
+	if err := attachPostReactions(ctx, db, posts, userID); err != nil {
 		return ListPostsByUserReactionResult{}, err
 	}
 
