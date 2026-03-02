@@ -213,3 +213,17 @@ ON oauth_users(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_notifications_unread
   ON notifications(recipient_id, is_read);
+
+  -- ===============================================================
+-- NOTIFICATION UNIQUENESS (ANTI-SPAM)
+-- ===============================================================
+
+-- One notification per actor per post per type
+CREATE UNIQUE INDEX IF NOT EXISTS ux_notification_post
+  ON notifications(actor_id, recipient_id, post_id, type)
+  WHERE post_id IS NOT NULL;
+
+-- One notification per actor per comment per type
+CREATE UNIQUE INDEX IF NOT EXISTS ux_notification_comment
+  ON notifications(actor_id, recipient_id, comment_id, type)
+  WHERE comment_id IS NOT NULL;

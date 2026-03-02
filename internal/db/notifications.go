@@ -58,6 +58,7 @@ func InsertNotification(
 		INSERT INTO notifications
 			(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
 		VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
+		ON CONFLICT DO NOTHING
 	`
 
 	_, err := db.ExecContext(ctx, query,
@@ -120,6 +121,7 @@ func handleReactionNotificationTx(
 		INSERT INTO notifications
 			(recipient_id, actor_id, type, post_id, comment_id, created_at, is_read)
 		VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), 0)
+		ON CONFLICT DO NOTHING
 	`
 
 	_, err := tx.ExecContext(
