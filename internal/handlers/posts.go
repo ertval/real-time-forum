@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	repository "forum/internal/db"
+	"forum/internal/middleware"
 )
 
 type PostsHandler struct {
@@ -50,6 +51,9 @@ func (p *PostsHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	page, perPage := sanitizePagination(r)
 
+	// Get logged-in user ID (0 if guest)
+	userID, _ := middleware.GetUserID(r.Context())
+
 	// Filter by category (optional)
 	if categoryIDStr := r.URL.Query().Get("category_id"); categoryIDStr != "" {
 		categoryID, err := strconv.ParseInt(categoryIDStr, 10, 64)
@@ -66,6 +70,7 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 				Page:       page,
 				PerPage:    perPage,
 			},
+			userID,
 		)
 		if err != nil {
 			log.Printf("failed to list posts by category: %v", err)
@@ -96,6 +101,7 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 			Page:    page,
 			PerPage: perPage,
 		},
+		userID,
 	)
 	if err != nil {
 		log.Printf("failed to list posts: %v", err)
@@ -115,17 +121,6 @@ func (p *PostsHandler) listPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteOK(w, result.Posts, meta)
-}
-
-// ListPublicPosts handles:
-// GET /api/v1/posts/public
-func (p *PostsHandler) ListPublicPosts(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		MethodNotAllowed(w, r)
-		return
-	}
-
-	p.listPosts(w, r)
 }
 
 /*-------------
@@ -685,6 +680,133 @@ func (p *PostsHandler) deletePost(w http.ResponseWriter, r *http.Request, postID
 	WriteNoContent(w)
 }
 
+/*----------
+  MY POSTS
+----------*/
+
+func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	page, perPage := sanitizePagination(r)
+
+	statusPtr, err := parsePostStatusFilter(r)
+	if err != nil {
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
+		return
+	}
+
+	result, err := repository.ListPostsByAuthor(
+		r.Context(),
+		p.conn,
+		repository.ListPostsByAuthorParams{
+			AuthorID: userID,
+			Page:     page,
+			PerPage:  perPage,
+			Status:   statusPtr,
+		},
+		userID,
+	)
+	if err != nil {
+		log.Printf("failed to list posts by author: %v", err)
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing user posts", http.StatusInternalServerError))
+		return
+	}
+
+	totalPages := (result.Total + perPage - 1) / perPage
+
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      result.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, result.Posts, meta)
+}
+
+func (p *PostsHandler) ListLikedPosts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	page, perPage := sanitizePagination(r)
+
+	result, err := repository.ListPostsByUserReaction(
+		r.Context(),
+		p.conn,
+		repository.ListPostsByUserReactionParams{
+			UserID:   userID,
+			Page:     page,
+			PerPage:  perPage,
+			Reaction: repository.ReactionLike,
+		},
+		userID,
+	)
+	if err != nil {
+		log.Printf("failed to list liked posts: %v", err)
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing liked posts", http.StatusInternalServerError))
+		return
+	}
+
+	totalPages := (result.Total + perPage - 1) / perPage
+
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      result.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, result.Posts, meta)
+}
+
+func (p *PostsHandler) ListDislikedPosts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	page, perPage := sanitizePagination(r)
+
+	result, err := repository.ListPostsByUserReaction(
+		r.Context(),
+		p.conn,
+		repository.ListPostsByUserReactionParams{
+			UserID:   userID,
+			Page:     page,
+			PerPage:  perPage,
+			Reaction: repository.ReactionDislike,
+		},
+		userID,
+	)
+	if err != nil {
+		log.Printf("failed to list disliked posts: %v", err)
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing disliked posts", http.StatusInternalServerError))
+		return
+	}
+
+	totalPages := (result.Total + perPage - 1) / perPage
+
+	meta := &Meta{
+		Pagination: &PaginationMeta{
+			Page:       page,
+			PerPage:    perPage,
+			Total:      result.Total,
+			TotalPages: totalPages,
+		},
+	}
+
+	WriteOK(w, result.Posts, meta)
+}
+
 /*----------------------------------
   POST NAVIGATION (CATEGORY AWARE)
 ----------------------------------*/
@@ -810,6 +932,8 @@ func (p *PostsHandler) handleReaction(
 func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, postID int64) {
 	page, perPage := sanitizePagination(r)
 
+	viewerID, _ := middleware.GetUserID(r.Context())
+
 	listResult, err := repository.ListCommentsByPost(
 		r.Context(),
 		p.conn,
@@ -818,6 +942,7 @@ func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, post
 			Page:    page,
 			PerPage: perPage,
 		},
+		viewerID,
 	)
 	if err != nil {
 		log.Printf("failed to list comments: %v", err)
@@ -980,128 +1105,4 @@ func (p *PostsHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.createComment(w, r, postID)
-}
-
-/*----------
-  MY POSTS
-----------*/
-
-func (p *PostsHandler) ListMyPosts(w http.ResponseWriter, r *http.Request) {
-	userID, ok := requireUserID(w, r)
-	if !ok {
-		return
-	}
-
-	page, perPage := sanitizePagination(r)
-
-	statusPtr, err := parsePostStatusFilter(r)
-	if err != nil {
-		WriteError(w, r, NewError("BAD_REQUEST", "invalid status", http.StatusBadRequest))
-		return
-	}
-
-	result, err := repository.ListPostsByAuthor(
-		r.Context(),
-		p.conn,
-		repository.ListPostsByAuthorParams{
-			AuthorID: userID,
-			Page:     page,
-			PerPage:  perPage,
-			Status:   statusPtr,
-		},
-	)
-	if err != nil {
-		log.Printf("failed to list posts by author: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing user posts", http.StatusInternalServerError))
-		return
-	}
-
-	totalPages := (result.Total + perPage - 1) / perPage
-
-	meta := &Meta{
-		Pagination: &PaginationMeta{
-			Page:       page,
-			PerPage:    perPage,
-			Total:      result.Total,
-			TotalPages: totalPages,
-		},
-	}
-
-	WriteOK(w, result.Posts, meta)
-}
-
-func (p *PostsHandler) ListLikedPosts(w http.ResponseWriter, r *http.Request) {
-	userID, ok := requireUserID(w, r)
-	if !ok {
-		return
-	}
-
-	page, perPage := sanitizePagination(r)
-
-	result, err := repository.ListPostsByUserReaction(
-		r.Context(),
-		p.conn,
-		repository.ListPostsByUserReactionParams{
-			UserID:   userID,
-			Page:     page,
-			PerPage:  perPage,
-			Reaction: repository.ReactionLike,
-		},
-	)
-	if err != nil {
-		log.Printf("failed to list liked posts: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing liked posts", http.StatusInternalServerError))
-		return
-	}
-
-	totalPages := (result.Total + perPage - 1) / perPage
-
-	meta := &Meta{
-		Pagination: &PaginationMeta{
-			Page:       page,
-			PerPage:    perPage,
-			Total:      result.Total,
-			TotalPages: totalPages,
-		},
-	}
-
-	WriteOK(w, result.Posts, meta)
-}
-
-func (p *PostsHandler) ListDislikedPosts(w http.ResponseWriter, r *http.Request) {
-	userID, ok := requireUserID(w, r)
-	if !ok {
-		return
-	}
-
-	page, perPage := sanitizePagination(r)
-
-	result, err := repository.ListPostsByUserReaction(
-		r.Context(),
-		p.conn,
-		repository.ListPostsByUserReactionParams{
-			UserID:   userID,
-			Page:     page,
-			PerPage:  perPage,
-			Reaction: repository.ReactionDislike,
-		},
-	)
-	if err != nil {
-		log.Printf("failed to list disliked posts: %v", err)
-		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error listing disliked posts", http.StatusInternalServerError))
-		return
-	}
-
-	totalPages := (result.Total + perPage - 1) / perPage
-
-	meta := &Meta{
-		Pagination: &PaginationMeta{
-			Page:       page,
-			PerPage:    perPage,
-			Total:      result.Total,
-			TotalPages: totalPages,
-		},
-	}
-
-	WriteOK(w, result.Posts, meta)
 }

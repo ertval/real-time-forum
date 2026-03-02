@@ -388,10 +388,18 @@ export function reactionTemplate(item, isComment = false) {
     ? `data-comment-id="${item.id}"`
     : `data-post-id="${item.id}"`;
 
+  const isLiked = item.my_reaction === 1;
+  const isDisliked = item.my_reaction === -1;
+
   return `
     <div class="reaction">
       <label class="reaction-toggle reaction-toggle--like" aria-label="Like">
-        <input type="checkbox" data-reaction="like" ${idAttr}>
+        <input 
+          type="checkbox" 
+          data-reaction="like" 
+          ${idAttr}
+          ${isLiked ? "checked" : ""}
+        >
         <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
           <path d="M29.845,17.099l-2.489,8.725C26.989,27.105,25.804,28,24.473,28H11c-0.553,0-1-0.448-1-1V13
           c0-0.215,0.069-0.425,0.198-0.597l5.392-7.24C16.188,4.414,17.05,4,17.974,4C19.643,4,21,5.357,21,7.026V12h5.002
@@ -405,7 +413,12 @@ export function reactionTemplate(item, isComment = false) {
 
     <div class="reaction">
       <label class="reaction-toggle reaction-toggle--dislike" aria-label="Dislike">
-        <input type="checkbox" data-reaction="dislike" ${idAttr}>
+        <input 
+          type="checkbox" 
+          data-reaction="dislike" 
+          ${idAttr}
+          ${isDisliked ? "checked" : ""}
+        >
         <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
           <path d="M2.156,14.901l2.489-8.725C5.012,4.895,6.197,4,7.528,4h13.473C21.554,4,22,4.448,22,5v14
           c0,0.215-0.068,0.425-0.197,0.597l-5.392,7.24C15.813,27.586,14.951,28,14.027,28c-1.669,0-3.026-1.357-3.026-3.026V20H5.999
