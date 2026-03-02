@@ -11,30 +11,37 @@
 
   <div class="page-actions">
 
-    <a id="login-btn" class="btn btn-secondary" href="/login">
+    <!-- GUEST ONLY -->
+    <a
+      id="login-btn"
+      class="btn btn-secondary"
+      href="/login"
+    >
       Login
     </a>
 
-    <button
-      id="logout-btn"
-      class="btn btn-secondary"
-      data-logout-button
-      data-logout-url="/api/v1/users/logout"
-      type="button"
+    <!-- AUTH ONLY -->
+    <a
+      id="my-activity-btn"
+      class="btn btn-primary auth-only"
+      href="/activity"
     >
-      Logout
-    </button>
-
-    <a id="my-activity-btn" class="btn btn-primary" href="/activity" style="display:none">
       My Activity
     </a>
 
-    <a id="create-post-btn" class="btn btn-primary" href="/create-post">
+    <a
+      id="create-post-btn"
+      class="btn btn-primary"
+      href="/create-post"
+    >
       Create post
     </a>
 
-    <!-- NOTIFICATIONS -->
-    <div class="notification-wrapper">
+    <!-- AUTH ONLY - NOTIFICATIONS -->
+    <div
+      class="notification-wrapper auth-only"
+      id="notification-wrapper"
+    >
       <button
         id="notification-bell"
         class="icon-btn"
@@ -42,10 +49,16 @@
         type="button"
       >
         🔔
-        <span id="notification-badge" class="notification-badge hidden">0</span>
+        <span
+          id="notification-badge"
+          class="notification-badge hidden"
+        >0</span>
       </button>
 
-      <div id="notification-dropdown" class="notification-dropdown hidden">
+      <div
+        id="notification-dropdown"
+        class="notification-dropdown hidden"
+      >
         <div class="notification-header">
           Notifications
         </div>
@@ -53,10 +66,10 @@
       </div>
     </div>
 
-    <!-- SETTINGS BUTTON -->
+    <!-- AUTH ONLY - SETTINGS -->
     <button
       id="settings-btn"
-      class="icon-btn"
+      class="icon-btn auth-only"
       aria-label="Settings"
       type="button"
     >

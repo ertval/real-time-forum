@@ -1,3 +1,5 @@
+/* /web/static/css/header.css */
+
 /* --------------------------------------------------
    HEADER (shared across all pages)
 -------------------------------------------------- */
@@ -45,12 +47,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-/* Header buttons controlled by JS */
-#login-btn,
-#logout-btn {
-    display: none;
 }
 
 /* Settings icon button */
@@ -176,4 +172,19 @@
 /* Ensure emojis align better */
 .notification-item::after {
     vertical-align: middle;
+}
+
+/* Hide auth-only by default */
+.auth-only {
+  display: none;
+}
+
+/* Show auth-only when logged in */
+body.is-authenticated .auth-only {
+  display: inline-flex;
+}
+
+/* Hide login button when logged in */
+body.is-authenticated #login-btn {
+  display: none;
 }
