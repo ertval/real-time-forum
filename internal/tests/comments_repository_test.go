@@ -194,6 +194,83 @@ func TestUpdateComment_NoFieldsIsNoop(t *testing.T) {
 	}
 }
 
+func TestUpdateComment_ImageURLUpdateAndRemove(t *testing.T) {
+	db := newTestDB(t)
+	defer db.Close()
+
+	userID, postID := seedUserAndPost(t, db)
+	ctx := context.Background()
+
+	initialImageURL := "/static/uploads/initial-comment.jpg"
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+		PostID:   postID,
+		UserID:   userID,
+		Body:     "hello with image",
+		ImageURL: &initialImageURL,
+	})
+	if err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+
+	updatedImageURL := "/static/uploads/updated-comment.png"
+	if err := repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{
+		ImageURL:       &updatedImageURL,
+		HasImageUpdate: true,
+	}); err != nil {
+		t.Fatalf("UpdateComment image replace: %v", err)
+	}
+
+	updatedComment, err := repository.GetCommentWithAuthor(ctx, db, commentID)
+	if err != nil {
+		t.Fatalf("GetCommentWithAuthor after image replace: %v", err)
+	}
+	if updatedComment.ImageURL == nil || *updatedComment.ImageURL != updatedImageURL {
+		t.Fatalf("expected replaced image_url %q, got %v", updatedImageURL, updatedComment.ImageURL)
+	}
+
+	if err := repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{
+		ImageURL:       nil,
+		HasImageUpdate: true,
+	}); err != nil {
+		t.Fatalf("UpdateComment image remove: %v", err)
+	}
+
+	removedImageComment, err := repository.GetCommentWithAuthor(ctx, db, commentID)
+	if err != nil {
+		t.Fatalf("GetCommentWithAuthor after image remove: %v", err)
+	}
+	if removedImageComment.ImageURL != nil {
+		t.Fatalf("expected nil image_url after remove, got %v", removedImageComment.ImageURL)
+	}
+}
+
+func TestUpdateComment_RemoveImageWithoutBodyFails(t *testing.T) {
+	db := newTestDB(t)
+	defer db.Close()
+
+	userID, postID := seedUserAndPost(t, db)
+	ctx := context.Background()
+
+	initialImageURL := "/static/uploads/image-only-comment.jpg"
+	commentID, err := repository.CreateComment(ctx, db, repository.CreateCommentInput{
+		PostID:   postID,
+		UserID:   userID,
+		Body:     "",
+		ImageURL: &initialImageURL,
+	})
+	if err != nil {
+		t.Fatalf("CreateComment image-only: %v", err)
+	}
+
+	err = repository.UpdateComment(ctx, db, commentID, repository.UpdateCommentInput{
+		ImageURL:       nil,
+		HasImageUpdate: true,
+	})
+	if err == nil {
+		t.Fatalf("expected error when removing image from image-only comment")
+	}
+}
+
 func TestCreateComment_FKEnforced(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()

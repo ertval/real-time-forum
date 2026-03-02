@@ -447,12 +447,16 @@ function extractArray(payload) {
 }
 
 function statusToggleTemplate(post) {
-  if (!post.status) return "";
+  const currentStatus =
+    typeof post?.status === "string" && post.status.toLowerCase() === "draft"
+      ? "draft"
+      : "published";
+
   return `
     <button class="btn btn-outline btn-sm post-status-toggle"
       data-post-id="${post.id}"
-      data-current-status="${post.status}">
-      ${post.status === "draft" ? "Publish" : "Draft"}
+      data-current-status="${currentStatus}">
+      ${currentStatus === "draft" ? "Publish" : "Draft"}
     </button>
   `;
 }
