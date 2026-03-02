@@ -223,7 +223,9 @@ func GetCommentWithAuthor(
 ----------------*/
 
 type UpdateCommentInput struct {
-	Body *string
+	Body           *string
+	ImageURL       *string
+	HasImageUpdate bool
 }
 
 func UpdateComment(ctx context.Context, db *sql.DB, id int64, in UpdateCommentInput) error {
@@ -234,6 +236,11 @@ func UpdateComment(ctx context.Context, db *sql.DB, id int64, in UpdateCommentIn
 	if in.Body != nil {
 		setParts = append(setParts, "body = ?")
 		args = append(args, *in.Body)
+	}
+
+	if in.HasImageUpdate {
+		setParts = append(setParts, "image_url = ?")
+		args = append(args, in.ImageURL)
 	}
 
 	if len(setParts) == 0 {

@@ -111,6 +111,14 @@
   gap: 12px;
 }
 
+.activity-comment-head-right {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .activity-comment-post-wrap p {
   margin: 0 0 4px;
 }
@@ -130,6 +138,12 @@
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.activity-comment-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .activity-comment-image-wrap {
@@ -155,6 +169,35 @@
   font-weight: 600;
 }
 
+.activity-comment-reactions.comment {
+  margin-top: 8px;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.activity-comment.is-editing .activity-comment-footer {
+  display: none;
+}
+
+.activity-comment-edit-form {
+  margin-top: 2px;
+}
+
+.activity-comment-edit-form textarea {
+  min-height: 88px;
+}
+
+.activity-comment-edit-preview {
+  width: min(100%, 360px);
+}
+
+.activity-comment-edit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 #activity-pagination {
   margin-top: 28px;
 }
@@ -162,5 +205,10 @@
 @media (max-width: 768px) {
   .activity-comment-head {
     flex-direction: column;
+  }
+
+  .activity-comment-head-right {
+    width: 100%;
+    justify-content: space-between;
   }
 }
