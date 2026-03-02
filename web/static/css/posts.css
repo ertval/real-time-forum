@@ -290,21 +290,20 @@ body.image-lightbox-open {
   margin-bottom: 4px;
 }
 
-.comment-body,
-.comment-text {
-  font-size: 14px;
-  margin: 0;
-}
-
+/* Critical for flex wrapping */
 .comment-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0; /* prevents flex overflow */
 }
 
 .comment-text {
+  font-size: 14px;
   margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;   
+  word-break: break-word;    
 }
 
 .comment-image {
@@ -471,14 +470,16 @@ body.image-lightbox-open {
 .status-filter {
   width: 190px;
   min-height: 40px;
-  padding: 8px 12px;.btn-danger {
+  padding: 8px 12px;
+}
+
+.btn-danger {
   border: 1px solid rgba(220, 38, 38, 0.35);
   background: rgba(220, 38, 38, 0.08);
 }
 
-  .btn-danger:hover {
-    background: rgba(220, 38, 38, 0.14);
-  }
+.btn-danger:hover {
+  background: rgba(220, 38, 38, 0.14);
 }
 
 /* -----------------------------------
