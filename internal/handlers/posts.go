@@ -816,8 +816,7 @@ func (p *PostsHandler) handleReaction(
 func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, postID int64) {
 	page, perPage := sanitizePagination(r)
 
-	// Get viewer ID (0 if guest)
-	userID, _ := middleware.GetUserID(r.Context())
+	viewerID, _ := middleware.GetUserID(r.Context())
 
 	listResult, err := repository.ListCommentsByPost(
 		r.Context(),
@@ -827,7 +826,7 @@ func (p *PostsHandler) listComments(w http.ResponseWriter, r *http.Request, post
 			Page:    page,
 			PerPage: perPage,
 		},
-		userID, // pass viewerID
+		viewerID,
 	)
 	if err != nil {
 		log.Printf("failed to list comments: %v", err)

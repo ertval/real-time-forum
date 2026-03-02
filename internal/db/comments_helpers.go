@@ -134,7 +134,6 @@ func attachCommentMyReactions(
 		return nil
 	}
 
-	// Collect comment IDs
 	commentIDs := make([]int64, 0, len(comments))
 	index := make(map[int64]*Comment)
 
@@ -144,10 +143,10 @@ func attachCommentMyReactions(
 	}
 
 	query := `
-		SELECT comment_id, reaction
+		SELECT comment_id, value
 		FROM reactions
 		WHERE user_id = ?
-		  AND target_type = 'comment'
+		  AND comment_id IS NOT NULL
 		  AND comment_id IN (` + placeholders(len(commentIDs)) + `)
 	`
 
