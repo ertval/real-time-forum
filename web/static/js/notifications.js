@@ -78,6 +78,7 @@ function updateBadge(count) {
     badge.textContent = count;
     badge.classList.remove("hidden");
   } else {
+    badge.textContent = "";
     badge.classList.add("hidden");
   }
 }
