@@ -11,20 +11,19 @@ let pollingStarted = false;
 let bellInitialized = false;
 
 export async function initHeader() {
-  await Auth.init();
 
   setupForumLogo();
 
   const greetingEl = document.getElementById("greeting");
   const loginBtn = document.getElementById("login-btn");
-  const logoutBtn = document.getElementById("logout-btn");
+
   const createPostBtn = document.getElementById("create-post-btn");
 
-  const authedOnlyEls = [,
+  const authedOnlyEls = [
     document.getElementById("my-activity-btn"),
   ].filter(Boolean);
 
-  if (!greetingEl || !loginBtn || !logoutBtn) return;
+  if (!greetingEl || !loginBtn) return;
 
   const isAuthed = Auth.isAuthenticated;
   const username = Auth.user?.username ?? "User";
@@ -44,33 +43,26 @@ export async function initHeader() {
       bellInitialized = true;
     }
   } else {
-    if (pollingStarted) {
-      stopNotificationPolling();
-      pollingStarted = false;
-    }
+  if (pollingStarted) {
+    stopNotificationPolling();
+    pollingStarted = false;
   }
+
+  bellInitialized = false;
+}
 
   /* -------------------------
      GREETING + BUTTONS
   -------------------------- */
 
   greetingEl.textContent = isAuthed
-    ? `Hello, ${username}`
-    : "Hello, Guest";
+    ? `Welcome back, ${username}`
+    : "Welcome back, Guest";
 
   greetingEl.style.display = "block";
   loginBtn.style.display = isAuthed ? "none" : "inline-flex";
-  logoutBtn.style.display = isAuthed ? "inline-flex" : "none";
 
   setAuthedOnlyVisibility(authedOnlyEls, isAuthed);
-
-  /* -------------------------
-     LOGOUT
-  -------------------------- */
-
-  if (isAuthed) {
-    bindLogout(logoutBtn);
-  }
 
   /* -------------------------
      CREATE POST
@@ -121,30 +113,3 @@ function setupForumLogo() {
   }
 }
 
-/* -------------------------
-   LOGOUT
--------------------------- */
-
-function bindLogout(logoutBtn) {
-  if (!logoutBtn || logoutBtn.dataset.bound) return;
-
-  logoutBtn.dataset.bound = "1";
-
-  logoutBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-
-    await fetch("/api/v1/users/logout", {
-      method: "POST",
-      credentials: "include",
-    });
-
-    stopNotificationPolling();
-    pollingStarted = false;
-
-    Auth.checked = false;
-    Auth.isAuthenticated = false;
-    Auth.user = null;
-
-    window.location.reload();
-  });
-}
