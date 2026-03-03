@@ -46,18 +46,33 @@
       </a>
 
       <!-- NOTIFICATIONS -->
-      <button
-        id="notification-bell"
-        class="header-icon"
-        aria-label="Notifications"
-        type="button"
-      >
-        🔔
-        <span
-          id="notification-badge"
-          class="notification-badge hidden"
-        >0</span>
-      </button>
+      <div class="notification-wrapper auth-only">
+
+        <button
+          id="notification-bell"
+          class="header-icon"
+          aria-label="Notifications"
+          type="button"
+        >
+          🔔
+          <span
+            id="notification-badge"
+            class="notification-badge hidden"
+          ></span>
+        </button>
+
+        <!-- DROPDOWN -->
+        <div id="notification-dropdown" class="notification-dropdown hidden">
+          <div class="notification-header">
+            Notifications
+          </div>
+          <div id="notification-list"></div>
+        </div>
+
+          <div id="notification-list"></div>
+        </div>
+
+      </div>
 
       <!-- SETTINGS -->
       <button
