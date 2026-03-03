@@ -1,76 +1,95 @@
-/* /web/static/css/header.css */
-
 /* --------------------------------------------------
    HEADER (shared across all pages)
 -------------------------------------------------- */
 
 .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
 }
 
+/* LEFT SIDE */
 .page-title-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* force left alignment */
+  line-height: 1.1;
 }
 
 .page-title {
-    margin: 0;
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
 }
 
 /* Forum logo */
 .forum-logo {
-    color: #000;
-    text-decoration: none;
-    padding: 4px 10px;
-    border-radius: 8px;
-    transition: background-color 120ms ease;
+  display: inline-block;
+  color: #000;
+  text-decoration: none;
+  padding: 0;
+  border-radius: 6px;
 }
 
-.forum-logo:hover,
-.forum-logo:focus {
-    color: #000;
-    text-decoration: none;
-    background-color: rgba(15, 23, 42, 0.04);
-}
-
-/* Greeting */
+/* Greeting EXACTLY under Forum */
 #greeting {
-    margin: 0;
+  margin-top: 13px;
+  font-size: 16px;
+  color: #64748b;
+  font-weight: bold;
 }
 
-/* Header actions (buttons) */
+/* RIGHT SIDE ACTIONS */
 .page-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Settings icon button */
+/* Auth buttons */
+.auth-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* Icons container always keeps space */
+.right-icons {
+  display: flex;
+  gap: 8px;
+  width: 80px; /* fixed for symmetry */
+  justify-content: flex-end;
+}
+
+/* Buttons smaller + more balanced */
+.btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+/* Settings / Bell */
 .icon-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: transparent;
-    border: 1px solid rgba(0,0,0,0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 18px;
-    transition: all 120ms ease;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 120ms ease;
 }
 
 .icon-btn:hover {
-    background: rgba(15, 23, 42, 0.06);
-    transform: rotate(20deg);
+  background: rgba(15, 23, 42, 0.05);
+  transform: translateY(-1px);
 }
 
 .icon-btn:active {
-    transform: scale(0.9);
+  transform: scale(0.95);
 }
 
 /* --------------------------------------------------
@@ -78,113 +97,101 @@
 -------------------------------------------------- */
 
 .notification-wrapper {
-    position: relative;
+  position: relative;
 }
 
-/* Badge */
 .notification-badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #e11d48;
-    color: white;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 12px;
-    min-width: 18px;
-    text-align: center;
-    font-weight: 600;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #e11d48;
+  color: white;
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+  font-weight: 600;
 }
 
 .notification-badge.hidden {
-    display: none;
-}
-
-/* Dropdown container */
-.notification-dropdown {
-    position: absolute;
-    right: 0;
-    top: 42px;
-    width: 300px;
-    background: #ffffff;
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 10px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    max-height: 400px;
-    overflow-y: auto;
-    z-index: 200;
-}
-
-.notification-dropdown.hidden {
-    display: none;
-}
-
-/* Header */
-.notification-header {
-    padding: 10px 14px;
-    font-weight: 600;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-}
-
-/* Each notification row */
-.notification-item {
-    padding: 10px 14px;
-    font-size: 14px;
-    cursor: pointer;
-    line-height: 1.35;
-    transition: background 0.15s ease, opacity 0.15s ease;
-    color: #111827;
-}
-
-/* Alternate row background */
-.notification-item:nth-child(odd) {
-    background: #f8fafc;
-}
-
-.notification-item:nth-child(even) {
-    background: #ffffff;
-}
-
-/* Hover */
-.notification-item:hover {
-    background: #e2e8f0;
-}
-
-/* Unread state */
-.notification-item.unread {
-    background: #f0f7ff;
-    font-weight: 600;
-}
-
-/* Bold title inside message */
-.notification-item strong {
-    font-weight: 700;
-    color: #1e293b; /* slate-800 */
-}
-
-/* Italic excerpt */
-.notification-item em {
-    font-style: italic;
-    color: #475569; /* slate-600 */
-    opacity: 0.9;
-}
-
-/* Ensure emojis align better */
-.notification-item::after {
-    vertical-align: middle;
-}
-
-/* Hide auth-only by default */
-.auth-only {
   display: none;
 }
 
-/* Show auth-only when logged in */
-body.is-authenticated .auth-only {
+.notification-dropdown {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  max-height: 380px;
+  overflow-y: auto;
+  z-index: 200;
+}
+
+.notification-dropdown.hidden {
+  display: none;
+}
+
+.notification-header {
+  padding: 10px 14px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.notification-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.15s ease;
+  color: #111827;
+}
+
+.notification-item:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.notification-item:hover {
+  background: #e2e8f0;
+}
+
+.notification-item.unread {
+  background: #f0f7ff;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------
+   AUTH VISIBILITY LOGIC
+-------------------------------------------------- */
+
+/* Hide icons but keep space */
+.right-icons .auth-only {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+body.is-authenticated .right-icons .auth-only {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Hide My Activity completely when guest */
+#my-activity-btn {
+  display: none;
+}
+
+body.is-authenticated #my-activity-btn {
   display: inline-flex;
 }
 
-/* Hide login button when logged in */
+/* Hide login when authenticated */
 body.is-authenticated #login-btn {
   display: none;
 }

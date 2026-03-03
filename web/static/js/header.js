@@ -56,8 +56,8 @@ export async function initHeader() {
   -------------------------- */
 
   greetingEl.textContent = isAuthed
-    ? `Hello, ${username}`
-    : "Hello, Guest";
+    ? `Welcome back, ${username}`
+    : "Welcome back, Guest";
 
   greetingEl.style.display = "block";
   loginBtn.style.display = isAuthed ? "none" : "inline-flex";
