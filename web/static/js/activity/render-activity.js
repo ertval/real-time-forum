@@ -126,10 +126,38 @@ function renderCommentsSection(section) {
   items.forEach(comment => {
     const commentID = Number(comment.id) || 0;
     const username = resolveUsername(comment);
+    const commentBody = typeof comment.body === "string" ? comment.body : "";
+    const commentImageURL =
+      typeof comment.image_url === "string" && comment.image_url.trim()
+        ? comment.image_url.trim()
+        : "";
+
+    const bodyMarkup = commentBody.trim()
+      ? `
+          <p class="activity-comment-body">
+            ${escapeHTML(commentBody)}
+          </p>
+        `
+      : "";
+
+    const imageMarkup = commentImageURL
+      ? `
+          <div class="activity-comment-image-wrap">
+            <img
+              class="activity-comment-image"
+              src="${escapeHTML(commentImageURL)}"
+              alt="Comment image by ${escapeHTML(username)}"
+              loading="lazy"
+            />
+          </div>
+        `
+      : "";
 
     const article = document.createElement("article");
     article.className = "activity-comment card card-pad";
     article.dataset.commentId = commentID;
+    article.dataset.commentBody = commentBody;
+    article.dataset.commentImageUrl = commentImageURL;
 
     article.innerHTML = `
       <header class="activity-comment-head">
@@ -148,9 +176,10 @@ function renderCommentsSection(section) {
       <p class="activity-comment-author muted">
         By ${escapeHTML(username)}
       </p>
-      <p class="activity-comment-body">
-        ${escapeHTML(comment.body || "")}
-      </p>
+      <div class="activity-comment-content">
+        ${bodyMarkup}
+        ${imageMarkup}
+      </div>
     `;
 
     output.appendChild(article);
