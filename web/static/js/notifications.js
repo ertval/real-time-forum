@@ -15,7 +15,6 @@ export function startNotificationPolling() {
   if (pollInterval) return;
 
   resetState();
-
   fetchNotifications();
   pollInterval = setInterval(fetchNotifications, 5000);
 }
@@ -28,7 +27,6 @@ export function stopNotificationPolling() {
 
   clearInterval(pollInterval);
   pollInterval = null;
-
   resetState();
 }
 
@@ -84,52 +82,55 @@ function updateBadge(count) {
 }
 
 /* -------------------------
-   DROPDOWN
+   DROPDOWN RENDER
 -------------------------- */
 function renderDropdown(notifications) {
-  const list = document.getElementById("notification-list");
-  if (!list) return;
+  const dropdown = document.getElementById("notification-dropdown");
+  if (!dropdown) return;
 
-  list.innerHTML = "";
+  dropdown.innerHTML = `
+    <div class="notification-header">
+      Notifications
+    </div>
+  `;
+
+  if (!notifications.length) {
+    dropdown.innerHTML += `
+      <div class="notification-empty">
+        No notifications yet.
+      </div>
+    `;
+    return;
+  }
 
   notifications.forEach(n => {
-    const postId = n.post_id;
-    const commentId = n.comment_id;
-
     const div = document.createElement("div");
     div.className = "notification-item";
     div.style.cursor = "pointer";
 
     if (!n.is_read) div.classList.add("unread");
 
-    // HTML rendering enabled
     div.innerHTML = buildMessage(n);
 
-    /* -------------------------
-       CLICK REDIRECT + MARK READ
-    -------------------------- */
     div.addEventListener("click", async () => {
       await markOneAsRead(n.id);
 
-      if (postId) {
+      if (n.post_id) {
         if (n.type === "comment") {
-          // New comment notification → highlight last comment
-          window.location.href = `/view-post/${postId}?highlight=last`;
+          window.location.href = `/view-post/${n.post_id}?highlight=last`;
           return;
         }
 
-        if (commentId) {
-          // Comment reaction → highlight specific comment
-          window.location.href = `/view-post/${postId}?highlight=${commentId}`;
+        if (n.comment_id) {
+          window.location.href = `/view-post/${n.post_id}?highlight=${n.comment_id}`;
           return;
         }
 
-        // Post like/dislike
-        window.location.href = `/view-post/${postId}`;
+        window.location.href = `/view-post/${n.post_id}`;
       }
     });
 
-    list.appendChild(div);
+    dropdown.appendChild(div);
   });
 }
 
@@ -148,7 +149,21 @@ async function markOneAsRead(id) {
 }
 
 /* -------------------------
-   TOAST LOGIC
+   MARK ALL AS READ
+-------------------------- */
+async function markAllAsRead() {
+  try {
+    await fetch(`${API_BASE}/notifications/read-all`, {
+      method: "PATCH",
+      credentials: "include",
+    });
+  } catch (err) {
+    console.error("mark-all error:", err);
+  }
+}
+
+/* -------------------------
+   TOAST + SOUND
 -------------------------- */
 function processNewNotifications(notifications) {
   notifications.forEach(n => {
@@ -163,7 +178,7 @@ function processNewNotifications(notifications) {
 
       if (!n.is_read) {
         uiNotify(buildMessage(n), { type: "info", html: true });
-        playNotification(); // Play sound only for NEW unread notifications
+        playNotification();
       }
     }
   });
@@ -226,15 +241,4 @@ export function initNotificationBell() {
       dropdown.classList.add("hidden");
     }
   });
-}
-
-async function markAllAsRead() {
-  try {
-    await fetch(`${API_BASE}/notifications/read-all`, {
-      method: "PATCH",
-      credentials: "include",
-    });
-  } catch (err) {
-    console.error("mark-all error:", err);
-  }
 }
