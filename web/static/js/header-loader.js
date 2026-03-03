@@ -34,10 +34,5 @@ window.addEventListener("message", async (e) => {
   await Auth.init();
 
   applyAuthUI();
-});
-
-/* Logout event */
-window.addEventListener("auth:changed", async () => {
-  await Auth.init();
-  applyAuthUI();
+  initHeader(); 
 });
