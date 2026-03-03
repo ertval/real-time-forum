@@ -3,7 +3,9 @@
 <header class="page-header">
   <div class="page-title-wrap">
     <h1 id="forum-title" class="page-title">
-      <a href="/" class="forum-logo">Forum</a>
+      <a href="/" class="forum-logo" aria-label="Forum home">
+        <img src="/static/img/forum-logo.png" alt="Forum">
+      </a>
     </h1>
 
     <p id="greeting" class="muted" aria-live="polite"></p>
@@ -20,61 +22,47 @@
       Login
     </a>
 
-    <!-- AUTH BUTTONS GROUP -->
-    <div class="auth-buttons">
+    <!-- AUTH ICONS GROUP -->
+    <div class="auth-buttons auth-only">
+
+      <!-- MY ACTIVITY -->
       <a
         id="my-activity-btn"
-        class="btn btn-primary auth-only"
+        class="header-icon"
         href="/activity"
+        aria-label="My activity"
       >
-        My Activity
+        <img src="/static/img/my-activity.png" alt="My activity">
       </a>
 
+      <!-- CREATE POST -->
       <a
         id="create-post-btn"
-        class="btn btn-primary"
+        class="header-icon"
         href="/create-post"
+        aria-label="Create post"
       >
-        Create post
+        <img src="/static/img/create-post.png" alt="Create post">
       </a>
-    </div>
-
-    <!-- RIGHT ICONS (RESERVED SPACE ALWAYS) -->
-    <div class="right-icons">
 
       <!-- NOTIFICATIONS -->
-      <div
-        class="notification-wrapper auth-only"
-        id="notification-wrapper"
+      <button
+        id="notification-bell"
+        class="header-icon"
+        aria-label="Notifications"
+        type="button"
       >
-        <button
-          id="notification-bell"
-          class="icon-btn"
-          aria-label="Notifications"
-          type="button"
-        >
-          🔔
-          <span
-            id="notification-badge"
-            class="notification-badge hidden"
-          >0</span>
-        </button>
-
-        <div
-          id="notification-dropdown"
-          class="notification-dropdown hidden"
-        >
-          <div class="notification-header">
-            Notifications
-          </div>
-          <div id="notification-list"></div>
-        </div>
-      </div>
+        🔔
+        <span
+          id="notification-badge"
+          class="notification-badge hidden"
+        >0</span>
+      </button>
 
       <!-- SETTINGS -->
       <button
         id="settings-btn"
-        class="icon-btn auth-only"
+        class="header-icon"
         aria-label="Settings"
         type="button"
       >
