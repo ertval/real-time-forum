@@ -25,7 +25,8 @@ export async function renderActivity(state, pager) {
     data.created_posts,
     "created-posts-output",
     "created-posts-empty",
-    "created-count"
+    "created-count",
+    { showOwnerActions: true }
   );
 
   renderCommentsSection(data.comments);
@@ -61,7 +62,13 @@ export async function renderActivity(state, pager) {
   }
 }
 
-function renderPostsSection(section, outputId, emptyId, countId) {
+function renderPostsSection(
+  section,
+  outputId,
+  emptyId,
+  countId,
+  { showOwnerActions = false } = {}
+) {
   const output = document.getElementById(outputId);
   const empty = document.getElementById(emptyId);
   const count = document.getElementById(countId);
@@ -83,12 +90,13 @@ function renderPostsSection(section, outputId, emptyId, countId) {
   items.forEach(post => {
     const isOwner =
       Number(post.author_id) === Number(activityState.activityUserID);
+    const enableActions = showOwnerActions && isOwner;
 
     const article = renderPostCard(post, {
       clickable: true,
-      showStatusToggle: isOwner,
-      showDelete: isOwner,
-      showEdit: isOwner,
+      showStatusToggle: enableActions,
+      showDelete: enableActions,
+      showEdit: enableActions,
     });
 
     article.querySelector(".post-comments")?.remove();

@@ -89,6 +89,40 @@ func TestAPIPostGet_NotFound(t *testing.T) {
 	}
 }
 
+func TestAPIPostGet_InvalidID_BadRequest(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	invalidPaths := []string{
+		"/api/v1/posts/abc",
+		"/api/v1/posts/0",
+		"/api/v1/posts/-1",
+	}
+
+	for _, path := range invalidPaths {
+		t.Run(path, func(t *testing.T) {
+			w, body := doRequest(t, h, http.MethodGet, path, nil)
+
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d body=%s", w.Code, string(body))
+			}
+
+			var env apiEnvelope
+			if err := json.Unmarshal(body, &env); err != nil {
+				t.Fatalf("unmarshal envelope: %v", err)
+			}
+
+			if env.Error == nil {
+				t.Fatalf("expected error envelope, got none: %s", string(body))
+			}
+
+			if env.Error.Code != "BAD_REQUEST" {
+				t.Fatalf("expected error code BAD_REQUEST, got %q", env.Error.Code)
+			}
+		})
+	}
+}
+
 func TestAPIPostGet_ReactionCounts(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()

@@ -116,3 +116,57 @@ func TestNotifications_ReadAll(t *testing.T) {
 		t.Fatalf("expected 204, got %d", rec.Code)
 	}
 }
+
+func TestNotifications_ReadOne_InvalidID_BadRequest(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	paths := []string{
+		"/api/v1/notifications/abc/read",
+		"/api/v1/notifications/0/read",
+		"/api/v1/notifications/-1/read",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPatch, path, nil)
+			req.Header.Set("Cookie", "session_token="+token)
+
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+			}
+
+			apiErr := decodeErrorEnvelope(t, rec)
+			if apiErr == nil || apiErr.Code != "BAD_REQUEST" {
+				t.Fatalf("expected BAD_REQUEST error, got %+v body=%s", apiErr, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestNotifications_ReadOne_NotFound(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/notifications/9999/read", nil)
+	req.Header.Set("Cookie", "session_token="+token)
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, rec)
+	if apiErr == nil || apiErr.Code != "NOT_FOUND" {
+		t.Fatalf("expected NOT_FOUND error, got %+v body=%s", apiErr, rec.Body.String())
+	}
+}

@@ -41,7 +41,7 @@ func NewMux() *http.ServeMux {
 	)
 
 	// ---- API proxy to backend (8080) ----
-	backendURL, err := url.Parse("http://localhost:8080")
+	backendURL, err := url.Parse(backendBaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +64,11 @@ func NewMux() *http.ServeMux {
 	mux.HandleFunc("/login", serveTemplate("./web/templates/login.html"))
 	mux.HandleFunc("/register", serveTemplate("./web/templates/register.html"))
 	mux.HandleFunc("/activity", serveTemplate("./web/templates/activity.html"))
-	mux.HandleFunc("/view-post/", serveTemplate("./web/templates/view-post.html"))
+	servePostByID := servePostByIDTemplate("./web/templates/view-post.html")
+	mux.HandleFunc("/view-post", servePostByID)
+	mux.HandleFunc("/view-post/", servePostByID)
+	mux.HandleFunc("/post", servePostByID)
+	mux.HandleFunc("/post/", servePostByID)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("HIT / handler: %s", r.URL.Path)
@@ -77,9 +81,77 @@ func NewMux() *http.ServeMux {
 			))
 			return
 		}
+
+		setNoStoreHeaders(w)
 		http.ServeFile(w, r, "./web/templates/home.html")
 	})
 	return mux
+}
+
+func servePostByIDTemplate(path string) http.HandlerFunc {
+	templateHandler := serveTemplate(path)
+	return func(w http.ResponseWriter, r *http.Request) {
+		postID, ok := parseRouteID(r.URL.Path, "view-post", "post")
+		if !ok {
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError(
+					"BAD_REQUEST",
+					"invalid post id",
+					http.StatusBadRequest,
+				),
+			)
+			return
+		}
+
+		status, err := postStatusChecker.GetPostStatus(
+			r.Context(),
+			postID,
+			r.Header.Get("Cookie"),
+		)
+		if err != nil {
+			log.Printf("failed to verify post existence (post_id=%d): %v", postID, err)
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError(
+					"INTERNAL_SERVER_ERROR",
+					"failed to load post",
+					http.StatusInternalServerError,
+				),
+			)
+			return
+		}
+
+		switch status {
+		case http.StatusOK:
+			templateHandler(w, r)
+		case http.StatusNotFound:
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError("NOT_FOUND", "post not found", http.StatusNotFound),
+			)
+		case http.StatusBadRequest:
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError("BAD_REQUEST", "invalid post id", http.StatusBadRequest),
+			)
+		default:
+			log.Printf("unexpected backend status while verifying post %d: %d", postID, status)
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError(
+					"INTERNAL_SERVER_ERROR",
+					"failed to load post",
+					http.StatusInternalServerError,
+				),
+			)
+		}
+	}
 }
 
 func serveTemplate(path string) http.HandlerFunc {
@@ -97,7 +169,14 @@ func serveTemplate(path string) http.HandlerFunc {
 			return
 		}
 
+		setNoStoreHeaders(w)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.ServeFile(w, r, path)
 	}
+}
+
+func setNoStoreHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 }
