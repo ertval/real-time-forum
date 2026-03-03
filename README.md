@@ -30,7 +30,9 @@ go mod tidy
 
 ## 🗄️ 3. Initialize / Reset Database
 
-If you want a clean SQLite database: make reset-db
+If you want a clean SQLite database:
+
+make reset-db
 
 ------------------------------------------------------------------------
 
@@ -107,18 +109,6 @@ make docker-down
 
 ------------------------------------------------------------------------
 
-## 🧹 8. Clean Up
-
-### Remove binaries:
-
-make clean
-
-### Clean everything:
-
-make clean-all
-
-------------------------------------------------------------------------
-
 ## ✔️ Recommended Workflow
 
 make deps\
@@ -130,43 +120,95 @@ http://localhost:3000
 
 ------------------------------------------------------------------------
 
-## 📌 Notes
+# Project Title: Forum Project
 
--   Backend is the only service that runs inside Docker.
--   Frontend is designed to run locally (not containerized).
--   Frontend communicates with backend using:
-    http://localhost:8080/api/v1
+## Description
 
-------------------------------------------------------------------------
+The **Forum project** is a full-stack web-based application that allows
+users to register, log in, create posts, comment, react, and receive
+real-time notifications.
 
-## Project Title: Forum Project
-
-### Description
-
-The **Forum project** is a web-based application that allows users to
-register, log in, post, comment, and like posts. It also includes
-features like categories, filters, and session management.
+The system is built with a clean backend API architecture and a dynamic
+frontend UI that communicates through REST endpoints.
 
 ------------------------------------------------------------------------
 
-## Features
+## 🚀 Core Features
 
--   Authentication: User registration, login, logout, and session
-    management.
--   Posts: Create, update, delete, and view posts.
--   Comments: Add, update, and delete comments on posts.
--   Likes: Like/dislike posts and comments.
--   Filters: Filter posts by categories.
--   Notifications: Real-time notifications for reactions and comments.
+### 🔐 Authentication
+
+-   Traditional email/password authentication
+-   Secure password hashing with bcrypt
+-   Session management using UUID and cookies
+-   OAuth authentication with:
+    -   Google Login
+    -   GitHub Login
+-   Protected routes with middleware-based access control
 
 ------------------------------------------------------------------------
 
-## Technologies Used
+### 📝 Posts
+
+-   Create, update, delete, and view posts
+-   Image upload support in posts
+-   Category tagging
+-   Publish / Draft state management
+
+------------------------------------------------------------------------
+
+### 💬 Comments
+
+-   Add, update, and delete comments
+-   Image upload support in comments
+-   Highlight new or specific comments
+-   Automatic scroll to newest comment
+
+------------------------------------------------------------------------
+
+### 👍 Reactions
+
+-   Like / Dislike posts
+-   Like / Dislike comments
+-   Mutual exclusion logic (cannot like and dislike simultaneously)
+-   Instant UI updates after reaction
+
+------------------------------------------------------------------------
+
+### 🔔 Real-Time Notifications
+
+-   Notifications for:
+    -   Post reactions
+    -   Comment reactions
+    -   New comments on your posts
+-   Live polling system
+-   Sound effects for new notifications
+-   Notification badge counter
+-   Dropdown notification panel
+-   Auto-mark as read behavior
+
+------------------------------------------------------------------------
+
+### 📊 My Activity Dashboard
+
+All user-related actions are organized and accessible through **My
+Activity**, including:
+
+-   User's posts
+-   User's comments
+-   Reactions received
+-   Notifications history
+-   Activity-based navigation
+
+------------------------------------------------------------------------
+
+## 🧩 Technologies Used
 
 -   Go (Backend)
 -   SQLite (Database)
 -   bcrypt (Password hashing)
 -   uuid (Session management)
+-   OAuth2 (Google & GitHub authentication)
+-   Vanilla JavaScript (Frontend)
 -   Docker (Containerization)
 -   Docker Compose (Orchestration)
 
@@ -198,16 +240,12 @@ It means another process is already using the backend port.
 
 #### Option 1 (Linux - using fuser)
 
-``` bash
 fuser -k 8080/tcp
-```
 
 #### Option 2 (Linux / macOS - using lsof)
 
-``` bash
-lsof -i :8080
-kill -9 <PID>
-```
+lsof -i :8080\
+kill -9 `<PID>`{=html}
 
 #### Option 3 (Cross-platform alternative)
 
@@ -216,16 +254,14 @@ not desired.
 
 After freeing the port, run again:
 
-``` bash
 make run-all
-```
 
 ------------------------------------------------------------------------
 
 ## Known Issues or Limitations
 
--   Advanced user profile management is not yet implemented.
--   Nested threaded comment replies are limited.
+-   Nested threaded replies are limited to a single level.
+-   Advanced user profile customization is not yet implemented.
 
 ------------------------------------------------------------------------
 
