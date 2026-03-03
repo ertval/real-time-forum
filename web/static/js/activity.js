@@ -146,7 +146,8 @@ function renderPostsSection({
   outputId,
   emptyId,
   countId,
-  currentUserID,
+  currentUserID = 0,
+  showOwnerActions = false,
 }) {
   const output = document.getElementById(outputId);
   const empty = document.getElementById(emptyId);
@@ -169,12 +170,13 @@ function renderPostsSection({
 
   for (const post of items) {
     const isOwner = Number(post.author_id) === Number(currentUserID);
+    const enableActions = showOwnerActions && isOwner;
 
     const article = renderPostCard(post, {
       clickable: true,
-      showStatusToggle: isOwner,
-      showDelete: isOwner,
-      showEdit: isOwner,
+      showStatusToggle: enableActions,
+      showDelete: enableActions,
+      showEdit: enableActions,
     });
 
     // Keep activity page lightweight: no comments preview loading for each card.
@@ -347,6 +349,7 @@ async function renderActivity(state, pager) {
     emptyId: "created-posts-empty",
     countId: "created-count",
     currentUserID,
+    showOwnerActions: true,
   });
 
   renderCommentsSection(data.comments);
@@ -356,7 +359,7 @@ async function renderActivity(state, pager) {
     outputId: "liked-posts-output",
     emptyId: "liked-posts-empty",
     countId: "liked-count",
-    currentUserID,
+    showOwnerActions: false,
   });
 
   renderPostsSection({
@@ -364,7 +367,7 @@ async function renderActivity(state, pager) {
     outputId: "disliked-posts-output",
     emptyId: "disliked-posts-empty",
     countId: "disliked-count",
-    currentUserID,
+    showOwnerActions: false,
   });
 
   initReactions();
