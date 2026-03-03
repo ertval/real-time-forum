@@ -1,3 +1,4 @@
+/* /static/css/activity.css */
 /* ==================================================
    ACTIVITY PAGE (Final Clean Version)
 ================================================== */
@@ -321,4 +322,72 @@
     width: 100%;
     justify-content: space-between;
   }
+}
+
+/* --------------------------------------------------
+   ICON ACTION BUTTONS (Edit / Delete)
+-------------------------------------------------- */
+
+.action-icon {
+  position: relative;
+
+  width: 34px;
+  height: 34px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #f8fafc;
+
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+/* -------------------------
+   ICON IMAGE BASE
+--------------------------*/
+
+.action-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  pointer-events: none;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+/* -------------------------
+   HOVER EFFECT
+--------------------------*/
+
+.action-icon:hover {
+  transform: translateY(-1px);
+}
+
+.action-icon:hover img {
+  transform: scale(1.2);
+}
+
+/* Publish / Draft */
+.post-status-toggle:hover img {
+  filter: brightness(1.25) drop-shadow(0 0 6px rgba(59,130,246,0.7));
+}
+
+/* Edit */
+.post-edit:hover img,
+.comment-edit:hover img {
+  filter: brightness(1.25) drop-shadow(0 0 6px rgba(59,130,246,0.6));
+}
+
+/* Delete */
+.delete-icon:hover img,
+.comment-delete:hover img {
+  filter: brightness(1.2) drop-shadow(0 0 6px rgba(239,68,68,0.7));
+}
+
+/* Click */
+.action-icon:active img {
+  transform: scale(0.9);
 }

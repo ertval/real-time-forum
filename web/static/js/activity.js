@@ -15,6 +15,10 @@ import { uiNotify, uiConfirm } from "./ui-messages.js";
 import { playDelete, playUpload } from "./sound-effects.js";
 import { Auth } from "./auth.js";
 import { setupImagePicker } from "./image-picker.js";
+import {
+  editCommentButton,
+  deleteCommentButton,
+} from "./post-actions.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 10;
@@ -214,28 +218,12 @@ function renderCommentsSection(section) {
         ? comment.image_url.trim()
         : "";
     const username = resolveUsername(comment);
+
     const editButtonMarkup =
-      commentID > 0
-        ? `
-          <button
-            class="btn btn-outline btn-sm comment-edit"
-            data-comment-id="${commentID}"
-          >
-            Edit
-          </button>
-        `
-        : "";
+      commentID > 0 ? editCommentButton(commentID) : "";
+
     const deleteButtonMarkup =
-      commentID > 0
-        ? `
-          <button
-            class="btn btn-danger btn-sm comment-delete"
-            data-comment-id="${commentID}"
-          >
-            Delete
-          </button>
-        `
-        : "";
+      commentID > 0 ? deleteCommentButton(commentID) : "";
 
     const article = document.createElement("article");
     article.className = "activity-comment card card-pad";
@@ -303,26 +291,91 @@ function getGlobalTotalPages(data) {
   return totalPages.length ? Math.max(...totalPages) : 1;
 }
 
+let sectionToggleBound = false;
+
 function initSectionToggles() {
-  const toggles = document.querySelectorAll("[data-activity-toggle]");
 
-  for (const toggle of toggles) {
+   if (sectionToggleBound) return;
+    sectionToggleBound = true;
+
+  const sections = document.querySelectorAll(".activity-section");
+
+  for (const section of sections) {
+    const head = section.querySelector(".activity-section-head");
+    const toggle = section.querySelector("[data-activity-toggle]");
+
+    if (!head || !toggle) continue;
+
     const controls = toggle.getAttribute("aria-controls");
-    if (!controls) continue;
-
-    const content = document.getElementById(controls);
+    const content = controls ? document.getElementById(controls) : null;
     if (!content) continue;
 
+    // Initial state
     const isExpanded = toggle.getAttribute("aria-expanded") === "true";
     content.hidden = !isExpanded;
 
-    toggle.addEventListener("click", () => {
+    const toggleSection = () => {
       const expanded = toggle.getAttribute("aria-expanded") === "true";
       const nextExpanded = !expanded;
       toggle.setAttribute("aria-expanded", String(nextExpanded));
       content.hidden = !nextExpanded;
+    };
+
+    // Click anywhere on header
+    head.addEventListener("click", (e) => {
+      // If user clicked directly on the button, ignore (already handled)
+      if (e.target.closest("[data-activity-toggle]")) return;
+      toggleSection();
+    });
+
+    // Keep button working normally
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleSection();
     });
   }
+}
+
+function openSectionByHash() {
+  const hash = window.location.hash.replace("#", "");
+  if (!hash) return;
+
+    // close all sections first
+  document.querySelectorAll("[data-activity-toggle]").forEach(toggle => {
+    const controls = toggle.getAttribute("aria-controls");
+    const content = controls ? document.getElementById(controls) : null;
+    if (!content) return;
+    toggle.setAttribute("aria-expanded", "false");
+    content.hidden = true;
+  });
+
+  const map = {
+    created: "created-section-content",
+    comments: "comments-section-content",
+    liked: "liked-section-content",
+    disliked: "disliked-section-content",
+  };
+
+  const targetId = map[hash];
+  if (!targetId) return;
+
+  const content = document.getElementById(targetId);
+  if (!content) return;
+
+  const toggle = document.querySelector(
+    `[aria-controls="${targetId}"]`
+  );
+
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", "true");
+  }
+
+  content.hidden = false;
+
+  content.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
 }
 
 async function renderActivity(state, pager) {
@@ -842,9 +895,24 @@ function initStatusToggle(refresh) {
         }
 
         playUpload();
+        
         btn.dataset.currentStatus = nextStatus;
-        btn.textContent = nextStatus === "draft" ? "Publish" : "Draft";
+
+        const img = btn.querySelector("img");
+        if (img) {
+          img.src =
+            nextStatus === "draft"
+              ? "/static/img/publish.png"
+              : "/static/img/draft.png";
+        }
+
+        btn.title =
+          nextStatus === "draft"
+            ? "Publish post"
+            : "Move to draft";
+
         await refresh();
+
       } catch (err) {
         console.error("Activity status toggle failed:", err);
         uiNotify("Failed to update post status.", { type: "danger" });
@@ -880,10 +948,6 @@ async function startActivityPage() {
 
   let state = getQueryState();
 
-  const refresh = async () => {
-    await renderActivity(state, pager);
-  };
-
   statusSelect.value = state.status;
   perPageSelect.value = String(state.perPage);
 
@@ -896,12 +960,18 @@ async function startActivityPage() {
       setQueryState(state);
       try {
         await renderActivity(state, pager);
+        openSectionByHash(); 
       } catch (err) {
         console.error("Activity pagination failed:", err);
         uiNotify("Failed to load activity.", { type: "danger" });
       }
     },
   });
+
+  const refresh = async () => {
+    await renderActivity(state, pager);
+    openSectionByHash();
+  };
 
   prevBtn.addEventListener("click", () => pager.prev());
   nextBtn.addEventListener("click", () => pager.next());
@@ -912,6 +982,7 @@ async function startActivityPage() {
     setQueryState(state);
     try {
       await renderActivity(state, pager);
+      openSectionByHash(); // <-- add here
     } catch (err) {
       console.error("Activity status filter failed:", err);
       uiNotify("Failed to load activity.", { type: "danger" });
@@ -924,18 +995,24 @@ async function startActivityPage() {
     setQueryState(state);
     try {
       await renderActivity(state, pager);
+      openSectionByHash(); // <-- add here
     } catch (err) {
       console.error("Activity per-page update failed:", err);
       uiNotify("Failed to load activity.", { type: "danger" });
     }
   });
 
+  /* ---------------- INITIAL RENDER ---------------- */
+
   try {
     await renderActivity(state, pager);
+    openSectionByHash(); // <-- THIS WAS MISSING
   } catch (err) {
     console.error("Activity render failed:", err);
     uiNotify("Failed to load activity.", { type: "danger" });
   }
+
+  /* ---------------- HISTORY NAVIGATION ---------------- */
 
   window.addEventListener("popstate", async () => {
     state = getQueryState();
@@ -944,11 +1021,14 @@ async function startActivityPage() {
 
     try {
       await renderActivity(state, pager);
+      openSectionByHash(); // <-- also here
     } catch (err) {
       console.error("Activity history navigation failed:", err);
       uiNotify("Failed to load activity.", { type: "danger" });
     }
   });
+
+  window.addEventListener("hashchange", openSectionByHash);
 
   initEditPostNavigation();
   initStatusToggle(refresh);
