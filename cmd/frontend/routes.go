@@ -8,8 +8,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"strconv"
-	"strings"
 )
 
 func NewMux() *http.ServeMux {
@@ -43,7 +41,7 @@ func NewMux() *http.ServeMux {
 	)
 
 	// ---- API proxy to backend (8080) ----
-	backendURL, err := url.Parse("http://localhost:8080")
+	backendURL, err := url.Parse(backendBaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,7 +89,8 @@ func NewMux() *http.ServeMux {
 func servePostByIDTemplate(path string) http.HandlerFunc {
 	templateHandler := serveTemplate(path)
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := parsePostIDFromFrontendPath(r.URL.Path); !ok {
+		postID, ok := parseRouteID(r.URL.Path, "view-post", "post")
+		if !ok {
 			handlers.WriteError(
 				w,
 				r,
@@ -104,27 +103,53 @@ func servePostByIDTemplate(path string) http.HandlerFunc {
 			return
 		}
 
-		templateHandler(w, r)
-	}
-}
+		status, err := postStatusChecker.GetPostStatus(
+			r.Context(),
+			postID,
+			r.Header.Get("Cookie"),
+		)
+		if err != nil {
+			log.Printf("failed to verify post existence (post_id=%d): %v", postID, err)
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError(
+					"INTERNAL_SERVER_ERROR",
+					"failed to load post",
+					http.StatusInternalServerError,
+				),
+			)
+			return
+		}
 
-func parsePostIDFromFrontendPath(path string) (int64, bool) {
-	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if len(parts) != 2 {
-		return 0, false
+		switch status {
+		case http.StatusOK:
+			templateHandler(w, r)
+		case http.StatusNotFound:
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError("NOT_FOUND", "post not found", http.StatusNotFound),
+			)
+		case http.StatusBadRequest:
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError("BAD_REQUEST", "invalid post id", http.StatusBadRequest),
+			)
+		default:
+			log.Printf("unexpected backend status while verifying post %d: %d", postID, status)
+			handlers.WriteError(
+				w,
+				r,
+				handlers.NewError(
+					"INTERNAL_SERVER_ERROR",
+					"failed to load post",
+					http.StatusInternalServerError,
+				),
+			)
+		}
 	}
-
-	route := parts[0]
-	if route != "view-post" && route != "post" {
-		return 0, false
-	}
-
-	id, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil || id <= 0 {
-		return 0, false
-	}
-
-	return id, true
 }
 
 func serveTemplate(path string) http.HandlerFunc {
