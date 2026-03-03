@@ -65,38 +65,44 @@ async function saveDraft() {
   if (!body && !draftImageURL) return;
   if (pendingImageFile) return;
 
+  const draftPayload = {
+    title,
+    body,
+    image_url: draftImageURL,
+    category_ids: categoryIds,
+  };
+
   draftSaveInFlight = true;
   try {
     if (currentDraftId) {
-      await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
+      const updateRes = await fetch(`${API_BASE}/posts/draft/${currentDraftId}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          body,
-          image_url: draftImageURL,
-          category_ids: categoryIds,
-        }),
+        body: JSON.stringify(draftPayload),
       });
-      return;
+
+      if (updateRes.ok) return;
+
+      // Draft may have been deleted in another tab/session.
+      // Reset and fall through to create a new autosave draft.
+      if (updateRes.status === 404) {
+        currentDraftId = null;
+      } else {
+        return;
+      }
     }
 
-    const res = await fetch(`${API_BASE}/posts/draft`, {
+    const createRes = await fetch(`${API_BASE}/posts/draft`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        body,
-        image_url: draftImageURL,
-        category_ids: categoryIds,
-      }),
+      body: JSON.stringify(draftPayload),
     });
 
-    if (!res.ok) return;
+    if (!createRes.ok) return;
 
-    const payload = await res.json().catch(() => null);
+    const payload = await createRes.json().catch(() => null);
     currentDraftId = payload?.data?.id ?? null;
   } catch {
     // Best-effort autosave: network failures should not break user flow.

@@ -234,17 +234,28 @@ function renderCommentsSection(section) {
     }
 
     const post = comment.post || {};
+    const postID = asPositiveID(post.id) || asPositiveID(comment.post_id);
+    const postTitle = escapeHTML(post.title || "Untitled post");
+    const postLinkMarkup = postID
+      ? `
+          <a
+            class="activity-comment-post-link"
+            href="/view-post/${postID}"
+          >
+            ${postTitle}
+          </a>
+        `
+      : `
+          <span class="activity-comment-post-link">
+            ${postTitle}
+          </span>
+        `;
 
     article.innerHTML = `
       <header class="activity-comment-head">
         <div class="activity-comment-post-wrap">
           <p class="muted">On post</p>
-          <a
-            class="activity-comment-post-link"
-            href="/view-post/${Number(post.id) || Number(comment.post_id) || 0}"
-          >
-            ${escapeHTML(post.title || "Untitled post")}
-          </a>
+          ${postLinkMarkup}
         </div>
 
         <div class="activity-comment-head-right">
