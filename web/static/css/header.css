@@ -1,179 +1,222 @@
 /* --------------------------------------------------
-   HEADER (shared across all pages)
+   HEADER (Final Polished Version)
 -------------------------------------------------- */
 
 .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 32px;
-}
-
-.page-title-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.page-title {
-    margin: 0;
-}
-
-/* Forum logo */
-.forum-logo {
-    color: #000;
-    text-decoration: none;
-    padding: 4px 10px;
-    border-radius: 8px;
-    transition: background-color 120ms ease;
-}
-
-.forum-logo:hover,
-.forum-logo:focus {
-    color: #000;
-    text-decoration: none;
-    background-color: rgba(15, 23, 42, 0.04);
-}
-
-/* Greeting */
-#greeting {
-    margin: 0;
-}
-
-/* Header actions (buttons) */
-.page-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* Header buttons controlled by JS */
-#login-btn,
-#logout-btn {
-    display: none;
-}
-
-/* Settings icon button */
-.icon-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: transparent;
-    border: 1px solid rgba(0,0,0,0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 18px;
-    transition: all 120ms ease;
-}
-
-.icon-btn:hover {
-    background: rgba(15, 23, 42, 0.06);
-    transform: rotate(20deg);
-}
-
-.icon-btn:active {
-    transform: scale(0.9);
+  display: flex;
+  align-items: center;
+  padding-bottom: 16px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
 /* --------------------------------------------------
-   NOTIFICATIONS
+   LEFT SIDE
+-------------------------------------------------- */
+
+.page-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.forum-logo {
+  display: inline-flex;
+  align-items: center;
+}
+
+.forum-logo img {
+  height: 44px;   
+  width: auto;
+  display: block;
+  transition: opacity 0.15s ease;
+}
+
+.forum-logo:hover img {
+  opacity: 0.85;
+}
+
+/* Greeting */
+
+#greeting {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.2px;
+}
+
+/* --------------------------------------------------
+   RIGHT SIDE
+-------------------------------------------------- */
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto; 
+}
+
+/* --------------------------------------------------
+   LOGIN (Guest)
+-------------------------------------------------- */
+
+#login-btn {
+  padding: 8px 16px;
+  font-size: 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  background: #f1f5f9;
+  border: 1px solid rgba(0,0,0,0.06);
+  color: #111827;
+  transition: all 0.15s ease;
+}
+
+#login-btn:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+#login-btn:active {
+  transform: scale(0.96);
+}
+
+/* --------------------------------------------------
+   AUTH ICON GROUP
+-------------------------------------------------- */
+
+.auth-buttons {
+  display: flex;
+  gap: 14px;
+}
+
+/* --------------------------------------------------
+   HEADER ICONS
+-------------------------------------------------- */
+
+.header-icon,
+.icon-btn {
+  position: relative;
+  width: 42px;          
+  height: 42px;         
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-icon img {
+  width: 22px;          
+  height: 22px;
+  object-fit: contain;
+}
+
+.icon-btn {
+  font-size: 18px;      
+}
+
+.header-icon:hover,
+.icon-btn:hover {
+  background: rgba(0,0,0,0.06);
+  transform: translateY(-1px);
+}
+
+.header-icon:active,
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* --------------------------------------------------
+   TOOLTIP (from aria-label)
+-------------------------------------------------- */
+
+.header-icon::after,
+.icon-btn::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  background: #111827;
+  color: white;
+  padding: 5px 9px;
+  border-radius: 6px;
+  opacity: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.header-icon:hover::after,
+.icon-btn:hover::after {
+  opacity: 1;
+}
+
+/* --------------------------------------------------
+   NOTIFICATION BADGE
 -------------------------------------------------- */
 
 .notification-wrapper {
-    position: relative;
+  position: relative;
 }
 
-/* Badge */
 .notification-badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #e11d48;
-    color: white;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 12px;
-    min-width: 18px;
-    text-align: center;
-    font-weight: 600;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #e11d48;
+  color: white;
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 12px;
+  min-width: 18px;
+  text-align: center;
+  font-weight: 600;
+  display: none;
 }
 
-.notification-badge.hidden {
-    display: none;
+.notification-badge.show {
+  display: block;
 }
 
-/* Dropdown container */
+/* --------------------------------------------------
+   DROPDOWN
+-------------------------------------------------- */
+
 .notification-dropdown {
-    position: absolute;
-    right: 0;
-    top: 42px;
-    width: 300px;
-    background: #ffffff;
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 10px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    max-height: 400px;
-    overflow-y: auto;
-    z-index: 200;
+  position: absolute;
+  right: 0;
+  top: 48px;
+  width: 290px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+  max-height: 380px;
+  overflow-y: auto;
+  z-index: 200;
 }
 
 .notification-dropdown.hidden {
-    display: none;
+  display: none;
 }
 
-/* Header */
-.notification-header {
-    padding: 10px 14px;
-    font-weight: 600;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
+/* --------------------------------------------------
+   AUTH VISIBILITY
+-------------------------------------------------- */
+
+.auth-only {
+  display: none;
 }
 
-/* Each notification row */
-.notification-item {
-    padding: 10px 14px;
-    font-size: 14px;
-    cursor: pointer;
-    line-height: 1.35;
-    transition: background 0.15s ease, opacity 0.15s ease;
-    color: #111827;
+body.is-authenticated .auth-only {
+  display: flex;
 }
 
-/* Alternate row background */
-.notification-item:nth-child(odd) {
-    background: #f8fafc;
-}
-
-.notification-item:nth-child(even) {
-    background: #ffffff;
-}
-
-/* Hover */
-.notification-item:hover {
-    background: #e2e8f0;
-}
-
-/* Unread state */
-.notification-item.unread {
-    background: #f0f7ff;
-    font-weight: 600;
-}
-
-/* Bold title inside message */
-.notification-item strong {
-    font-weight: 700;
-    color: #1e293b; /* slate-800 */
-}
-
-/* Italic excerpt */
-.notification-item em {
-    font-style: italic;
-    color: #475569; /* slate-600 */
-    opacity: 0.9;
-}
-
-/* Ensure emojis align better */
-.notification-item::after {
-    vertical-align: middle;
+body.is-authenticated #login-btn {
+  display: none;
 }

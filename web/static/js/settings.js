@@ -11,7 +11,12 @@ function setSFX(val) {
   localStorage.setItem(SFX_KEY, val);
 }
 
+let settingsInitialized = false;
+
 function initSettings() {
+  if (settingsInitialized) return;
+  settingsInitialized = true;
+
   const modal = document.getElementById("settings-modal");
   if (!modal) return;
 
@@ -19,39 +24,57 @@ function initSettings() {
     initSounds();
   }
 
-  document.addEventListener("click", (e) => {
-    const openBtn = e.target.closest("#settings-btn");
-    const closeBtn = e.target.closest("#settings-close");
-    const backdrop = e.target.closest(".settings-backdrop");
-    const checkbox = document.getElementById("sfxToggle");
+  document.addEventListener("click", handleSettingsClick);
+  document.addEventListener("change", handleSettingsChange);
+}
 
-    if (openBtn) {
-      modal.classList.remove("hidden");
+function handleSettingsClick(e) {
+  const modal = document.getElementById("settings-modal");
+  const openBtn = e.target.closest("#settings-btn");
+  const closeBtn = e.target.closest("#settings-close");
+  const backdrop = e.target.closest(".settings-backdrop");
+  const logoutBtn = e.target.closest("#settings-logout-btn");
 
-      if (checkbox) {
-        checkbox.checked = getSFX();
-      }
+  if (openBtn) {
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    document.getElementById("sfxToggle").checked = getSFX();
+    document.body.style.overflow = "hidden";
+    return;
+  }
 
-      document.body.style.overflow = "hidden";
-      return;
-    }
+  if (closeBtn || backdrop) {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    return;
+  }
 
-    if (closeBtn || backdrop) {
-      modal.classList.add("hidden");
-      document.body.style.overflow = "";
-    }
-  });
+  if (logoutBtn) {
+    handleLogout();
+  }
+}
 
-  document.addEventListener("change", (e) => {
-    if (e.target.id === "sfxToggle") {
-      const enabled = e.target.checked;
-      setSFX(enabled);
+function handleSettingsChange(e) {
+  if (e.target.id !== "sfxToggle") return;
 
-      if (enabled) {
-        initSounds();
-      }
-    }
-  });
+  const enabled = e.target.checked;
+  setSFX(enabled);
+
+  if (enabled) initSounds();
+}
+
+async function handleLogout() {
+  try {
+    await fetch("/api/v1/users/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (err) {
+    console.error("Logout failed:", err);
+  }
+
+  window.location.href = "/login";
 }
 
 export { initSettings };

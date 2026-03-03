@@ -3,7 +3,9 @@
 <header class="page-header">
   <div class="page-title-wrap">
     <h1 id="forum-title" class="page-title">
-      <a href="/" class="forum-logo">Forum</a>
+      <a href="/" class="forum-logo" aria-label="Forum home">
+        <img src="/static/img/forum-logo.png" alt="Forum">
+      </a>
     </h1>
 
     <p id="greeting" class="muted" aria-live="polite"></p>
@@ -11,57 +13,63 @@
 
   <div class="page-actions">
 
-    <a id="login-btn" class="btn btn-secondary" href="/login">
+    <!-- GUEST ONLY -->
+    <a
+      id="login-btn"
+      class="btn btn-secondary"
+      href="/login"
+    >
       Login
     </a>
 
-    <button
-      id="logout-btn"
-      class="btn btn-secondary"
-      data-logout-button
-      data-logout-url="/api/v1/users/logout"
-      type="button"
-    >
-      Logout
-    </button>
+    <!-- AUTH ICONS GROUP -->
+    <div class="auth-buttons auth-only">
 
-    <a id="my-activity-btn" class="btn btn-primary" href="/activity" style="display:none">
-      My Activity
-    </a>
+      <!-- MY ACTIVITY -->
+      <a
+        id="my-activity-btn"
+        class="header-icon"
+        href="/activity"
+        aria-label="My activity"
+      >
+        <img src="/static/img/my-activity.png" alt="My activity">
+      </a>
 
-    <a id="create-post-btn" class="btn btn-primary" href="/create-post">
-      Create post
-    </a>
+      <!-- CREATE POST -->
+      <a
+        id="create-post-btn"
+        class="header-icon"
+        href="/create-post"
+        aria-label="Create post"
+      >
+        <img src="/static/img/create-post.png" alt="Create post">
+      </a>
 
-    <!-- NOTIFICATIONS -->
-    <div class="notification-wrapper">
+      <!-- NOTIFICATIONS -->
       <button
         id="notification-bell"
-        class="icon-btn"
+        class="header-icon"
         aria-label="Notifications"
         type="button"
       >
         🔔
-        <span id="notification-badge" class="notification-badge hidden">0</span>
+        <span
+          id="notification-badge"
+          class="notification-badge hidden"
+        >0</span>
       </button>
 
-      <div id="notification-dropdown" class="notification-dropdown hidden">
-        <div class="notification-header">
-          Notifications
-        </div>
-        <div id="notification-list"></div>
-      </div>
-    </div>
+      <!-- SETTINGS -->
+      <button
+        id="settings-btn"
+        class="header-icon"
+        aria-label="Settings"
+        type="button"
+      >
+        ⚙️
+      </button>
 
-    <!-- SETTINGS BUTTON -->
-    <button
-      id="settings-btn"
-      class="icon-btn"
-      aria-label="Settings"
-      type="button"
-    >
-      ⚙️
-    </button>
+    </div>
 
   </div>
 </header>
