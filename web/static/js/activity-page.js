@@ -53,7 +53,7 @@ async function requireAuth() {
 
   const version = String(Date.now());
   loadModuleScript("/static/js/header-loader.js", version);
-  loadModuleScript("/static/js/activity.js", version);
+  loadModuleScript("/static/js/activity/bootstrap-activity.js", version);
 })().catch((err) => {
   console.error("Activity page bootstrap failed:", err);
   alert("Failed to load activity page.");

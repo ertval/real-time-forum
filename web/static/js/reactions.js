@@ -3,25 +3,18 @@ import { API_BASE } from "./utils.js";
 import { Auth } from "./auth.js";
 import { playReaction } from "./sound-effects.js";
 
-let bound = false;
-
 export function initReactions() {
-  if (bound) return;
-  bound = true;
-
   document.addEventListener("change", async (e) => {
     const btn = e.target.closest("[data-reaction]");
     if (!btn) return;
 
     e.stopPropagation();
 
-    // Save previous state for rollback
     const previousState = !btn.checked;
 
-    // Guest → force login modal
     const allowed = await Auth.requireOrPrompt();
     if (!allowed) {
-      btn.checked = previousState; // rollback immediately
+      btn.checked = previousState;
       return;
     }
 
@@ -33,8 +26,10 @@ export function initReactions() {
       ? btn.closest("article[data-post-id]")
       : btn.closest(".comment");
 
+    if (!scope) return;
+
     const oppositeType = type === "like" ? "dislike" : "like";
-    const opposite = scope?.querySelector(
+    const opposite = scope.querySelector(
       `input[data-reaction="${oppositeType}"]`
     );
 
@@ -68,7 +63,6 @@ export function initReactions() {
         return;
       }
 
-      // Only now apply mutual exclusion
       if (btn.checked && opposite) {
         opposite.checked = false;
       }
@@ -77,24 +71,15 @@ export function initReactions() {
 
       const { data } = await res.json();
 
-      const container = btn.closest(
-        postId
-          ? `article[data-post-id="${postId}"]`
-          : `div[data-comment-id="${commentId}"]`
-      );
-
-      if (!container) return;
-
-      container.querySelector("[data-like-count]").textContent =
+      scope.querySelector("[data-like-count]").textContent =
         data.likes_count;
 
-      container.querySelector("[data-dislike-count]").textContent =
+      scope.querySelector("[data-dislike-count]").textContent =
         data.dislikes_count;
 
     } catch (err) {
       console.error("Reaction failed:", err);
 
-      // Full rollback on network error
       btn.checked = previousState;
       if (opposite && oppositePreviousState !== null) {
         opposite.checked = oppositePreviousState;

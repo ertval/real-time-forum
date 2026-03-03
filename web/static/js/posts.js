@@ -452,11 +452,25 @@ function statusToggleTemplate(post) {
       ? "draft"
       : "published";
 
+  const iconSrc =
+    currentStatus === "draft"
+      ? "/static/img/publish.png"
+      : "/static/img/draft.png";
+
+  const label =
+    currentStatus === "draft"
+      ? "Publish post"
+      : "Move to draft";
+
   return `
-    <button class="btn btn-outline btn-sm post-status-toggle"
+    <button 
+      class="action-icon post-status-toggle"
       data-post-id="${post.id}"
-      data-current-status="${currentStatus}">
-      ${currentStatus === "draft" ? "Publish" : "Draft"}
+      data-current-status="${currentStatus}"
+      aria-label="${label}"
+      title="${label}"
+    >
+      <img src="${iconSrc}" alt="" />
     </button>
   `;
 }
@@ -472,18 +486,26 @@ function renderCategories(categories = []) {
 
 function deletePostTemplate(post) {
   return `
-    <button class="btn btn-danger btn-sm post-delete"
-      data-post-id="${post.id}">
-      Delete
+    <button
+      class="action-icon delete-icon post-delete"
+      data-post-id="${post.id}"
+      aria-label="Delete post"
+      title="Delete post"
+    >
+      <img src="/static/img/delete.png" alt="" />
     </button>
   `;
 }
 
 function editPostTemplate(post) {
   return `
-    <button class="btn btn-outline btn-sm post-edit"
-      data-post-id="${post.id}">
-      Edit
+    <button
+      class="action-icon post-edit"
+      data-post-id="${post.id}"
+      aria-label="Edit post"
+      title="Edit post"
+    >
+      <img src="/static/img/edit.png" alt="" />
     </button>
   `;
 }
