@@ -46,18 +46,31 @@
       </a>
 
       <!-- NOTIFICATIONS -->
-      <button
-        id="notification-bell"
-        class="header-icon"
-        aria-label="Notifications"
-        type="button"
-      >
-        🔔
-        <span
-          id="notification-badge"
-          class="notification-badge hidden"
-        >0</span>
-      </button>
+      <div class="notification-wrapper">
+
+        <button
+          id="notification-bell"
+          class="header-icon"
+          aria-label="Notifications"
+          type="button"
+        >
+          🔔
+          <span
+            id="notification-badge"
+            class="notification-badge"
+          >0</span>
+        </button>
+
+        <div
+          id="notification-dropdown"
+          class="notification-dropdown hidden"
+        >
+          <div class="notification-empty">
+            No notifications yet.
+          </div>
+        </div>
+
+      </div>
 
       <!-- SETTINGS -->
       <button
