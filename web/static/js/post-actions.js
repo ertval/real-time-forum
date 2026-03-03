@@ -33,8 +33,9 @@ export function editPostButton(postId) {
       class="action-icon post-edit"
       data-post-id="${postId}"
       aria-label="Edit post"
+      title="Edit post"
     >
-      <img src="/static/img/edit.png" alt="Edit" />
+      <img src="/static/img/edit.png" alt="" />
     </button>
   `;
 }
@@ -45,8 +46,9 @@ export function deletePostButton(postId) {
       class="action-icon delete-icon post-delete"
       data-post-id="${postId}"
       aria-label="Delete post"
+      title="Delete post"
     >
-      <img src="/static/img/delete.png" alt="Delete" />
+      <img src="/static/img/delete.png" alt="" />
     </button>
   `;
 }
