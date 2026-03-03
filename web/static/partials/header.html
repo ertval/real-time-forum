@@ -20,61 +20,68 @@
       Login
     </a>
 
-    <!-- AUTH ONLY -->
-    <a
-      id="my-activity-btn"
-      class="btn btn-primary auth-only"
-      href="/activity"
-    >
-      My Activity
-    </a>
-
-    <a
-      id="create-post-btn"
-      class="btn btn-primary"
-      href="/create-post"
-    >
-      Create post
-    </a>
-
-    <!-- AUTH ONLY - NOTIFICATIONS -->
-    <div
-      class="notification-wrapper auth-only"
-      id="notification-wrapper"
-    >
-      <button
-        id="notification-bell"
-        class="icon-btn"
-        aria-label="Notifications"
-        type="button"
+    <!-- AUTH BUTTONS GROUP -->
+    <div class="auth-buttons">
+      <a
+        id="my-activity-btn"
+        class="btn btn-primary auth-only"
+        href="/activity"
       >
-        🔔
-        <span
-          id="notification-badge"
-          class="notification-badge hidden"
-        >0</span>
-      </button>
+        My Activity
+      </a>
 
-      <div
-        id="notification-dropdown"
-        class="notification-dropdown hidden"
+      <a
+        id="create-post-btn"
+        class="btn btn-primary"
+        href="/create-post"
       >
-        <div class="notification-header">
-          Notifications
-        </div>
-        <div id="notification-list"></div>
-      </div>
+        Create post
+      </a>
     </div>
 
-    <!-- AUTH ONLY - SETTINGS -->
-    <button
-      id="settings-btn"
-      class="icon-btn auth-only"
-      aria-label="Settings"
-      type="button"
-    >
-      ⚙️
-    </button>
+    <!-- RIGHT ICONS (RESERVED SPACE ALWAYS) -->
+    <div class="right-icons">
+
+      <!-- NOTIFICATIONS -->
+      <div
+        class="notification-wrapper auth-only"
+        id="notification-wrapper"
+      >
+        <button
+          id="notification-bell"
+          class="icon-btn"
+          aria-label="Notifications"
+          type="button"
+        >
+          🔔
+          <span
+            id="notification-badge"
+            class="notification-badge hidden"
+          >0</span>
+        </button>
+
+        <div
+          id="notification-dropdown"
+          class="notification-dropdown hidden"
+        >
+          <div class="notification-header">
+            Notifications
+          </div>
+          <div id="notification-list"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <button
+        id="settings-btn"
+        class="icon-btn auth-only"
+        aria-label="Settings"
+        type="button"
+      >
+        ⚙️
+      </button>
+
+    </div>
 
   </div>
 </header>
