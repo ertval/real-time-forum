@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"errors"
 	"forum/internal/middleware"
 	"net/http"
 	"strconv"
@@ -51,6 +52,16 @@ func atoiOrDefault(str string, def int) int {
 func parseID(path, prefix string) (int64, error) {
 	raw := strings.TrimPrefix(path, prefix)
 	return strconv.ParseInt(raw, 10, 64)
+}
+
+var errInvalidPositiveID = errors.New("invalid positive id")
+
+func parsePositiveID(raw string) (int64, error) {
+	id, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil || id <= 0 {
+		return 0, errInvalidPositiveID
+	}
+	return id, nil
 }
 
 /*--------------
@@ -104,8 +115,8 @@ func getPostIDFromURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 		return 0, false
 	}
 
-	id, err := strconv.ParseInt(parts[len(parts)-2], 10, 64)
-	if err != nil || id <= 0 {
+	id, err := parsePositiveID(parts[len(parts)-2])
+	if err != nil {
 		WriteError(w, r, NewError("BAD_REQUEST", "invalid post id", http.StatusBadRequest))
 		return 0, false
 	}

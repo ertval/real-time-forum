@@ -7,6 +7,7 @@ import {
 
 import { initReactions } from "./reactions.js";
 import { API_BASE } from "./utils.js";
+import { uiNotify } from "./ui-messages.js";
 
 /*---------
   HELPERS
@@ -48,11 +49,15 @@ async function highlightComment(commentId) {
 ------*/
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const postId = getPostIdFromURL();
-  if (!postId) return;
-
   const container = document.getElementById("post-output");
   if (!container) return;
+
+  const postId = getPostIdFromURL();
+  if (!postId) {
+    container.innerHTML = `<p class="muted">Invalid post ID.</p>`;
+    uiNotify("Invalid post ID.", { type: "danger" });
+    return;
+  }
 
   const result = await loadAndRenderPost(postId, container);
   if (!result) return;

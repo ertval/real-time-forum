@@ -81,7 +81,6 @@ async function saveDraft() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draftPayload),
       });
-
       if (updateRes.ok) return;
 
       // Draft may have been deleted in another tab/session.
