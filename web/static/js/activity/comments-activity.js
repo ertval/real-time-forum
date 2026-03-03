@@ -131,6 +131,11 @@ function openCommentInlineEditor(article, refresh) {
         <input type="file" class="comment-image-input" accept="${IMAGE_ACCEPT_ATTR}" hidden />
       </div>
 
+      <div class="comment-image-row">
+        <span class="comment-image-name muted" aria-live="polite"></span>
+        <button type="button" class="image-clear" aria-label="Remove selected image" hidden>x</button>
+      </div>
+
       <div class="comment-image-preview activity-comment-edit-preview" hidden>
         <img />
       </div>
@@ -145,15 +150,27 @@ function openCommentInlineEditor(article, refresh) {
   const form = content.querySelector("[data-comment-edit-form]");
   const textarea = form.querySelector("textarea");
   const cancelBtn = form.querySelector(".cancel-edit");
+  const imageName = form.querySelector(".comment-image-name");
+  const imageClear = form.querySelector(".image-clear");
 
   textarea.value = originalBody;
+  let removePersistedImage = false;
 
   const picker = setupImagePicker({
     input: form.querySelector(".comment-image-input"),
     triggerButton: form.querySelector(".comment-image-btn"),
+    clearButton: imageClear,
+    nameLabel: imageName,
     previewContainer: form.querySelector(".comment-image-preview"),
     previewImage: form.querySelector(".comment-image-preview img"),
     persistedUrl: originalImageURL || null,
+    persistedLabel: "Current image attached",
+    onTooLarge: () => {
+      uiNotify("Image must be 20MB or smaller.", { type: "danger" });
+    },
+    onClearPersisted: () => {
+      removePersistedImage = true;
+    },
   });
 
   activeCommentEditor = {
@@ -175,8 +192,9 @@ function openCommentInlineEditor(article, refresh) {
 
     const body = textarea.value.trim();
     const imageFile = picker?.getFile?.() || null;
+    const hasPersistedImage = !!originalImageURL && !removePersistedImage;
 
-    if (!body && !imageFile && !originalImageURL) {
+    if (!body && !imageFile && !hasPersistedImage) {
       uiNotify("Cannot save empty comment.", { type: "warn" });
       return;
     }
@@ -185,7 +203,18 @@ function openCommentInlineEditor(article, refresh) {
       const requestOptions = buildImageRequestOptions({
         method: "PATCH",
         imageFile,
-        jsonBody: { body },
+        buildMultipartBody: file => {
+          const formData = new FormData();
+          formData.append("body", body);
+          formData.append("image", file);
+          return formData;
+        },
+        jsonBody: {
+          body,
+          remove_image: removePersistedImage && !imageFile,
+        },
+        multipartHeaders: { Accept: "application/json" },
+        jsonHeaders: { Accept: "application/json" },
       });
 
       const res = await fetch(
