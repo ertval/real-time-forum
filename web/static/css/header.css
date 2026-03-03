@@ -1,6 +1,6 @@
-/*  /css/header.css */
+/* /web/static/css/header.css */
 /* --------------------------------------------------
-   HEADER (Final Polished Version)
+   HEADER 
 -------------------------------------------------- */
 
 .page-header {
@@ -9,6 +9,8 @@
   padding-bottom: 16px;
   margin-bottom: 26px;
   border-bottom: 1px solid rgba(0,0,0,0.05);
+  position: relative;
+  z-index: 10;
 }
 
 /* --------------------------------------------------
@@ -26,7 +28,7 @@
 }
 
 .forum-logo img {
-  height: 44px;   
+  height: 44px;
   width: auto;
   display: block;
   transition: opacity 0.15s ease;
@@ -36,11 +38,8 @@
   opacity: 0.85;
 }
 
-/* Greeting */
-
 #greeting {
-  margin-top: 6px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: #6b7280;
   letter-spacing: 0.2px;
@@ -54,7 +53,7 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  margin-left: auto; 
+  margin-left: auto;
 }
 
 /* --------------------------------------------------
@@ -97,8 +96,8 @@
 .header-icon,
 .icon-btn {
   position: relative;
-  width: 42px;          
-  height: 42px;         
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: transparent;
   border: 1px solid rgba(0,0,0,0.06);
@@ -107,16 +106,13 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  font-size: 18px;
 }
 
 .header-icon img {
-  width: 22px;          
+  width: 22px;
   height: 22px;
   object-fit: contain;
-}
-
-.icon-btn {
-  font-size: 18px;      
 }
 
 .header-icon:hover,
@@ -131,25 +127,26 @@
 }
 
 /* --------------------------------------------------
-   TOOLTIP (from aria-label)
+   TOOLTIP
 -------------------------------------------------- */
 
 .header-icon::after,
 .icon-btn::after {
   content: attr(aria-label);
   position: absolute;
-  bottom: -34px;
+  bottom: -38px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 12px;
   background: #111827;
   color: white;
-  padding: 5px 9px;
+  padding: 6px 10px;
   border-radius: 6px;
   opacity: 0;
   white-space: nowrap;
   pointer-events: none;
   transition: opacity 0.15s ease;
+  z-index: 500;
 }
 
 .header-icon:hover::after,
@@ -158,52 +155,146 @@
 }
 
 /* --------------------------------------------------
-   NOTIFICATION BADGE
+   NOTIFICATIONS
 -------------------------------------------------- */
 
 .notification-wrapper {
   position: relative;
 }
 
+/* BADGE */
+
 .notification-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -5px;
+  right: -5px;
   background: #e11d48;
-  color: white;
+  color: #ffffff;
   font-size: 11px;
   padding: 3px 7px;
-  border-radius: 12px;
+  border-radius: 999px;
   min-width: 18px;
   text-align: center;
   font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.notification-badge.hidden {
   display: none;
 }
 
-.notification-badge.show {
-  display: block;
-}
-
-/* --------------------------------------------------
-   DROPDOWN
--------------------------------------------------- */
+/* DROPDOWN */
 
 .notification-dropdown {
   position: absolute;
   right: 0;
-  top: 48px;
-  width: 290px;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-  max-height: 380px;
+  top: 52px;
+  width: 320px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+  max-height: 420px;
   overflow-y: auto;
-  z-index: 200;
+  z-index: 300;
+  animation: fadeSlide 0.15s ease;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.2) transparent;
 }
 
 .notification-dropdown.hidden {
   display: none;
+}
+
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* HEADER */
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: #f8fafc;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+
+.notification-header::before {
+  content: "🔔";
+}
+
+/* EMPTY */
+
+.notification-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* ITEMS */
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1.45;
+  color: #111827;
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+/* Zebra (safe, ignores header) */
+
+.notification-dropdown .notification-item:nth-of-type(odd) {
+  background: #f9fafb;
+}
+
+.notification-dropdown .notification-item:nth-of-type(even) {
+  background: #ffffff;
+}
+
+.notification-item:hover {
+  background: #e6f0ff;
+}
+
+.notification-item:active {
+  transform: scale(0.98);
+}
+
+.notification-item.unread {
+  background: #eef6ff;
+  font-weight: 600;
+  border-left: 3px solid #3b82f6;
+}
+
+.notification-item strong {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.notification-item em {
+  font-style: italic;
+  color: #475569;
+  opacity: 0.95;
 }
 
 /* --------------------------------------------------
