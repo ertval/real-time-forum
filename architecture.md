@@ -1,221 +1,283 @@
+# Forum Project --- Architecture Overview
 
-# Forum Project — Architecture Overview
+This document reflects the current architecture of the Forum project,
+including authentication (Google & GitHub), image uploads, reactions,
+real-time notifications, and the My Activity dashboard.
 
-This document reflects the **current architecture** of the Forum project,
-including drafts, autosave, middleware refactors, and test strategy.
-
----
+------------------------------------------------------------------------
 
 ## 1. High-Level Overview
 
-The project follows a **clean, layered Go architecture**:
+The project follows a clean, layered Go architecture with strict
+separation between persistence, HTTP logic, middleware, and frontend.
 
-```
-cmd/
-internal/
+Structure:
+
+cmd/\
+internal/\
 web/
-```
 
 Frontend communicates with backend via:
-```
-/api/v1/*
-```
 
----
+/api/v1/\*
+
+Architecture style: - Layered architecture - Clear separation of
+concerns - Stateless HTTP handlers - Context-aware database operations
+
+------------------------------------------------------------------------
 
 ## 2. Backend Architecture
 
 Built with Go standard library + SQLite.
 
-```
-internal/
- ├── db
- ├── handlers
- ├── middleware
- ├── router
- ├── server
- └── tests
-```
+internal/\
+├── db\
+├── handlers\
+├── middleware\
+├── router\
+├── server\
+└── tests
 
----
+------------------------------------------------------------------------
 
-## 2.1 internal/db — Persistence Layer
+## 2.1 internal/db --- Persistence Layer
 
-Responsibilities:
-- SQL queries
-- Transactions
-- Context-aware execution
-- Schema ownership
+Responsibilities: - SQL queries - Transactions - Context-aware
+execution - Schema ownership - Reaction aggregation - Draft
+persistence - Notification storage
 
-Key modules:
-- users.go
-- sessions.go
-- posts.go
-- drafts.go
-- comments.go
-- categories.go
-- reactions.go
-- errors.go
-- db.go
+Key modules: - users.go - sessions.go - posts.go - drafts.go -
+comments.go - categories.go - reactions.go - notifications.go -
+errors.go - db.go
 
-Rules:
-- No HTTP imports
-- No JSON
-- No request parsing
+Rules: - No HTTP imports - No JSON encoding - No request parsing - No
+business logic leakage
 
----
+------------------------------------------------------------------------
 
-## 2.2 internal/handlers — HTTP Layer
+## 2.2 internal/handlers --- HTTP Layer
 
-Responsibilities:
-- HTTP validation
-- Request parsing
-- JSON responses
-- Status codes
+Responsibilities: - Request validation - JSON parsing - Status code
+handling - Response formatting - OAuth callback handling
 
-Key handlers:
-- users.go
-- posts.go
-- drafts.go
-- comments.go
-- categories.go
-- health.go
+Key handlers: - users.go - posts.go - drafts.go - comments.go -
+categories.go - notifications.go - health.go
 
-Patterns:
-- HandlePosts → collection
-- HandlePost → item
-- req structs for payloads
+Patterns: - HandlePosts → collection - HandlePost → single resource -
+Structured request DTOs - Consistent error response schema
 
----
+------------------------------------------------------------------------
 
 ## 2.3 Middleware
 
-```
-Request
- → Logger
- → Recoverer
- → CORS
- → Auth (optional)
- → Handler
-```
+Request Flow:
 
-Files:
-- auth.go
-- middleware.go
+Request\
+→ Logger\
+→ Recoverer\
+→ CORS\
+→ OptionalAuth\
+→ Auth (when required)\
+→ Handler
 
-Auth:
-- Validates session cookie
-- Injects userID into context
+Files: - auth.go - middleware.go
 
----
+Authentication middleware: - Validates session cookie - Injects userID
+into context - Supports optional auth for public endpoints
+
+------------------------------------------------------------------------
 
 ## 2.4 Router
 
-- Uses http.ServeMux
-- Explicit routing
-- Auth applied per-route
+-   Uses http.ServeMux
+-   Explicit route definitions
+-   Middleware applied per-route
+-   API versioning (/api/v1)
 
 Examples:
-```
-GET  /api/v1/posts
-POST /api/v1/posts        (auth)
-POST /api/v1/drafts       (auth)
-GET  /api/v1/users/me     (auth)
-```
 
----
+GET /api/v1/posts\
+POST /api/v1/posts (auth)\
+POST /api/v1/drafts (auth)\
+GET /api/v1/users/me (auth)\
+GET /api/v1/notifications (auth)\
+PATCH /api/v1/notifications/read-all (auth)
+
+------------------------------------------------------------------------
 
 ## 2.5 Server
 
-- Initializes DB
-- Builds router
-- Starts HTTP server
+-   Initializes SQLite database
+-   Loads schema
+-   Builds router
+-   Applies middleware stack
+-   Starts HTTP server
 
-No business logic.
+No business logic inside server package.
 
----
+------------------------------------------------------------------------
 
 ## 3. Frontend Architecture
 
 Located under:
-```
-web/
- ├── static/js
- ├── static/css
- └── index.html
-```
 
-Frontend logic split into:
-- auth.js
-- create-post.js
-- drafts.js
-- api.js
-- ui-messages.js
+web/\
+├── static/js\
+├── static/css\
+└── templates
 
-No framework. Pure JS.
+Frontend logic modules:
 
----
+-   auth.js
+-   header-loader.js
+-   view-post.js
+-   home.js
+-   create-post.js
+-   drafts.js
+-   reactions.js
+-   notifications.js
+-   ui-messages.js
+-   image-picker.js
+
+Characteristics: - Pure Vanilla JavaScript - No frontend framework -
+Modular ES modules - Event delegation for dynamic DOM - API-driven UI
+state
+
+------------------------------------------------------------------------
 
 ## 4. Authentication Model
 
-- Cookie-based sessions
-- HttpOnly cookies
-- One session per user
-- Server-side validation
+Supported authentication methods:
 
----
+-   Email / Password
+-   Google OAuth
+-   GitHub OAuth
 
-## 5. Database Model
+Authentication design:
 
-Tables:
-- users
-- sessions
-- posts
-- drafts
-- comments
-- categories
-- reactions
+-   Cookie-based sessions
+-   HttpOnly cookies
+-   One session per user
+-   Server-side session validation
+-   OAuth callback flow integrated in handlers
+
+------------------------------------------------------------------------
+
+## 5. Reactions System
+
+-   Like / Dislike for posts
+-   Like / Dislike for comments
+-   One reaction per user per entity
+-   Mutual exclusion enforced
+-   Server returns updated counts
+-   Frontend updates UI instantly
+
+------------------------------------------------------------------------
+
+## 6. Image Upload System
+
+Supported in: - Posts - Comments
+
+Features: - Multipart form handling - Max size validation - Image
+preview in UI - Lazy loading - Transparent PNG detection (frontend
+enhancement)
+
+------------------------------------------------------------------------
+
+## 7. Real-Time Notifications
+
+Notifications triggered on:
+
+-   Post reactions
+-   Comment reactions
+-   New comments on user posts
+
+Architecture:
+
+-   notifications table
+-   Polling mechanism (frontend)
+-   Badge counter
+-   Dropdown panel
+-   Sound feedback
+-   Mark-as-read endpoints
+
+------------------------------------------------------------------------
+
+## 8. My Activity Dashboard
+
+Aggregates:
+
+-   User posts
+-   User comments
+-   Reactions received
+-   Notifications
+
+Provides centralized user activity tracking and navigation.
+
+------------------------------------------------------------------------
+
+## 9. Database Model
+
+Core tables:
+
+-   users
+-   sessions
+-   posts
+-   drafts
+-   comments
+-   categories
+-   reactions
+-   notifications
 
 Constraints:
-- One reaction per user per post
-- Drafts owned by user
-- FK enforced
 
----
+-   One reaction per user per entity
+-   Foreign keys enforced
+-   Cascading rules defined
+-   Draft ownership enforced
 
-## 6. Testing Strategy
+------------------------------------------------------------------------
 
-- Full API integration tests
-- httptest
-- In-memory SQLite
-- Schema loaded dynamically
+## 10. Testing Strategy
 
-Tests assert:
-- Status codes
-- Cookies
-- JSON responses
+-   Full API integration tests
+-   httptest package
+-   In-memory SQLite
+-   Dynamic schema loading
+-   Authentication flow testing
+-   Reaction logic testing
 
----
+Assertions cover:
 
-## 7. Design Principles
+-   HTTP status codes
+-   Cookies
+-   JSON structure
+-   Database side-effects
 
-- Explicit over implicit
-- No magic frameworks
-- Stateless handlers
-- SRP-compliant files
-- Predictable naming
+------------------------------------------------------------------------
 
----
+## 11. Design Principles
+
+-   Explicit over implicit
+-   No heavy frameworks
+-   Predictable naming conventions
+-   Stateless handlers
+-   SRP-compliant modules
+-   Clear separation between layers
+-   Defensive error handling
+
+------------------------------------------------------------------------
 
 ## Summary
 
-```
-cmd/                → entrypoints
-internal/db         → persistence
-internal/handlers   → HTTP
-internal/middleware → middleware
-internal/router     → routing
-internal/server     → bootstrap
-internal/tests      → API tests
-web/                → frontend
-```
+cmd/ → entrypoints\
+internal/db → persistence layer\
+internal/handlers → HTTP logic\
+internal/middleware → request middleware\
+internal/router → routing configuration\
+internal/server → application bootstrap\
+internal/tests → API integration tests\
+web/ → frontend
+
+This architecture ensures maintainability, clarity, testability, and
+production-ready structure without relying on external frameworks.
