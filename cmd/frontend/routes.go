@@ -81,6 +81,8 @@ func NewMux() *http.ServeMux {
 			))
 			return
 		}
+
+		setNoStoreHeaders(w)
 		http.ServeFile(w, r, "./web/templates/home.html")
 	})
 	return mux
@@ -167,7 +169,14 @@ func serveTemplate(path string) http.HandlerFunc {
 			return
 		}
 
+		setNoStoreHeaders(w)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.ServeFile(w, r, path)
 	}
+}
+
+func setNoStoreHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 }
