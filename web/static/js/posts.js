@@ -490,8 +490,9 @@ function deletePostTemplate(post) {
       class="action-icon delete-icon post-delete"
       data-post-id="${post.id}"
       aria-label="Delete post"
+      title="Delete post"
     >
-      <img src="/static/img/delete.png" alt="Delete" />
+      <img src="/static/img/delete.png" alt="" />
     </button>
   `;
 }
@@ -502,8 +503,9 @@ function editPostTemplate(post) {
       class="action-icon post-edit"
       data-post-id="${post.id}"
       aria-label="Edit post"
+      title="Edit post"
     >
-      <img src="/static/img/edit.png" alt="Edit" />
+      <img src="/static/img/edit.png" alt="" />
     </button>
   `;
 }
