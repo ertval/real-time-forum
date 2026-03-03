@@ -76,12 +76,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 -------------------------------*/
 
 async function loadAndRenderPost(postId, container) {
+  
   try {
     const res = await fetch(`${API_BASE}/posts/${postId}`, {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
 
+    
     if (!res.ok) {
       container.innerHTML = `<p class="muted">Post not found.</p>`;
       return null;
