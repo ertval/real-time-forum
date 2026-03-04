@@ -3,13 +3,10 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	repository "forum/internal/db"
 	"log"
-	"mime/multipart"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -98,127 +95,20 @@ func (p *PostsHandler) updateComment(w http.ResponseWriter, r *http.Request, com
 		return
 	}
 
-	updateReq := struct {
-		Body           *string
-		ImageURL       *string
-		HasImageUpdate bool
-		RemoveImage    bool
-
-		UploadFile     multipart.File
-		UploadMime     string
-		UploadPath     string
-		HasImageUpload bool
-	}{}
-
-	contentType := strings.ToLower(r.Header.Get("Content-Type"))
-	if strings.HasPrefix(contentType, "multipart/form-data") {
-		cleanupMultipartForm, ok := parseMultipartForm(w, r)
-		if !ok {
-			return
-		}
+	updateReq, cleanupMultipartForm, ok := parseCommentUpdateRequest(w, r)
+	if !ok {
+		return
+	}
+	if cleanupMultipartForm != nil {
 		defer cleanupMultipartForm()
-
-		if value, exists := multipartFirstValue(r.MultipartForm, "body"); exists {
-			updateReq.Body = value
-		}
-
-		if value, exists := multipartFirstTrimmedValue(r.MultipartForm, "image_url"); exists {
-			if value != nil && *value == "" {
-				updateReq.ImageURL = nil
-			} else {
-				updateReq.ImageURL = value
-			}
-			updateReq.HasImageUpdate = true
-		}
-
-		removeImage, err := multipartOptionalBool(r.MultipartForm, "remove_image")
-		if err != nil {
-			WriteError(w, r, NewError("BAD_REQUEST", "invalid remove_image flag", http.StatusBadRequest))
-			return
-		}
-		if removeImage != nil {
-			updateReq.RemoveImage = *removeImage
-		}
-
-		file, mime, hasUpload, ok := parseImageUpload(w, r)
-		if !ok {
-			return
-		}
-		if hasUpload {
-			updateReq.UploadFile = file
-			defer updateReq.UploadFile.Close()
-			updateReq.UploadMime = mime
-			updateReq.HasImageUpload = true
-		}
-	} else {
-		var req struct {
-			Body        *string `json:"body"`
-			ImageURL    *string `json:"image_url"`
-			RemoveImage *bool   `json:"remove_image"`
-		}
-
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			WriteError(w, r, NewError("BAD_REQUEST", "invalid json", http.StatusBadRequest))
-			return
-		}
-
-		updateReq.Body = req.Body
-
-		if req.ImageURL != nil {
-			trimmed := strings.TrimSpace(*req.ImageURL)
-			if trimmed == "" {
-				updateReq.ImageURL = nil
-			} else {
-				updateReq.ImageURL = &trimmed
-			}
-			updateReq.HasImageUpdate = true
-		}
-
-		if req.RemoveImage != nil {
-			updateReq.RemoveImage = *req.RemoveImage
-		}
 	}
+	defer updateReq.Image.closeUploadFile()
 
-	if updateReq.RemoveImage && updateReq.HasImageUpload {
-		WriteError(w, r, NewError(
-			"BAD_REQUEST",
-			"remove_image cannot be combined with image upload",
-			http.StatusBadRequest,
-		))
+	if !resolveImageUpdateRequest(w, r, &updateReq.Image, "failed to save updated comment image") {
 		return
 	}
 
-	if updateReq.RemoveImage && updateReq.HasImageUpdate && updateReq.ImageURL != nil {
-		WriteError(w, r, NewError(
-			"BAD_REQUEST",
-			"remove_image cannot be combined with image_url",
-			http.StatusBadRequest,
-		))
-		return
-	}
-
-	if updateReq.UploadFile != nil {
-		savedImageURL, imagePath, err := saveUploadedImage(updateReq.UploadFile, updateReq.UploadMime)
-		if err != nil {
-			log.Printf("failed to save updated comment image: %v", err)
-			WriteError(w, r, NewError(
-				"INTERNAL_SERVER_ERROR",
-				"error saving image",
-				http.StatusInternalServerError,
-			))
-			return
-		}
-		updateReq.ImageURL = &savedImageURL
-		updateReq.HasImageUpdate = true
-		updateReq.UploadPath = imagePath
-	}
-
-	if updateReq.RemoveImage && !updateReq.HasImageUpload {
-		updateReq.ImageURL = nil
-		updateReq.HasImageUpdate = true
-	}
-
-	if updateReq.Body == nil && !updateReq.HasImageUpdate {
+	if updateReq.Body == nil && !updateReq.Image.HasImageUpdate {
 		WriteError(w, r, NewError("BAD_REQUEST", "nothing to update", http.StatusBadRequest))
 		return
 	}
@@ -229,14 +119,12 @@ func (p *PostsHandler) updateComment(w http.ResponseWriter, r *http.Request, com
 	}
 
 	finalImageURL := comment.ImageURL
-	if updateReq.HasImageUpdate {
-		finalImageURL = updateReq.ImageURL
+	if updateReq.Image.HasImageUpdate {
+		finalImageURL = updateReq.Image.ImageURL
 	}
 
 	if strings.TrimSpace(finalBody) == "" && finalImageURL == nil {
-		if updateReq.UploadPath != "" {
-			_ = os.Remove(updateReq.UploadPath)
-		}
+		cleanupUploadedPath(updateReq.Image.UploadPath)
 		WriteError(w, r, NewError("BAD_REQUEST", "body required", http.StatusBadRequest))
 		return
 	}
@@ -247,13 +135,11 @@ func (p *PostsHandler) updateComment(w http.ResponseWriter, r *http.Request, com
 		commentID,
 		repository.UpdateCommentInput{
 			Body:           updateReq.Body,
-			ImageURL:       updateReq.ImageURL,
-			HasImageUpdate: updateReq.HasImageUpdate,
+			ImageURL:       updateReq.Image.ImageURL,
+			HasImageUpdate: updateReq.Image.HasImageUpdate,
 		},
 	); err != nil {
-		if updateReq.UploadPath != "" {
-			_ = os.Remove(updateReq.UploadPath)
-		}
+		cleanupUploadedPath(updateReq.Image.UploadPath)
 		log.Printf("failed to update comment: %v", err)
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error updating comment", http.StatusInternalServerError))
 		return

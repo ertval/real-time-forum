@@ -327,6 +327,117 @@ func TestAPIPostUpdate_RemoveImage(t *testing.T) {
 	}
 }
 
+func TestAPIPostUpdate_RemoveImageAndUploadRejected(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	createRec := multipartRequest(
+		t,
+		h,
+		http.MethodPost,
+		"/api/v1/posts",
+		token,
+		map[string]string{
+			"title": "Image post",
+			"body":  "post body",
+		},
+		[]int64{1},
+		"initial.jpg",
+		sampleJPEGBytes,
+	)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", createRec.Code, createRec.Body.String())
+	}
+
+	createdPost := decodeEnvelopeDataMap(t, createRec)
+	postID := int64(createdPost["id"].(float64))
+	oldImageURL := createdPost["image_url"].(string)
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, oldImageURL) })
+
+	rec := multipartRequest(
+		t,
+		h,
+		http.MethodPatch,
+		fmt.Sprintf("/api/v1/posts/%d", postID),
+		token,
+		map[string]string{
+			"remove_image": "true",
+		},
+		nil,
+		"replacement.png",
+		samplePNGBytes,
+	)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, rec)
+	if apiErr == nil {
+		t.Fatalf("expected error envelope, got %s", rec.Body.String())
+	}
+	if apiErr.Message != "remove_image cannot be combined with image upload" {
+		t.Fatalf("unexpected error message: %q", apiErr.Message)
+	}
+
+	post := getPost(t, h, postID)
+	if got := post["image_url"]; got != oldImageURL {
+		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
+	}
+}
+
+func TestAPIPostUpdate_RemoveImageAndImageURLRejected(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+
+	createRec := multipartRequest(
+		t,
+		h,
+		http.MethodPost,
+		"/api/v1/posts",
+		token,
+		map[string]string{
+			"title": "Image post",
+			"body":  "post body",
+		},
+		[]int64{1},
+		"initial.jpg",
+		sampleJPEGBytes,
+	)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", createRec.Code, createRec.Body.String())
+	}
+
+	createdPost := decodeEnvelopeDataMap(t, createRec)
+	postID := int64(createdPost["id"].(float64))
+	oldImageURL := createdPost["image_url"].(string)
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, oldImageURL) })
+
+	rec := patchPost(t, h, token, postID, map[string]any{
+		"remove_image": true,
+		"image_url":    "/static/uploads/another.jpg",
+	})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, rec)
+	if apiErr == nil {
+		t.Fatalf("expected error envelope, got %s", rec.Body.String())
+	}
+	if apiErr.Message != "remove_image cannot be combined with image_url" {
+		t.Fatalf("unexpected error message: %q", apiErr.Message)
+	}
+
+	post := getPost(t, h, postID)
+	if got := post["image_url"]; got != oldImageURL {
+		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
+	}
+}
+
 func extractCategoryIDsFromPost(t *testing.T, post map[string]any) []int64 {
 	t.Helper()
 
