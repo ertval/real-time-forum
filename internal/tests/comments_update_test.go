@@ -216,3 +216,118 @@ func TestAPICommentUpdate_RemoveImageFromImageOnlyCommentRequiresBody(t *testing
 		t.Fatalf("expected image_url to remain after failed patch, got nil")
 	}
 }
+
+func TestAPICommentUpdate_RemoveImageAndUploadRejected(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Post for conflicting image flags",
+		"body":         "seed body",
+		"category_ids": []int64{1},
+	})
+
+	createRec := multipartCommentRequest(
+		t,
+		h,
+		token,
+		postID,
+		map[string]string{"body": "initial comment body"},
+		"initial-comment.jpg",
+		sampleJPEGBytes,
+	)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", createRec.Code, createRec.Body.String())
+	}
+
+	createdComment := decodeEnvelopeDataMap(t, createRec)
+	commentID := int64(createdComment["id"].(float64))
+	oldImageURL := createdComment["image_url"].(string)
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, oldImageURL) })
+
+	payload, contentType := buildCommentMultipartBody(
+		t,
+		map[string]string{
+			"remove_image": "true",
+		},
+		"replacement-comment.png",
+		samplePNGBytes,
+	)
+	patchRec := multipartRequestWithBody(
+		t,
+		h,
+		http.MethodPatch,
+		fmt.Sprintf("/api/v1/comments/%d", commentID),
+		token,
+		contentType,
+		payload,
+	)
+	if patchRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body=%s", patchRec.Code, patchRec.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, patchRec)
+	if apiErr == nil {
+		t.Fatalf("expected error envelope, got %s", patchRec.Body.String())
+	}
+	if apiErr.Message != "remove_image cannot be combined with image upload" {
+		t.Fatalf("unexpected error message: %q", apiErr.Message)
+	}
+
+	fetched := getCommentByID(t, h, commentID)
+	if got := fetched["image_url"]; got != oldImageURL {
+		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
+	}
+}
+
+func TestAPICommentUpdate_RemoveImageAndImageURLRejected(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	token := loginAndGetToken(t, h, "testuser", "password123")
+	postID := createPostAndGetID(t, h, token, map[string]any{
+		"title":        "Post for conflicting image flags",
+		"body":         "seed body",
+		"category_ids": []int64{1},
+	})
+
+	createRec := multipartCommentRequest(
+		t,
+		h,
+		token,
+		postID,
+		map[string]string{"body": "initial comment body"},
+		"initial-comment.jpg",
+		sampleJPEGBytes,
+	)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", createRec.Code, createRec.Body.String())
+	}
+
+	createdComment := decodeEnvelopeDataMap(t, createRec)
+	commentID := int64(createdComment["id"].(float64))
+	oldImageURL := createdComment["image_url"].(string)
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, oldImageURL) })
+
+	patchRec := patchCommentJSON(t, h, token, commentID, map[string]any{
+		"remove_image": true,
+		"image_url":    "/static/uploads/another-comment.jpg",
+	})
+	if patchRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body=%s", patchRec.Code, patchRec.Body.String())
+	}
+
+	apiErr := decodeErrorEnvelope(t, patchRec)
+	if apiErr == nil {
+		t.Fatalf("expected error envelope, got %s", patchRec.Body.String())
+	}
+	if apiErr.Message != "remove_image cannot be combined with image_url" {
+		t.Fatalf("unexpected error message: %q", apiErr.Message)
+	}
+
+	fetched := getCommentByID(t, h, commentID)
+	if got := fetched["image_url"]; got != oldImageURL {
+		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
+	}
+}
