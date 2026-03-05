@@ -43,6 +43,7 @@ func TestUserActivity_ReturnsCreatedLikedDislikedAndComments(t *testing.T) {
 	reactToPost(t, h, token, dislikedPostID, "dislike")
 
 	commentID := createComment(t, h, token, likedPostID, "Activity comment")
+	reactToComment(t, h, token, commentID, "like")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/activity?page=1&per_page=20", nil)
 	req.Header.Set("Cookie", "session_token="+token)
@@ -92,9 +93,12 @@ func TestUserActivity_ReturnsCreatedLikedDislikedAndComments(t *testing.T) {
 		} `json:"disliked_posts"`
 		Comments struct {
 			Items []struct {
-				ID     int64 `json:"id"`
-				PostID int64 `json:"post_id"`
-				Post   struct {
+				ID         int64 `json:"id"`
+				PostID     int64 `json:"post_id"`
+				Likes      int   `json:"likes"`
+				Dislikes   int   `json:"dislikes"`
+				MyReaction int   `json:"my_reaction"`
+				Post       struct {
 					ID         int64  `json:"id"`
 					Title      string `json:"title"`
 					Likes      int    `json:"likes"`
@@ -172,6 +176,12 @@ func TestUserActivity_ReturnsCreatedLikedDislikedAndComments(t *testing.T) {
 	if len(comment.Post.Categories) == 0 {
 		t.Fatalf("expected nested post categories in comment activity")
 	}
+	if comment.Likes != 1 || comment.Dislikes != 0 {
+		t.Fatalf("expected comment reaction counts 1 like / 0 dislikes, got %d / %d", comment.Likes, comment.Dislikes)
+	}
+	if comment.MyReaction != 1 {
+		t.Fatalf("expected comment my_reaction=1, got %d", comment.MyReaction)
+	}
 	if comment.Post.Likes != 1 || comment.Post.Dislikes != 0 {
 		t.Fatalf("expected nested post reaction counts 1 like / 0 dislikes, got %d / %d", comment.Post.Likes, comment.Post.Dislikes)
 	}
@@ -190,5 +200,18 @@ func reactToPost(t *testing.T, h http.Handler, token string, postID int64, react
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("reaction failed: %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func reactToComment(t *testing.T, h http.Handler, token string, commentID int64, reaction string) {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/comments/%d/%s", commentID, reaction), nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("comment reaction failed: %d body=%s", rec.Code, rec.Body.String())
 	}
 }
