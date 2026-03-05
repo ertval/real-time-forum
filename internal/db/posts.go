@@ -289,8 +289,8 @@ func UpdatePostStatus(ctx context.Context, db *sql.DB, postID, authorID int64, s
 	res, err := db.ExecContext(ctx, `
         UPDATE posts
         SET status = ?, updated_at = datetime('now')
-        WHERE id = ?
-    `, status, postID)
+        WHERE id = ? AND author_id = ?
+    `, status, postID, authorID)
 	if err != nil {
 		return err
 	}
