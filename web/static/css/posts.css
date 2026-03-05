@@ -30,6 +30,8 @@
 
 .post-body p {
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .post-image {
