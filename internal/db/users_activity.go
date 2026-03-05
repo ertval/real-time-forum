@@ -32,6 +32,7 @@ type UserActivityComment struct {
 	UpdatedAt       string                  `json:"updated_at,omitempty"`
 	Likes           int                     `json:"likes"`
 	Dislikes        int                     `json:"dislikes"`
+	MyReaction      int                     `json:"my_reaction"`
 	Post            UserActivityCommentPost `json:"post"`
 }
 
@@ -69,6 +70,9 @@ func ListUserCommentsWithPost(
 		return ListUserCommentsWithPostResult{}, err
 	}
 	if err := attachUserActivityCommentPostReactions(ctx, db, comments, p.UserID); err != nil {
+		return ListUserCommentsWithPostResult{}, err
+	}
+	if err := attachUserActivityCommentMyReactions(ctx, db, comments, p.UserID); err != nil {
 		return ListUserCommentsWithPostResult{}, err
 	}
 
@@ -167,6 +171,67 @@ func attachUserActivityCommentPostReactions(
 		if reaction, ok := reactionMap[comments[i].Post.ID]; ok {
 			comments[i].Post.MyReaction = reaction
 		}
+	}
+
+	return nil
+}
+
+func attachUserActivityCommentMyReactions(
+	ctx context.Context,
+	db *sql.DB,
+	comments []UserActivityComment,
+	viewerID int64,
+) error {
+	if viewerID <= 0 || len(comments) == 0 {
+		return nil
+	}
+
+	commentIDs := make([]int64, 0, len(comments))
+	seen := make(map[int64]struct{}, len(comments))
+
+	for _, comment := range comments {
+		if _, ok := seen[comment.ID]; ok {
+			continue
+		}
+		seen[comment.ID] = struct{}{}
+		commentIDs = append(commentIDs, comment.ID)
+	}
+
+	query := `
+		SELECT comment_id, value
+		FROM reactions
+		WHERE user_id = ?
+		  AND comment_id IS NOT NULL
+		  AND comment_id IN (` + placeholders(len(commentIDs)) + `)
+	`
+
+	args := make([]any, 0, len(commentIDs)+1)
+	args = append(args, viewerID)
+	for _, id := range commentIDs {
+		args = append(args, id)
+	}
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	reactionMap := make(map[int64]int, len(commentIDs))
+	for rows.Next() {
+		var commentID int64
+		var reaction int
+		if err := rows.Scan(&commentID, &reaction); err != nil {
+			return err
+		}
+		reactionMap[commentID] = reaction
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for i := range comments {
+		comments[i].MyReaction = reactionMap[comments[i].ID]
 	}
 
 	return nil

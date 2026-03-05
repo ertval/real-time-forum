@@ -192,6 +192,13 @@ function renderCommentsSection(section) {
 function mapActivityCommentPostToCard(comment) {
   const post = comment?.post ?? {};
   const categories = normalizePostCategories(post, comment);
+  const postReaction = Number(
+    post?.my_reaction ??
+      post?.myReaction ??
+      comment?.post_my_reaction ??
+      comment?.postMyReaction ??
+      0
+  );
 
   const postID = Number(comment?.post_id ?? post.id) || 0;
   const createdAt =
@@ -211,9 +218,9 @@ function mapActivityCommentPostToCard(comment) {
     image_url: typeof post.image_url === "string" ? post.image_url : "",
     created_at: createdAt,
     categories,
-    likes: Number(post.likes) || 0,
-    dislikes: Number(post.dislikes) || 0,
-    my_reaction: Number(post.my_reaction) || 0,
+    likes: Number(post.likes ?? post.likes_count) || 0,
+    dislikes: Number(post.dislikes ?? post.dislikes_count) || 0,
+    my_reaction: Number.isFinite(postReaction) ? postReaction : 0,
   };
 }
 
