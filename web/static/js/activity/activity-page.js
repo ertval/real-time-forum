@@ -1,6 +1,6 @@
-// web/static/js/activity-page.js
-import { API_BASE } from "./utils.js";
-import { loadSettingsModal } from "./settings-loader.js";
+// web/static/js/activity/activity-page.js
+import { API_BASE } from "../utils.js";
+import { loadSettingsModal } from "../settings-loader.js";
 
 async function loadHeader() {
   const res = await fetch("/static/partials/header.html");
@@ -46,7 +46,7 @@ async function requireAuth() {
 
 (async function bootstrap() {
   await loadHeader();
-  await loadSettingsModal(); 
+  await loadSettingsModal();
 
   const isAuthed = await requireAuth();
   if (!isAuthed) return;
