@@ -9,10 +9,12 @@ import (
 )
 
 type UserActivityCommentPost struct {
-	ID       int64  `json:"id"`
-	AuthorID int64  `json:"author_id"`
-	Author   string `json:"author"`
-	Title    string `json:"title"`
+	ID         int64          `json:"id"`
+	AuthorID   int64          `json:"author_id"`
+	Author     string         `json:"author"`
+	Title      string         `json:"title"`
+	ImageURL   *string        `json:"image_url"`
+	Categories []PostCategory `json:"categories"`
 }
 
 type UserActivityComment struct {
@@ -60,11 +62,29 @@ func ListUserCommentsWithPost(
 	if err != nil {
 		return ListUserCommentsWithPostResult{}, err
 	}
+	if err := attachUserActivityCommentPostCategories(ctx, db, comments); err != nil {
+		return ListUserCommentsWithPostResult{}, err
+	}
 
 	return ListUserCommentsWithPostResult{
 		Comments: comments,
 		Total:    total,
 	}, nil
+}
+
+func attachUserActivityCommentPostCategories(
+	ctx context.Context,
+	db *sql.DB,
+	comments []UserActivityComment,
+) error {
+	for i := range comments {
+		categories, err := getCategoriesByPostID(ctx, db, comments[i].Post.ID)
+		if err != nil {
+			return err
+		}
+		comments[i].Post.Categories = categories
+	}
+	return nil
 }
 
 func countUserComments(ctx context.Context, db *sql.DB, userID int64) (int, error) {
@@ -101,6 +121,7 @@ func fetchUserCommentsWithPost(
 			post.author_id,
 			pu.username,
 			post.title,
+			post.image_url,
 			IFNULL(rc.likes, 0) AS likes,
 			IFNULL(rc.dislikes, 0) AS dislikes
 		FROM comments c
@@ -130,7 +151,8 @@ func fetchUserCommentsWithPost(
 	for rows.Next() {
 		var comment UserActivityComment
 		var parentID sql.NullInt64
-		var imageURL sql.NullString
+		var commentImageURL sql.NullString
+		var postImageURL sql.NullString
 
 		if err := rows.Scan(
 			&comment.ID,
@@ -139,13 +161,14 @@ func fetchUserCommentsWithPost(
 			&comment.Username,
 			&parentID,
 			&comment.Body,
-			&imageURL,
+			&commentImageURL,
 			&comment.CreatedAt,
 			&comment.UpdatedAt,
 			&comment.Post.ID,
 			&comment.Post.AuthorID,
 			&comment.Post.Author,
 			&comment.Post.Title,
+			&postImageURL,
 			&comment.Likes,
 			&comment.Dislikes,
 		); err != nil {
@@ -156,8 +179,11 @@ func fetchUserCommentsWithPost(
 			id := parentID.Int64
 			comment.ParentCommentID = &id
 		}
-		if imageURL.Valid {
-			comment.ImageURL = &imageURL.String
+		if commentImageURL.Valid {
+			comment.ImageURL = &commentImageURL.String
+		}
+		if postImageURL.Valid {
+			comment.Post.ImageURL = &postImageURL.String
 		}
 
 		comments = append(comments, comment)
