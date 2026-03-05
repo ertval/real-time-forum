@@ -342,6 +342,18 @@ func (p *PostsHandler) getPost(w http.ResponseWriter, r *http.Request, postID in
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading post", http.StatusInternalServerError))
 		return
 	}
+
+	viewerID, _ := middleware.GetUserID(r.Context())
+	if viewerID > 0 {
+		reaction, err := repository.GetUserReactionForPost(r.Context(), p.conn, viewerID, postID)
+		if err != nil {
+			log.Printf("failed to load viewer reaction for post %d: %v", postID, err)
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "error loading post", http.StatusInternalServerError))
+			return
+		}
+		post.MyReaction = reaction
+	}
+
 	WriteOK(w, post, nil)
 }
 
