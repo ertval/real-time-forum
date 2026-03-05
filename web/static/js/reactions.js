@@ -24,7 +24,7 @@ export function initReactions() {
 
     const scope = postId
       ? btn.closest("article[data-post-id]")
-      : btn.closest(".comment");
+      : btn.closest(".comment, .activity-comment");
 
     if (!scope) return;
 

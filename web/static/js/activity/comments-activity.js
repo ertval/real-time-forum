@@ -191,11 +191,19 @@ function openCommentInlineEditor(article, refresh) {
     e.preventDefault();
 
     const body = textarea.value.trim();
+    const originalBodyNormalized = (originalBody || "").trim();
     const imageFile = picker?.getFile?.() || null;
     const hasPersistedImage = !!originalImageURL && !removePersistedImage;
+    const bodyChanged = body !== originalBodyNormalized;
+    const imageChanged = !!imageFile || removePersistedImage;
 
     if (!body && !imageFile && !hasPersistedImage) {
       uiNotify("Cannot save empty comment.", { type: "warn" });
+      return;
+    }
+
+    if (!bodyChanged && !imageChanged) {
+      uiNotify("No changes to update.", { type: "info" });
       return;
     }
 

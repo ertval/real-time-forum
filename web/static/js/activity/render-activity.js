@@ -1,7 +1,7 @@
 // /static/js/activity/render-activity.js
 
 import { loadActivity } from "./api-activity.js";
-import { renderPostCard } from "../posts.js";
+import { renderPostCard, reactionTemplate } from "../posts.js";
 import { initReactions } from "../reactions.js";
 import { formatCreatedAt, resolveUsername, escapeHTML } from "../utils.js";
 import { editCommentButton, deleteCommentButton } from "../post-actions.js";
@@ -133,11 +133,7 @@ function renderCommentsSection(section) {
         : "";
 
     const bodyMarkup = commentBody.trim()
-      ? `
-          <p class="activity-comment-body">
-            ${escapeHTML(commentBody)}
-          </p>
-        `
+      ? `<p class="activity-comment-body">${escapeHTML(commentBody)}</p>`
       : "";
 
     const imageMarkup = commentImageURL
@@ -153,6 +149,11 @@ function renderCommentsSection(section) {
         `
       : "";
 
+    const postForCard = mapActivityCommentPostToCard(comment);
+    const postArticle = renderPostCard(postForCard, { clickable: true });
+    postArticle.classList.add("activity-comment-related-post");
+    postArticle.querySelector(".post-comments")?.remove();
+
     const article = document.createElement("article");
     article.className = "activity-comment card card-pad";
     article.dataset.commentId = commentID;
@@ -161,27 +162,78 @@ function renderCommentsSection(section) {
 
     article.innerHTML = `
       <header class="activity-comment-head">
-        <div>
-          <p class="muted">On post</p>
-          <a href="/view-post/${comment.post_id}" class="activity-comment-post-link">
-            ${escapeHTML(comment.post?.title || "Untitled")}
-          </a>
-        </div>
+        <p class="activity-comment-author muted">
+          Author: ${escapeHTML(username)}
+        </p>
         <div class="activity-comment-head-right">
           <time class="muted">${formatCreatedAt(comment.created_at)}</time>
           ${editCommentButton(commentID)}
           ${deleteCommentButton(commentID)}
         </div>
       </header>
-      <p class="activity-comment-author muted">
-        By ${escapeHTML(username)}
-      </p>
       <div class="activity-comment-content">
         ${bodyMarkup}
         ${imageMarkup}
       </div>
+      <div class="activity-comment-reactions comment">
+        ${reactionTemplate(comment, true)}
+      </div>
     `;
 
-    output.appendChild(article);
+    const entry = document.createElement("div");
+    entry.className = "activity-comment-entry";
+    entry.appendChild(postArticle);
+    entry.appendChild(article);
+
+    output.appendChild(entry);
   });
+}
+
+function mapActivityCommentPostToCard(comment) {
+  const post = comment?.post ?? {};
+  const categories = normalizePostCategories(post, comment);
+
+  const postID = Number(comment?.post_id ?? post.id) || 0;
+  const createdAt =
+    typeof post.created_at === "string" && post.created_at.trim()
+      ? post.created_at
+      : comment?.created_at;
+
+  return {
+    id: postID,
+    author_id: Number(post.author_id) || 0,
+    author: typeof post.author === "string" ? post.author : "",
+    title:
+      typeof post.title === "string" && post.title.trim()
+        ? post.title
+        : "Untitled",
+    body: typeof post.body === "string" ? post.body : "",
+    image_url: typeof post.image_url === "string" ? post.image_url : "",
+    created_at: createdAt,
+    categories,
+    likes: Number(post.likes) || 0,
+    dislikes: Number(post.dislikes) || 0,
+    my_reaction: Number(post.my_reaction) || 0,
+  };
+}
+
+function normalizePostCategories(post, comment) {
+  const fromNested = Array.isArray(post?.categories) ? post.categories : [];
+  const fromComment = Array.isArray(comment?.categories) ? comment.categories : [];
+  const source = fromNested.length ? fromNested : fromComment;
+
+  return source
+    .map(category => {
+      if (!category || typeof category !== "object") return null;
+      const id = Number(category.id ?? category.ID) || 0;
+      const name =
+        typeof category.name === "string"
+          ? category.name
+          : typeof category.Name === "string"
+            ? category.Name
+            : "";
+      if (!id && !name) return null;
+      return { id, name };
+    })
+    .filter(Boolean);
 }

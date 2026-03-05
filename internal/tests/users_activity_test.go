@@ -95,8 +95,12 @@ func TestUserActivity_ReturnsCreatedLikedDislikedAndComments(t *testing.T) {
 				ID     int64 `json:"id"`
 				PostID int64 `json:"post_id"`
 				Post   struct {
-					ID    int64  `json:"id"`
-					Title string `json:"title"`
+					ID         int64  `json:"id"`
+					Title      string `json:"title"`
+					Categories []struct {
+						ID   int64  `json:"id"`
+						Name string `json:"name"`
+					} `json:"categories"`
 				} `json:"post"`
 			} `json:"items"`
 			Pagination struct {
@@ -161,6 +165,9 @@ func TestUserActivity_ReturnsCreatedLikedDislikedAndComments(t *testing.T) {
 	}
 	if comment.Post.Title == "" {
 		t.Fatalf("expected nested post title in comment activity")
+	}
+	if len(comment.Post.Categories) == 0 {
+		t.Fatalf("expected nested post categories in comment activity")
 	}
 }
 
