@@ -223,6 +223,7 @@
 .notification-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   padding: 14px 16px;
   font-size: 14px;
@@ -311,4 +312,36 @@ body.is-authenticated .auth-only {
 
 body.is-authenticated #login-btn {
   display: none;
+}
+
+/* MARK ALL BUTTON */
+
+#mark-all-read-btn {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+
+  white-space: nowrap;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #ffffff;
+  color: #374151;
+
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#mark-all-read-btn:hover {
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+
+#mark-all-read-btn:active {
+  transform: scale(0.95);
+}
+
+#mark-all-read-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
