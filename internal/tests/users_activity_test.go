@@ -97,6 +97,9 @@ func TestUserActivity_ReturnsCreatedLikedDislikedAndComments(t *testing.T) {
 				Post   struct {
 					ID         int64  `json:"id"`
 					Title      string `json:"title"`
+					Likes      int    `json:"likes"`
+					Dislikes   int    `json:"dislikes"`
+					MyReaction int    `json:"my_reaction"`
 					Categories []struct {
 						ID   int64  `json:"id"`
 						Name string `json:"name"`
@@ -168,6 +171,12 @@ func TestUserActivity_ReturnsCreatedLikedDislikedAndComments(t *testing.T) {
 	}
 	if len(comment.Post.Categories) == 0 {
 		t.Fatalf("expected nested post categories in comment activity")
+	}
+	if comment.Post.Likes != 1 || comment.Post.Dislikes != 0 {
+		t.Fatalf("expected nested post reaction counts 1 like / 0 dislikes, got %d / %d", comment.Post.Likes, comment.Post.Dislikes)
+	}
+	if comment.Post.MyReaction != 1 {
+		t.Fatalf("expected nested post my_reaction=1, got %d", comment.Post.MyReaction)
 	}
 }
 

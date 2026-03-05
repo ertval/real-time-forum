@@ -15,6 +15,9 @@ type UserActivityCommentPost struct {
 	Title      string         `json:"title"`
 	ImageURL   *string        `json:"image_url"`
 	Categories []PostCategory `json:"categories"`
+	Likes      int            `json:"likes"`
+	Dislikes   int            `json:"dislikes"`
+	MyReaction int            `json:"my_reaction"`
 }
 
 type UserActivityComment struct {
@@ -65,6 +68,9 @@ func ListUserCommentsWithPost(
 	if err := attachUserActivityCommentPostCategories(ctx, db, comments); err != nil {
 		return ListUserCommentsWithPostResult{}, err
 	}
+	if err := attachUserActivityCommentPostReactions(ctx, db, comments, p.UserID); err != nil {
+		return ListUserCommentsWithPostResult{}, err
+	}
 
 	return ListUserCommentsWithPostResult{
 		Comments: comments,
@@ -84,6 +90,85 @@ func attachUserActivityCommentPostCategories(
 		}
 		comments[i].Post.Categories = categories
 	}
+	return nil
+}
+
+func attachUserActivityCommentPostReactions(
+	ctx context.Context,
+	db *sql.DB,
+	comments []UserActivityComment,
+	viewerID int64,
+) error {
+	if len(comments) == 0 {
+		return nil
+	}
+
+	for i := range comments {
+		likes, dislikes, err := CountReactionsForPost(ctx, db, comments[i].Post.ID)
+		if err != nil {
+			return err
+		}
+		comments[i].Post.Likes = likes
+		comments[i].Post.Dislikes = dislikes
+		comments[i].Post.MyReaction = 0
+	}
+
+	if viewerID <= 0 {
+		return nil
+	}
+
+	postIDs := make([]int64, 0, len(comments))
+	seen := make(map[int64]struct{}, len(comments))
+	for _, comment := range comments {
+		if _, ok := seen[comment.Post.ID]; ok {
+			continue
+		}
+		seen[comment.Post.ID] = struct{}{}
+		postIDs = append(postIDs, comment.Post.ID)
+	}
+	if len(postIDs) == 0 {
+		return nil
+	}
+
+	query := `
+		SELECT post_id, value
+		FROM reactions
+		WHERE user_id = ?
+		  AND post_id IS NOT NULL
+		  AND post_id IN (` + placeholders(len(postIDs)) + `)
+	`
+
+	args := make([]any, 0, len(postIDs)+1)
+	args = append(args, viewerID)
+	for _, id := range postIDs {
+		args = append(args, id)
+	}
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	reactionMap := make(map[int64]int, len(postIDs))
+	for rows.Next() {
+		var postID int64
+		var reaction int
+		if err := rows.Scan(&postID, &reaction); err != nil {
+			return err
+		}
+		reactionMap[postID] = reaction
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for i := range comments {
+		if reaction, ok := reactionMap[comments[i].Post.ID]; ok {
+			comments[i].Post.MyReaction = reaction
+		}
+	}
+
 	return nil
 }
 
