@@ -239,7 +239,6 @@ function maybeRenderCommentForm(container, postId) {
     <div class="comment-image-preview" hidden>
       <img alt="Selected comment image preview" />
     </div>
-    <p class="comment-error" role="alert" hidden></p>
     <button class="btn btn-primary" type="submit">Comment</button>
   `;
 
@@ -296,7 +295,6 @@ function maybeRenderCommentForm(container, postId) {
       const allowed = await Auth.requireOrPrompt();
       if (!allowed) return;
 
-      const errorEl = form.querySelector(".comment-error");
       const body = textarea.value.trim();
       const imageFile =
         imagePicker?.getFile() ||
@@ -305,12 +303,9 @@ function maybeRenderCommentForm(container, postId) {
       const hasImage = !!imageFile;
 
       if (!body && !hasImage) {
-        errorEl.textContent = "Cannot submit an empty comment";
-        errorEl.hidden = false;
+        uiNotify("Cannot submit an empty comment.", { type: "warn" });
         return;
       }
-
-      errorEl.hidden = true;
 
       const res = await fetch(
         `${API_BASE}/posts/${postId}/comments`,
@@ -331,8 +326,10 @@ function maybeRenderCommentForm(container, postId) {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
-        errorEl.textContent = payload?.error?.message || "Failed to submit comment";
-        errorEl.hidden = false;
+        const message = payload?.error?.message || "Failed to submit comment.";
+        uiNotify(message, {
+          type: res.status >= 500 ? "danger" : "warn",
+        });
         return;
       }
 
@@ -368,6 +365,9 @@ function maybeRenderCommentForm(container, postId) {
 
         }, 1000);
       }
+    } catch (err) {
+      console.error("Failed to submit comment:", err);
+      uiNotify("Failed to submit comment.", { type: "danger" });
     } finally {
       isSubmitting = false;
       if (submitButton instanceof HTMLButtonElement) {
