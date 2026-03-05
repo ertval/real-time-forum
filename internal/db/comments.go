@@ -111,7 +111,7 @@ func CreateComment(
 
 	const query = `
 		INSERT INTO comments (post_id, user_id, parent_comment_id, body, image_url, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+		VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 	`
 
 	res, err := db.ExecContext(ctx, query,
@@ -247,7 +247,7 @@ func UpdateComment(ctx context.Context, db *sql.DB, id int64, in UpdateCommentIn
 		return nil
 	}
 
-	setParts = append(setParts, "updated_at = datetime('now')")
+	setParts = append(setParts, "updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')")
 	args = append(args, id)
 
 	query := `UPDATE comments SET ` + strings.Join(setParts, ", ") + ` WHERE id = ?`
