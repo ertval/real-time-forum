@@ -148,3 +148,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPosts(state, pager, paginationEl);
   });
 });
+
+// Back to Top button
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("backToTop");
+  if (!btn) return;
+  const showAt = window.innerWidth < 768 ? 200 : 400;
+  const onScroll = () => {
+    if (window.scrollY > showAt) btn.classList.add("show");
+    else btn.classList.remove("show");
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+  btn.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+});

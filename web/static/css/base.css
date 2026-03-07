@@ -319,3 +319,5 @@ label svg {
   height: 20px;
   display: block;
 }
+/* Smooth scrolling for anchor jumps */
+html { scroll-behavior: smooth; }
