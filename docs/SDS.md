@@ -1,0 +1,437 @@
+# Real-Time Forum SDS
+
+## 1. Overview
+
+This document defines the technical design for converting the current forum into the target real-time forum.
+
+The chosen direction is:
+
+- keep the current split frontend and backend server topology
+- replace the current multi-page frontend with a single-page application shell
+- require authentication for forum usage
+- keep useful existing features where they do not block the target requirements
+- implement private messaging as a minimal one-to-one system
+
+## 2. Current Technical Baseline
+
+The current codebase is a Go application with:
+
+- a frontend server that serves static assets and HTML templates
+- a backend API server under `/api/v1`
+- SQLite persistence
+- session-cookie authentication
+- REST endpoints for posts, comments, reactions, drafts, notifications, and activity
+- polling-based notifications
+
+The current implementation is not yet suitable for the target state because:
+
+- the frontend serves multiple templates instead of one SPA shell
+- public read routes still support unauthenticated access
+- registration persists only username, email, and password
+- comments are fetched and rendered in the home feed
+- there is no WebSocket endpoint
+- there is no persistence model for private messages
+- there is no presence model for online or offline status
+
+## 3. Target Architecture
+
+## 3.1 High-Level Design
+
+- Frontend server responsibilities:
+  - serve one HTML app shell
+  - serve static assets
+  - proxy `/api/` requests to the backend
+  - proxy `/ws` connections to the backend
+- Backend server responsibilities:
+  - own business logic and persistence
+  - serve authenticated REST APIs
+  - expose a WebSocket endpoint for presence and direct messages
+
+## 3.2 Frontend Runtime Model
+
+- The frontend uses one root HTML document.
+- The frontend owns route changes in JavaScript.
+- The authenticated app shell persists across route changes.
+- The app shell contains:
+  - header and logout control
+  - route outlet for page content
+  - persistent direct-message roster and active-chat area
+
+## 3.3 Backend Runtime Model
+
+- REST remains the transport for standard CRUD flows.
+- WebSocket is added only for presence and private messaging in this phase.
+- Session-cookie authentication remains the source of truth for both HTTP and WebSocket access.
+
+## 4. Data Model Changes
+
+## 4.1 Users
+
+Extend the `users` table with:
+
+- `age INTEGER NOT NULL`
+- `gender TEXT NOT NULL`
+- `first_name TEXT NOT NULL`
+- `last_name TEXT NOT NULL`
+
+Notes:
+
+- `username` remains the nickname shown in the forum and chat
+- existing users must be migrated safely
+
+## 4.2 Private Messages
+
+Add a new `private_messages` table:
+
+```sql
+CREATE TABLE private_messages (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  sender_id     INTEGER NOT NULL,
+  recipient_id  INTEGER NOT NULL,
+  body          TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+  CHECK (sender_id <> recipient_id),
+  CHECK (length(trim(body)) > 0)
+);
+```
+
+Required indexes:
+
+- `(sender_id, recipient_id, created_at DESC)`
+- `(recipient_id, sender_id, created_at DESC)`
+- optional pair-query support index if message lookup shows performance issues
+
+No separate conversations table is introduced in this phase.
+
+## 4.3 Presence
+
+Presence is not stored in SQLite.
+
+Presence is kept in memory as authenticated WebSocket connection state:
+
+- `userID -> active connection count`
+
+Online rule:
+
+- a user is online when active connection count is greater than zero
+
+## 5. API Design
+
+## 5.1 Existing Endpoint Changes
+
+- All forum content endpoints that currently allow optional auth become authenticated forum endpoints.
+- Login remains `POST /api/v1/users/login`.
+- Registration remains `POST /api/v1/users/register` but accepts the extended payload.
+- Logout remains `POST /api/v1/users/logout`.
+- `GET /api/v1/users/me` remains the bootstrap auth-check endpoint for the SPA.
+
+## 5.2 Registration Payload
+
+Request:
+
+```json
+{
+  "username": "alex",
+  "email": "alex@example.com",
+  "password": "password123",
+  "age": 24,
+  "gender": "male",
+  "first_name": "Alex",
+  "last_name": "Smyro"
+}
+```
+
+Validation rules for implementation:
+
+- `username`: existing rules stay in place
+- `email`: existing rules stay in place
+- `password`: existing rules stay in place
+- `age`: integer, positive
+- `gender`: required non-empty string
+- `first_name`: required non-empty string
+- `last_name`: required non-empty string
+
+## 5.3 Chat Roster Endpoint
+
+`GET /api/v1/chats`
+
+Purpose:
+
+- return all other users for the current user
+- include presence and last-message metadata for roster sorting
+
+Response shape:
+
+```json
+{
+  "data": [
+    {
+      "user_id": 12,
+      "username": "maria",
+      "is_online": true,
+      "last_message_at": "2026-04-09T14:20:00Z",
+      "last_message_preview": "see you soon",
+      "last_sender_id": 7
+    }
+  ]
+}
+```
+
+Sorting rules:
+
+- users with message history come first, sorted by `last_message_at DESC`
+- users without message history come after, sorted by `username ASC`
+
+## 5.4 Chat History Endpoint
+
+`GET /api/v1/chats/{userID}/messages?before_id=<messageID>&limit=10`
+
+Behavior:
+
+- without `before_id`, return the latest 10 messages in the pair
+- with `before_id`, return the 10 messages older than that message
+- response must be returned oldest-to-newest for direct rendering
+
+Response shape:
+
+```json
+{
+  "data": {
+    "messages": [
+      {
+        "id": 91,
+        "sender_id": 7,
+        "recipient_id": 12,
+        "sender_username": "alex",
+        "body": "hello",
+        "created_at": "2026-04-09T14:21:00Z"
+      }
+    ],
+    "has_more": true
+  }
+}
+```
+
+## 5.5 WebSocket Endpoint
+
+`GET /ws`
+
+Requirements:
+
+- only authenticated users may connect
+- session cookie is validated during upgrade
+- multiple tabs for the same user are allowed
+
+### Client-to-Server Events
+
+```json
+{
+  "type": "dm.send",
+  "payload": {
+    "recipient_id": 12,
+    "body": "hello"
+  }
+}
+```
+
+### Server-to-Client Events
+
+Presence snapshot:
+
+```json
+{
+  "type": "presence.snapshot",
+  "payload": {
+    "users": [
+      { "user_id": 12, "is_online": true }
+    ]
+  }
+}
+```
+
+Presence update:
+
+```json
+{
+  "type": "presence.update",
+  "payload": {
+    "user_id": 12,
+    "is_online": false
+  }
+}
+```
+
+Direct message:
+
+```json
+{
+  "type": "dm.message",
+  "payload": {
+    "id": 91,
+    "sender_id": 7,
+    "recipient_id": 12,
+    "sender_username": "alex",
+    "body": "hello",
+    "created_at": "2026-04-09T14:21:00Z"
+  }
+}
+```
+
+Error:
+
+```json
+{
+  "type": "chat.error",
+  "payload": {
+    "code": "RECIPIENT_OFFLINE",
+    "message": "recipient is offline"
+  }
+}
+```
+
+## 6. Backend Processing Rules
+
+## 6.1 Message Send Rules
+
+On `dm.send`:
+
+- validate authenticated sender
+- validate `recipient_id`
+- reject self-send
+- reject empty message body
+- reject recipient if offline
+- persist the message
+- emit `dm.message` to sender and recipient
+- update roster ordering for both affected users
+
+## 6.2 Presence Rules
+
+- increment connection count on successful WebSocket connect
+- decrement on disconnect
+- emit `presence.update` only on state transition:
+  - offline -> online
+  - online -> offline
+
+## 6.3 Auth Rules
+
+- HTTP session cookie remains the only auth mechanism
+- forum data endpoints require valid session
+- WebSocket upgrade rejects invalid or expired sessions
+- OAuth is not part of the target product design
+
+## 7. Frontend Design
+
+## 7.1 SPA Routes
+
+Required client routes:
+
+- `/login`
+- `/register`
+- `/`
+- `/post/:id`
+- `/create-post`
+- `/edit-post/:id`
+- `/activity`
+
+The frontend server still serves one shell for these routes.
+
+## 7.2 App Boot
+
+On application load:
+
+1. render SPA shell
+2. call `GET /api/v1/users/me`
+3. if `401`, render auth routes only
+4. if authenticated, render forum shell and open WebSocket connection
+
+## 7.3 Feed Behavior
+
+- fetch and render posts only
+- remove comment preview rendering from feed cards
+- clicking a post routes to post detail
+
+## 7.4 Post Detail Behavior
+
+- fetch one post
+- fetch and render comments only in this route
+- comment creation remains here
+
+## 7.5 Chat UI Behavior
+
+- roster is visible on every authenticated route
+- selecting a user loads latest history
+- composer is enabled only when selected user is online
+- history pagination loads 10 older messages at a time
+- scroll-triggered pagination uses throttle or debounce
+- incoming messages append live when the conversation is active
+- inactive conversation updates still refresh roster ordering and unread state if implemented later
+
+## 8. Migration Strategy
+
+- add schema migration for user-profile columns and `private_messages`
+- ensure existing users remain valid after migration
+- if existing rows need default values for new profile fields, migrate safely and require completion at next profile-edit or through a one-time data policy decided during implementation
+- retain existing tables for drafts, reactions, notifications, and activity
+- OAuth tables may remain temporarily in schema even if the product no longer exposes OAuth
+
+## 9. Implementation Constraints
+
+- keep the split frontend and backend servers
+- do not introduce a frontend framework unless later planning explicitly chooses one
+- do not replace the current notification system in this phase
+- do not introduce a generalized conversation model
+
+## 10. Testing Strategy
+
+## 10.1 Backend Tests
+
+- registration with extended fields
+- login with username
+- login with email
+- forum endpoint rejection for unauthenticated users
+- message persistence between two users
+- latest-10 history query
+- older-history query with `before_id`
+- roster ordering with and without prior messages
+- offline-recipient rejection
+- presence transitions with connect and disconnect
+- multi-connection same-user presence correctness
+
+## 10.2 Frontend Tests
+
+- SPA route transitions without full page reload
+- auth gating on app boot
+- logout visible from every authenticated route
+- feed contains no comments
+- post detail contains comments
+- chat roster sorting behavior
+- disabled composer for offline selected user
+- live message rendering on active chat
+- throttled or debounced history loading during upward scroll
+
+## 10.3 Regression Coverage
+
+The retained legacy features must still be verified after the migration:
+
+- post creation and editing
+- comments and reactions
+- image upload flows
+- drafts
+- activity view
+- current notifications
+
+## 11. Delivery Notes
+
+This SDS is intentionally scoped to support the next planning step:
+
+- break implementation into tickets
+- split tickets across four developer tracks
+
+The main critical path is:
+
+1. SPA shell and auth gating
+2. data-model and auth updates
+3. WebSocket and direct-message backend
+4. persistent chat UI and history loading
