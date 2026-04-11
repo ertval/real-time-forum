@@ -22,6 +22,7 @@ The original coverage and source-ticket mapping remain canonical in:
 3. Use `[-]` only when a meaningful subset of that ticket already exists in code.
 4. Keep `Depends on` and `Blocks` synchronized with the owning track file when ticket definitions change.
 5. Do not remove completed tickets from the tracker.
+6. A test ticket may start early, even if some lower-priority earlier-phase work is still open, only when all of its direct dependencies are already complete.
 
 ## Status Legend
 
@@ -40,10 +41,10 @@ The original coverage and source-ticket mapping remain canonical in:
 
 ## Summary Snapshot
 
-- Total tickets: `31`
+- Total tickets: `32`
 - Done: `0`
 - Partially Implemented: `0`
-- Not Started: `31`
+- Not Started: `32`
 
 ## Low-Blocking Claim Queue (Global)
 
@@ -52,15 +53,15 @@ Use this as the default claim order for the next wave of work:
 1. **Q0 P0 Shared Foundations**: `TA01`, `TA03`, `TA05`, `TC01`
 2. **Q1 P1 Shell/Auth Completion + Forum Base**: `TA04`, `TA06`, `TA07`, `TA08`, `TA09`, `TB01`, `TB04`, `TB05`, `TC02`
 3. **Q2 P2 Independent Build-Out**: `TA02`, `TB02`, `TB03`, `TB06`, `TB07`, `TB08`, `TC03`, `TC04`, `TC05`, `TC06`
-4. **Q3 P3 Browser Integration**: `TD01`, `TD02`, `TD03`, `TD04`, `TC07`
-5. **Q4 P4 Verification**: `TC08`, `TD05`, `TD06`
+4. **Q3 P3 Browser Integration + Early SPA Regression**: `TD01`, `TD02`, `TD03`, `TD04`, `TC07`, `TD05`
+5. **Q4 P4 Verification**: `TC08`, `TD06`, `TD07`
 
 ## Ticket ID Index
 
 - Track A: `TA01` through `TA09`
 - Track B: `TB01` through `TB08`
 - Track C: `TC01` through `TC08`
-- Track D: `TD01` through `TD06`
+- Track D: `TD01` through `TD07`
 
 ## Ordered Tickets By Track
 
@@ -82,10 +83,10 @@ Use this as the default claim order for the next wave of work:
 - [ ] **TB02** P1 - Remove Feed Comment Rendering | Remove comment previews from feed cards and stop feed-level comment fetching. (Depends on: TB01) | Blocks: TD05
 - [ ] **TB03** P1 - Post Detail Route and Comment Flow | Build SPA post detail with comments, comment creation, and comment image uploads. (Depends on: TB01) | Blocks: TD05; TB06; TB07
 - [ ] **TB04** P1 - Create and Edit Post SPA Flows | Move create/edit post flows into the SPA while preserving image and category behavior. (Depends on: TA04; TA08) | Blocks: TD05; TB08
-- [ ] **TB05** P1 - Activity View in the SPA | Move the activity screen into the shared shell and preserve activity data loading. (Depends on: TA03; TA04; TA08) | Blocks: TD05; TD06
-- [ ] **TB06** P2 - Notification Behavior in the SPA | Preserve polling, unread counts, mark-read behavior, and click/deep-link navigation after SPA migration. (Depends on: TA04; TB01; TB03) | Blocks: TD05; TD06
-- [ ] **TB07** P2 - Reaction Behavior in the SPA | Preserve post and comment reaction behavior after SPA migration. (Depends on: TB01; TB03) | Blocks: TD05; TD06
-- [ ] **TB08** P2 - Draft Workflows in the SPA | Preserve save-draft, edit-draft, and publish-draft behavior inside SPA routes. (Depends on: TB04) | Blocks: TD05; TD06
+- [ ] **TB05** P1 - Activity View in the SPA | Move the activity screen into the shared shell and preserve activity data loading. (Depends on: TA03; TA04; TA08) | Blocks: TD05; TD07
+- [ ] **TB06** P2 - Notification Behavior in the SPA | Preserve polling, unread counts, mark-read behavior, and click/deep-link navigation after SPA migration. (Depends on: TA04; TB01; TB03) | Blocks: TD05; TD07
+- [ ] **TB07** P2 - Reaction Behavior in the SPA | Preserve post and comment reaction behavior after SPA migration. (Depends on: TB01; TB03) | Blocks: TD05; TD07
+- [ ] **TB08** P2 - Draft Workflows in the SPA | Preserve save-draft, edit-draft, and publish-draft behavior inside SPA routes. (Depends on: TB04) | Blocks: TD05; TD07
 
 ### Track C
 
@@ -95,17 +96,18 @@ Use this as the default claim order for the next wave of work:
 - [ ] **TC04** P2 - Presence Broadcasting | Add presence snapshots and online/offline transition updates from active socket state. (Depends on: TC01) | Blocks: TC06; TD04; TC08
 - [ ] **TC05** P2 - Chat Roster API | Add roster API with presence and last-message metadata plus required ordering rules. (Depends on: TC02; TC01) | Blocks: TD01; TC08
 - [ ] **TC06** P2 - Realtime DM Send and Delivery | Validate, persist, and broadcast `dm.send` events plus error responses. (Depends on: TC02; TC01; TC04) | Blocks: TD04; TC08
-- [ ] **TC07** P3 - Database Migration Strategy | Define and implement migration handling for new user fields and direct messages. (Depends on: TA05; TC02) | Blocks: TD06
-- [ ] **TC08** P4 - Backend Test Coverage for Auth, Messaging, and Presence | Add backend coverage for auth modes, auth gating, roster/history, websocket auth, presence, and direct-message integration. (Depends on: TA06; TA08; TC01; TC03; TC04; TC05; TC06) | Blocks: TD06
+- [ ] **TC07** P3 - Database Migration Strategy | Define and implement migration handling for new user fields and direct messages. (Depends on: TA05; TC02) | Blocks: TD07
+- [ ] **TC08** P4 - Backend Test Coverage for Auth, Messaging, and Presence | Add backend coverage for auth modes, auth gating, roster/history, websocket auth, presence, and direct-message integration. (Depends on: TA06; TA08; TC01; TC03; TC04; TC05; TC06) | Blocks: TD07
 
 ### Track D
 
-- [ ] **TD01** P3 - Persistent Chat Roster UI | Build the always-visible roster UI with presence, ordering, previews, and offline-user selection. (Depends on: TA04; TC05) | Blocks: TD02; TD04; TD05
-- [ ] **TD02** P3 - Active Conversation Panel and Composer | Build selected-conversation rendering, offline-aware composer state, and empty conversation state. (Depends on: TC03; TD01) | Blocks: TD03; TD04; TD05
-- [ ] **TD03** P3 - Incremental History Loading | Add throttled or debounced upward history loading in batches of `10`. (Depends on: TD02) | Blocks: TD05
-- [ ] **TD04** P3 - Browser WebSocket Chat Integration | Wire browser-side WebSocket connect, send, receive, presence, ordering, and error handling. (Depends on: TA02; TA08; TC01; TC04; TC06; TD01; TD02) | Blocks: TD05; TD06
-- [ ] **TD05** P4 - Frontend Regression Coverage | Add frontend coverage for auth, SPA navigation, content migration, retained forum UX, offline chat behavior, and live messaging. (Depends on: TA07; TA09; TB02; TB03; TB04; TB05; TB06; TB07; TB08; TD01; TD02; TD03; TD04) | Blocks: TD06
-- [ ] **TD06** P4 - Final Acceptance Validation | Execute the final PRD/SDS acceptance sweep and record any remaining gaps as follow-up work. (Depends on: TB05; TB06; TB07; TB08; TC07; TC08; TD04; TD05) | Blocks: None
+- [ ] **TD01** P3 - Persistent Chat Roster UI | Build the always-visible roster UI with presence, ordering, previews, and offline-user selection. (Depends on: TA04; TC05) | Blocks: TD02; TD04; TD06
+- [ ] **TD02** P3 - Active Conversation Panel and Composer | Build selected-conversation rendering, offline-aware composer state, and empty conversation state. (Depends on: TC03; TD01) | Blocks: TD03; TD04; TD06
+- [ ] **TD03** P3 - Incremental History Loading | Add throttled or debounced upward history loading in batches of `10`. (Depends on: TD02) | Blocks: TD06
+- [ ] **TD04** P3 - Browser WebSocket Chat Integration | Wire browser-side WebSocket connect, send, receive, presence, ordering, and error handling. Reconnection is explicitly deferred for this ticket. (Depends on: TA02; TA08; TC01; TC04; TC06; TD01; TD02) | Blocks: TD06; TD07
+- [ ] **TD05** P4 - SPA and Forum Frontend Regression Coverage | Add frontend coverage for auth, SPA navigation, content migration, retained forum UX, and image-upload flows. (Depends on: TA07; TA09; TB02; TB03; TB04; TB05; TB06; TB07; TB08) | Blocks: TD07
+- [ ] **TD06** P4 - Chat Frontend Regression Coverage | Add frontend coverage for offline chat behavior, live messaging, roster updates, and chat history loading. (Depends on: TD01; TD02; TD03; TD04) | Blocks: TD07
+- [ ] **TD07** P4 - Final Acceptance Validation | Execute the final PRD/SDS acceptance sweep and record any remaining gaps as follow-up work. (Depends on: TB05; TB06; TB07; TB08; TC07; TC08; TD04; TD05; TD06) | Blocks: None
 
 ## Cross-Document References
 

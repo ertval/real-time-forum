@@ -256,7 +256,7 @@ Depends on:
 
 Blocks:
 
-- `TD06`
+- `TD07`
 
 Verification Gate:
 
@@ -292,7 +292,7 @@ Depends on:
 
 Blocks:
 
-- `TD06`
+- `TD07`
 
 Verification Gate:
 
