@@ -8,7 +8,8 @@ Track D owns the browser-side realtime chat experience and the final frontend in
 - active conversation panel
 - incremental history loading
 - browser WebSocket integration
-- frontend regression coverage
+- SPA and forum regression coverage
+- chat-specific frontend regression coverage
 - final acceptance validation
 
 This track is the main integration consumer. It depends on Track A for shell/auth and Track C for chat contracts.
@@ -20,7 +21,8 @@ This track is the main integration consumer. It depends on Track A for shell/aut
 - `TD03` -> `RTF-23`
 - `TD04` -> `RTF-24`
 - `TD05` -> `RTF-27`
-- `TD06` -> `RTF-28`
+- `TD06` -> `RTF-32`
+- `TD07` -> `RTF-28`
 
 ## Suggested Execution Order
 
@@ -30,6 +32,9 @@ This track is the main integration consumer. It depends on Track A for shell/aut
 4. `TD04`
 5. `TD05`
 6. `TD06`
+7. `TD07`
+
+`TD05` is intentionally split so SPA/forum regression work can start once Track B stabilizes; it does not need to wait for `TD04`.
 
 ## Tickets
 
@@ -58,7 +63,7 @@ Blocks:
 
 - `TD02`
 - `TD04`
-- `TD05`
+- `TD06`
 
 Verification Gate:
 
@@ -94,7 +99,7 @@ Blocks:
 
 - `TD03`
 - `TD04`
-- `TD05`
+- `TD06`
 
 Verification Gate:
 
@@ -125,7 +130,7 @@ Depends on:
 
 Blocks:
 
-- `TD05`
+- `TD06`
 
 Verification Gate:
 
@@ -150,6 +155,7 @@ Work:
 - consume presence and message events
 - update active conversation and roster ordering live
 - surface send and delivery errors in the UI
+- explicitly defer automatic reconnect, backoff, and disconnected-state recovery for this phase
 
 Depends on:
 
@@ -163,8 +169,8 @@ Depends on:
 
 Blocks:
 
-- `TD05`
 - `TD06`
+- `TD07`
 
 Verification Gate:
 
@@ -173,8 +179,9 @@ Verification Gate:
 - incoming messages appear live in the active conversation
 - message activity reorders the roster correctly
 - send and validation errors are visible in the UI
+- automatic reconnect and connection-loss recovery are out of scope for this ticket
 
-### TD05 - Frontend Regression Coverage
+### TD05 - SPA and Forum Frontend Regression Coverage
 
 Source:
 
@@ -189,7 +196,7 @@ Work:
 - cover auth routes, auth boot, and logout visibility
 - cover feed vs post-detail comment visibility
 - cover create/edit post, activity, drafts, notifications, and reactions in the SPA
-- cover image-upload flows, offline composer behavior, offline-history readability, live message rendering, and send-error handling
+- cover post and comment image-upload flows
 
 Depends on:
 
@@ -202,6 +209,37 @@ Depends on:
 - `TB06`
 - `TB07`
 - `TB08`
+
+Blocks:
+
+- `TD07`
+
+Verification Gate:
+
+- frontend regression coverage exists for the main SPA transitions
+- logout visibility is explicitly protected
+- image-upload flows are protected
+- retained legacy SPA flows covered by this phase are protected
+
+### TD06 - Chat Frontend Regression Coverage
+
+Source:
+
+- `RTF-32`
+
+Phase:
+
+- `P4`
+
+Work:
+
+- cover offline composer behavior
+- cover offline-history readability and empty conversation states
+- cover live message rendering and chat send-error handling
+- cover roster presence, roster reordering, and incremental history loading behavior
+
+Depends on:
+
 - `TD01`
 - `TD02`
 - `TD03`
@@ -209,17 +247,16 @@ Depends on:
 
 Blocks:
 
-- `TD06`
+- `TD07`
 
 Verification Gate:
 
-- frontend regression coverage exists for the main SPA transitions
-- logout visibility is explicitly protected
-- image-upload flows are protected
-- offline composer behavior, offline history readability, and live message rendering are tested
-- retained legacy SPA flows covered by this phase are protected
+- offline composer behavior is explicitly protected
+- offline history readability and empty-state conversations are tested
+- live message rendering and send-error handling are covered
+- presence rendering, roster reordering, and history-loading behavior are tested
 
-### TD06 - Final Acceptance Validation
+### TD07 - Final Acceptance Validation
 
 Source:
 
@@ -245,6 +282,7 @@ Depends on:
 - `TC08`
 - `TD04`
 - `TD05`
+- `TD06`
 
 Blocks:
 
