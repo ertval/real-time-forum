@@ -54,6 +54,14 @@ Transform the forum into a real-time single-page application where registered us
 - throttled or debounced history loading to avoid scroll-event spam
 - message display including sender username and sent timestamp
 
+### Bonus Features
+
+These features are targeted for the audit bonus questions and should be implemented after all mandatory requirements are satisfied:
+
+- user profile pages showing profile data (nickname, first/last name, age, gender)
+- image attachments in private messages (reusing the existing image upload infrastructure)
+- explicit use of concurrency patterns (goroutines and channels in the backend, Promises in the frontend) to improve performance
+
 ### Kept from the Existing Project
 
 These remain in scope unless they directly block the real-time forum work:
@@ -75,6 +83,7 @@ These remain in scope unless they directly block the real-time forum work:
 - message edits or deletes
 - read receipts
 - replacing the existing notification system with WebSockets in this phase
+- advanced profile customization (avatars, bios, settings) beyond displaying registration data
 
 ## 5. Users
 
@@ -129,6 +138,26 @@ A returning user who wants to reopen previous private conversations and continue
 - New incoming messages appear in real time in the active conversation.
 - When a new message arrives from another user, the roster ordering updates immediately.
 
+### 6.6 User Profiles (Bonus)
+
+- Each user has a viewable profile page.
+- The profile page displays: nickname, first name, last name, age, and gender.
+- The profile page is accessible from the chat roster and other user references in the forum.
+- Profile data comes from the extended registration fields.
+
+### 6.7 DM Image Attachments (Bonus)
+
+- Users can attach images to private messages.
+- Image uploads reuse the existing upload infrastructure and validation (max size, allowed types).
+- Images are rendered inline in the conversation panel.
+- Image messages are persisted and visible in chat history on reload.
+
+### 6.8 Performance and Concurrency (Bonus)
+
+- The backend uses goroutines and channels where appropriate to improve throughput (e.g., concurrent WebSocket broadcasts, non-blocking message persistence).
+- The frontend uses Promises and async patterns to avoid blocking the UI during API calls and WebSocket operations.
+- The application avoids unnecessary data requests and favors efficient data loading patterns.
+
 ## 7. User Experience Requirements
 
 ### 7.1 Persistent Shell
@@ -171,6 +200,12 @@ The product is considered complete for this phase when:
 - users can open prior direct-message history
 - users can send and receive private messages in real time
 - older messages load in batches of 10 during upward scroll
+
+Bonus success criteria:
+
+- users have viewable profile pages
+- users can send images through private messages
+- the codebase uses concurrency patterns (goroutines/channels, Promises) for performance
 
 ## 10. Risks and Dependencies
 

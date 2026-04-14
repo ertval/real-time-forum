@@ -11,6 +11,7 @@ Track D owns the browser-side realtime chat experience and the final frontend in
 - SPA and forum regression coverage
 - chat-specific frontend regression coverage
 - final acceptance validation
+- DM image rendering frontend (bonus)
 
 This track is the main integration consumer. It depends on Track A for shell/auth and Track C for chat contracts.
 
@@ -23,6 +24,7 @@ This track is the main integration consumer. It depends on Track A for shell/aut
 - `TD05` -> `RTF-27`
 - `TD06` -> `RTF-32`
 - `TD07` -> `RTF-28`
+- `TD08` -> `RTF-35` (bonus)
 
 ## Suggested Execution Order
 
@@ -32,7 +34,8 @@ This track is the main integration consumer. It depends on Track A for shell/aut
 4. `TD04`
 5. `TD05`
 6. `TD06`
-7. `TD07`
+7. `TD08` (bonus)
+8. `TD07`
 
 `TD05` is intentionally split so SPA/forum regression work can start once Track B stabilizes; it does not need to wait for `TD04`.
 
@@ -293,3 +296,39 @@ Verification Gate:
 - the build satisfies the documented product success criteria
 - retained features are confirmed working or explicitly flagged
 - remaining gaps are listed as follow-up items
+
+### TD08 - DM Image Rendering Frontend (Bonus)
+
+Source:
+
+- `RTF-35`
+
+Phase:
+
+- `P5` (Bonus)
+
+Work:
+
+- add image attachment button to the DM composer
+- upload selected image via `POST /api/v1/chats/{userID}/images`
+- include returned `image_url` in the `dm.send` WebSocket event
+- render images inline in the conversation panel (both sent and received)
+- display images in chat history loaded from the API
+- preserve image rendering during incremental history loading
+
+Depends on:
+
+- `TC09`
+- `TD02`
+- `TD04`
+
+Blocks:
+
+- `TD07`
+
+Verification Gate:
+
+- a user can select and upload an image in the DM composer
+- the image is displayed inline in the conversation for both sender and recipient
+- images are visible in chat history on page reload
+- image rendering works correctly with incremental history loading

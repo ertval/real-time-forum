@@ -11,6 +11,7 @@ Track C owns the realtime server spine:
 - realtime message delivery
 - backend migration strategy
 - backend test coverage
+- DM image upload backend (bonus)
 
 This track should stay backend-focused and avoid owning browser UI except where API and event contracts must be defined.
 
@@ -24,6 +25,7 @@ This track should stay backend-focused and avoid owning browser UI except where 
 - `TC06` -> `RTF-20`
 - `TC07` -> `RTF-25`
 - `TC08` -> `RTF-26`
+- `TC09` -> `RTF-34` (bonus)
 
 ## Suggested Execution Order
 
@@ -31,6 +33,7 @@ This track should stay backend-focused and avoid owning browser UI except where 
 2. `TC03`, `TC04`
 3. `TC05`, `TC06`
 4. `TC07`, `TC08`
+5. `TC09` (bonus)
 
 ## Tickets
 
@@ -299,3 +302,40 @@ Verification Gate:
 - backend tests cover the major auth and chat flows
 - both supported login modes are explicitly tested
 - offline-recipient and multi-connection presence cases are covered
+
+### TC09 - DM Image Upload Backend (Bonus)
+
+Source:
+
+- `RTF-34`
+
+Phase:
+
+- `P5` (Bonus)
+
+Work:
+
+- add `image_path TEXT DEFAULT NULL` column to `private_messages`
+- add `POST /api/v1/chats/{userID}/images` endpoint for DM image uploads
+- reuse existing image upload validation (max size, allowed types)
+- save uploaded images to `web/static/uploads/dm/`
+- extend `dm.send` WebSocket event to accept optional `image_url` field
+- extend `dm.message` event to include `image_url` when present
+- extend history API responses to include `image_url`
+
+Depends on:
+
+- `TC02`
+- `TC06`
+
+Blocks:
+
+- `TD08`
+- `TD07`
+
+Verification Gate:
+
+- DM image upload saves the file to disk and returns a valid URL
+- messages with images are persisted with the `image_path` column populated
+- `dm.message` events include `image_url` when an image is attached
+- history API returns `image_url` for messages that have images
