@@ -20,23 +20,18 @@ This is the main upstream track. The other tracks should assume Track A is the f
 This track rebrands the following source tickets from `docs/tickets-by-section.md`:
 
 - `TA01` -> `RTF-01`
-- `TA02` -> `RTF-02`
 - `TA03` -> `RTF-03`
 - `TA04` -> `RTF-04`
-- `TA05` -> `RTF-05`
-- `TA06` -> `RTF-06`
-- `TA07` -> `RTF-07`
 - `TA08` -> `RTF-08`
 - `TA09` -> `RTF-09`
 - `TA10` -> `RTF-33` (bonus)
 
 ## Suggested Execution Order
 
-1. `TA01`, `TA03`, `TA05`
-2. `TA04`, `TA06`, `TA07`, `TA08`
+1. `TA01`, `TA03`
+2. `TA04`, `TA08`
 3. `TA09`
-4. `TA02`
-5. `TA10` (bonus)
+4. `TA10` (bonus)
 
 ## Tickets
 
@@ -62,7 +57,7 @@ Depends on:
 
 Blocks:
 
-- `TA02`
+- `TD09`
 - `TA03`
 
 Verification Gate:
@@ -71,36 +66,6 @@ Verification Gate:
 - direct navigation to supported SPA routes resolves successfully
 - static assets load correctly
 - `/api/` proxy behavior remains intact
-
-### TA02 - Frontend WebSocket Proxy
-
-Source:
-
-- `RTF-02`
-
-Phase:
-
-- `P2`
-
-Work:
-
-- proxy `/ws` traffic from the frontend server to the backend
-- preserve existing REST proxy behavior
-- ensure authenticated cookies survive proxying
-
-Depends on:
-
-- `TA01`
-
-Blocks:
-
-- `TD04`
-
-Verification Gate:
-
-- a browser client can connect to `/ws` through the frontend server
-- the proxied request reaches the backend with the session cookie intact
-- REST proxy behavior is not regressed
 
 ### TA03 - SPA Boot and Client Routing
 
@@ -125,7 +90,7 @@ Depends on:
 Blocks:
 
 - `TA04`
-- `TA07`
+- `TD10`
 - `TA08`
 - `TB01`
 - `TB05`
@@ -170,100 +135,6 @@ Verification Gate:
 - authenticated routes render inside a shared shell
 - navigation and logout remain visible during route changes
 - layout reserves a stable location for chat
-
-### TA05 - User Profile Schema Extension
-
-Source:
-
-- `RTF-05`
-
-Phase:
-
-- `P0`
-
-Work:
-
-- extend the users schema with `age`, `gender`, `first_name`, and `last_name`
-- update repository models and scanning
-- preserve existing user reads
-
-Depends on:
-
-- None
-
-Blocks:
-
-- `TA06`
-- `TC02`
-- `TC07`
-
-Verification Gate:
-
-- new users persist all required profile fields
-- existing user reads do not break
-- repository coverage exists for the new fields
-
-### TA06 - Registration API Contract
-
-Source:
-
-- `RTF-06`
-
-Phase:
-
-- `P1`
-
-Work:
-
-- extend the registration payload and validation
-- validate age and required profile text fields
-- keep existing valid username, email, and password rules
-
-Depends on:
-
-- `TA05`
-
-Blocks:
-
-- `TC08`
-
-Verification Gate:
-
-- registration rejects missing required profile fields
-- valid extended payloads succeed
-- successful registration still creates a session
-
-### TA07 - SPA Login and Registration Views
-
-Source:
-
-- `RTF-07`
-
-Phase:
-
-- `P1`
-
-Work:
-
-- build SPA login and registration screens
-- add extended registration fields
-- support login by username or email
-- remove guest and OAuth entry paths from the UI
-
-Depends on:
-
-- `TA03`
-
-Blocks:
-
-- `TD05`
-
-Verification Gate:
-
-- login and registration routes render inside the SPA
-- registration includes all required fields
-- login accepts username or email entry
-- guest and OAuth entry options are not exposed
 
 ### TA08 - Authenticated-Only Forum Access
 
@@ -350,7 +221,7 @@ Work:
 
 Depends on:
 
-- `TA05`
+- `TC10`
 - `TA04`
 - `TA08`
 

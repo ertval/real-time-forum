@@ -25,17 +25,20 @@ This track is the main integration consumer. It depends on Track A for shell/aut
 - `TD06` -> `RTF-32`
 - `TD07` -> `RTF-28`
 - `TD08` -> `RTF-35` (bonus)
+- `TD09` -> `RTF-02`
+- `TD10` -> `RTF-07`
 
 ## Suggested Execution Order
 
-1. `TD01`
-2. `TD02`
-3. `TD03`
-4. `TD04`
-5. `TD05`
-6. `TD06`
-7. `TD08` (bonus)
-8. `TD07`
+1. `TD09`
+2. `TD10`, `TD01`
+3. `TD02`
+4. `TD03`
+5. `TD04`
+6. `TD05`
+7. `TD06`
+8. `TD08` (bonus)
+9. `TD07`
 
 `TD05` is intentionally split so SPA/forum regression work can start once Track B stabilizes; it does not need to wait for `TD04`.
 
@@ -162,7 +165,7 @@ Work:
 
 Depends on:
 
-- `TA02`
+- `TD09`
 - `TA08`
 - `TC01`
 - `TC04`
@@ -203,7 +206,7 @@ Work:
 
 Depends on:
 
-- `TA07`
+- `TD10`
 - `TA09`
 - `TB02`
 - `TB03`
@@ -332,3 +335,67 @@ Verification Gate:
 - the image is displayed inline in the conversation for both sender and recipient
 - images are visible in chat history on page reload
 - image rendering works correctly with incremental history loading
+
+### TD09 - Frontend WebSocket Proxy
+
+Source:
+
+- `RTF-02`
+
+Phase:
+
+- `P2`
+
+Work:
+
+- proxy `/ws` traffic from the frontend server to the backend
+- preserve existing REST proxy behavior
+- ensure authenticated cookies survive proxying
+
+Depends on:
+
+- `TA01`
+
+Blocks:
+
+- `TD04`
+
+Verification Gate:
+
+- a browser client can connect to `/ws` through the frontend server
+- the proxied request reaches the backend with the session cookie intact
+- REST proxy behavior is not regressed
+
+
+### TD10 - SPA Login and Registration Views
+
+Source:
+
+- `RTF-07`
+
+Phase:
+
+- `P1`
+
+Work:
+
+- build SPA login and registration screens
+- add extended registration fields
+- support login by username or email
+- remove guest and OAuth entry paths from the UI
+
+Depends on:
+
+- `TA03`
+
+Blocks:
+
+- `TD05`
+
+Verification Gate:
+
+- login and registration routes render inside the SPA
+- registration includes all required fields
+- login accepts username or email entry
+- guest and OAuth entry options are not exposed
+
