@@ -16,146 +16,70 @@ Track D owns the browser-side realtime chat experience and the final frontend in
 This track is the main integration consumer. It depends on Track A for shell/auth and Track C for chat contracts.
 
 ## Source Mapping
-
-- `TD01` -> `RTF-21`
-- `TD02` -> `RTF-22`
-- `TD03` -> `RTF-23`
-- `TD04` -> `RTF-24`
-- `TD05` -> `RTF-27`
-- `TD06` -> `RTF-32`
-- `TD07` -> `RTF-28`
-- `TD08` -> `RTF-35` (bonus)
-- `TD09` -> `RTF-02`
-- `TD10` -> `RTF-07`
+- D01 -> RTF-21, D02 -> RTF-22, D03 -> RTF-23, D04 -> RTF-24, D05 -> RTF-27, D06 -> RTF-32, D07 -> RTF-28, D08 -> RTF-35 (bonus), D09 -> RTF-02, D10 -> RTF-07
 
 ## Suggested Execution Order
+1. D09 | 2. D10, D01 | 3. D02 | 4. D03 | 5. D04 | 6. D05 | 7. D06 | 8. D08 (bonus) | 9. D07
 
-1. `TD09`
-2. `TD10`, `TD01`
-3. `TD02`
-4. `TD03`
-5. `TD04`
-6. `TD05`
-7. `TD06`
-8. `TD08` (bonus)
-9. `TD07`
-
-`TD05` is intentionally split so SPA/forum regression work can start once Track B stabilizes; it does not need to wait for `TD04`.
+`D05` is intentionally split so SPA/forum regression work can start once Track B stabilizes; it does not need to wait for `D04`.
 
 ## Tickets
 
-### TD01 - Persistent Chat Roster UI
-
-Source:
-
-- `RTF-21`
-
-Phase:
-
-- `P3`
+### D01 - Persistent Chat Roster UI
+Source: RTF-21 | Phase: P3
+Depends on: A04, C05
+Blocks: D02, D04, D06
 
 Work:
-
 - render the always-visible user roster in the authenticated shell
 - show online/offline state and last-message preview metadata
 - keep all rostered users selectable, including offline users
 
-Depends on:
-
-- `TA04`
-- `TC05`
-
-Blocks:
-
-- `TD02`
-- `TD04`
-- `TD06`
-
 Verification Gate:
-
 - the roster is visible on authenticated routes
 - presence state is shown per user
 - roster order matches backend ordering
 - all rostered users remain selectable
 
-### TD02 - Active Conversation Panel and Composer
-
-Source:
-
-- `RTF-22`
-
-Phase:
-
-- `P3`
+### D02 - Active Conversation Panel and Composer
+Source: RTF-22 | Phase: P3
+Depends on: C03, D01
+Blocks: D03, D04, D06
 
 Work:
-
 - render selected conversation history
 - display sender username and message timestamp
 - allow selecting any rostered user
 - render empty-state conversations when there is no history
 - disable sending when the selected user is offline
 
-Depends on:
-
-- `TC03`
-- `TD01`
-
-Blocks:
-
-- `TD03`
-- `TD04`
-- `TD06`
-
 Verification Gate:
-
 - selecting a user loads the latest 10 messages
 - offline history remains readable
 - selectable users with no history show a valid empty state
 - sending is disabled in the UI when the selected user is offline
 
-### TD03 - Incremental History Loading
-
-Source:
-
-- `RTF-23`
-
-Phase:
-
-- `P3`
+### D03 - Incremental History Loading
+Source: RTF-23 | Phase: P3
+Depends on: D02
+Blocks: D06
 
 Work:
-
 - load older history in batches of 10
 - use throttle or debounce for scroll-triggered loading
 - preserve stable scroll position when prepending history
 
-Depends on:
-
-- `TD02`
-
-Blocks:
-
-- `TD06`
-
 Verification Gate:
-
 - older messages load in batches of 10
 - repeated scroll events do not cause burst requests
 - the viewport remains usable after prepending history
 
-### TD04 - Browser WebSocket Chat Integration
-
-Source:
-
-- `RTF-24`
-
-Phase:
-
-- `P3`
+### D04 - Browser WebSocket Chat Integration
+Source: RTF-24 | Phase: P3
+Depends on: D09, A08, C01, C04, C06, D01, D02
+Blocks: D06, D07
 
 Work:
-
 - open the WebSocket after authenticated app boot
 - emit `dm.send` from the composer
 - consume presence and message events
@@ -163,23 +87,7 @@ Work:
 - surface send and delivery errors in the UI
 - explicitly defer automatic reconnect, backoff, and disconnected-state recovery for this phase
 
-Depends on:
-
-- `TD09`
-- `TA08`
-- `TC01`
-- `TC04`
-- `TC06`
-- `TD01`
-- `TD02`
-
-Blocks:
-
-- `TD06`
-- `TD07`
-
 Verification Gate:
-
 - presence changes update the roster without refresh
 - outbound messages are emitted through the agreed WebSocket contract
 - incoming messages appear live in the active conversation
@@ -187,131 +95,61 @@ Verification Gate:
 - send and validation errors are visible in the UI
 - automatic reconnect and connection-loss recovery are out of scope for this ticket
 
-### TD05 - SPA and Forum Frontend Regression Coverage
-
-Source:
-
-- `RTF-27`
-
-Phase:
-
-- `P4`
+### D05 - SPA and Forum Frontend Regression Coverage
+Source: RTF-27 | Phase: P4
+Depends on: D10, A09, B02, B03, B04, B05, B06, B07, B08
+Blocks: D07
 
 Work:
-
 - cover auth routes, auth boot, and logout visibility
 - cover feed vs post-detail comment visibility
 - cover create/edit post, activity, drafts, notifications, and reactions in the SPA
 - cover post and comment image-upload flows
 
-Depends on:
-
-- `TD10`
-- `TA09`
-- `TB02`
-- `TB03`
-- `TB04`
-- `TB05`
-- `TB06`
-- `TB07`
-- `TB08`
-
-Blocks:
-
-- `TD07`
-
 Verification Gate:
-
 - frontend regression coverage exists for the main SPA transitions
 - logout visibility is explicitly protected
 - image-upload flows are protected
 - retained legacy SPA flows covered by this phase are protected
 
-### TD06 - Chat Frontend Regression Coverage
-
-Source:
-
-- `RTF-32`
-
-Phase:
-
-- `P4`
+### D06 - Chat Frontend Regression Coverage
+Source: RTF-32 | Phase: P4
+Depends on: D01, D02, D03, D04
+Blocks: D07
 
 Work:
-
 - cover offline composer behavior
 - cover offline-history readability and empty conversation states
 - cover live message rendering and chat send-error handling
 - cover roster presence, roster reordering, and incremental history loading behavior
 
-Depends on:
-
-- `TD01`
-- `TD02`
-- `TD03`
-- `TD04`
-
-Blocks:
-
-- `TD07`
-
 Verification Gate:
-
 - offline composer behavior is explicitly protected
 - offline history readability and empty-state conversations are tested
 - live message rendering and send-error handling are covered
 - presence rendering, roster reordering, and history-loading behavior are tested
 
-### TD07 - Final Acceptance Validation
-
-Source:
-
-- `RTF-28`
-
-Phase:
-
-- `P4`
+### D07 - Final Acceptance Validation
+Source: RTF-28 | Phase: P4
+Depends on: B05, B06, B07, B08, C07, C08, D04, D05, D06
+Blocks: None
 
 Work:
-
 - execute the final acceptance checklist against the PRD and SDS
 - verify retained legacy features still function
 - record any remaining gaps as follow-up work instead of hidden work
 
-Depends on:
-
-- `TB05`
-- `TB06`
-- `TB07`
-- `TB08`
-- `TC07`
-- `TC08`
-- `TD04`
-- `TD05`
-- `TD06`
-
-Blocks:
-
-- None
-
 Verification Gate:
-
 - the build satisfies the documented product success criteria
 - retained features are confirmed working or explicitly flagged
 - remaining gaps are listed as follow-up items
 
-### TD08 - DM Image Rendering Frontend (Bonus)
-
-Source:
-
-- `RTF-35`
-
-Phase:
-
-- `P5` (Bonus)
+### D08 - DM Image Rendering Frontend (Bonus)
+Source: RTF-35 | Phase: P5 (Bonus)
+Depends on: C09, D02, D04
+Blocks: D07
 
 Work:
-
 - add image attachment button to the DM composer
 - upload selected image via `POST /api/v1/chats/{userID}/images`
 - include returned `image_url` in the `dm.send` WebSocket event
@@ -319,81 +157,40 @@ Work:
 - display images in chat history loaded from the API
 - preserve image rendering during incremental history loading
 
-Depends on:
-
-- `TC09`
-- `TD02`
-- `TD04`
-
-Blocks:
-
-- `TD07`
-
 Verification Gate:
-
 - a user can select and upload an image in the DM composer
 - the image is displayed inline in the conversation for both sender and recipient
 - images are visible in chat history on page reload
 - image rendering works correctly with incremental history loading
 
-### TD09 - Frontend WebSocket Proxy
-
-Source:
-
-- `RTF-02`
-
-Phase:
-
-- `P2`
+### D09 - Frontend WebSocket Proxy
+Source: RTF-02 | Phase: P2
+Depends on: A01
+Blocks: D04
 
 Work:
-
 - proxy `/ws` traffic from the frontend server to the backend
 - preserve existing REST proxy behavior
 - ensure authenticated cookies survive proxying
 
-Depends on:
-
-- `TA01`
-
-Blocks:
-
-- `TD04`
-
 Verification Gate:
-
 - a browser client can connect to `/ws` through the frontend server
 - the proxied request reaches the backend with the session cookie intact
 - REST proxy behavior is not regressed
 
 
-### TD10 - SPA Login and Registration Views
-
-Source:
-
-- `RTF-07`
-
-Phase:
-
-- `P1`
+### D10 - SPA Login and Registration Views
+Source: RTF-07 | Phase: P1
+Depends on: A03
+Blocks: D05
 
 Work:
-
 - build SPA login and registration screens
 - add extended registration fields
 - support login by username or email
 - remove guest and OAuth entry paths from the UI
 
-Depends on:
-
-- `TA03`
-
-Blocks:
-
-- `TD05`
-
 Verification Gate:
-
 - login and registration routes render inside the SPA
 - registration includes all required fields
 - login accepts username or email entry

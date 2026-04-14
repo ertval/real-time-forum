@@ -50,10 +50,10 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 1 | [ ] | **TA01** | A | Single SPA Shell Entry | None | TD09, TA03 |
-| 2 | [ ] | **TC10** | C | User Profile Schema Extension | None | TC11, TC02, TC07 |
-| 3 | [ ] | **TC01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | TC04, TC05, TC06, TD04, TC08 |
-| 4 | [ ] | **TA03** | A | SPA Boot and Client Routing | TA01 | TA04, TD10, TA08, TB01, TB05 |
+| 1 | [ ] | **A01** | A | Single SPA Shell Entry | None | D09, A03 |
+| 2 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
+| 3 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
+| 4 | [ ] | **A03** | A | SPA Boot and Client Routing | A01 | A04, D10, A08, B01, B05 |
 
 ### Wave 2 — Auth + Shell + Core Forum (P1)
 
@@ -61,16 +61,16 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 5 | [ ] | **TC11** | C | Registration API Contract | TC10 | TC08 |
-| 6 | [ ] | **TA04** | A | Persistent App Shell Layout | TA03 | TA09, TB01, TB04, TB05, TD01, TB06 |
-| 7 | [ ] | **TA08** | A | Authenticated-Only Forum Access | TA03 | TA09, TB01, TB04, TB05, TD04, TC08 |
-| 8 | [ ] | **TD10** | D | SPA Login and Registration Views | TA03 | TD05 |
-| 9 | [ ] | **TA09** | A | Global Logout Across the Forum | TA04, TA08 | TD05 |
-| 10 | [ ] | **TB01** | B | Feed Route in the SPA | TA03, TA04, TA08 | TB02, TB03, TB06, TB07 |
-| 11 | [ ] | **TB02** | B | Remove Feed Comment Rendering | TB01 | TD05 |
-| 12 | [ ] | **TB03** | B | Post Detail Route and Comment Flow | TB01 | TD05, TB06, TB07 |
-| 13 | [ ] | **TB04** | B | Create and Edit Post SPA Flows | TA04, TA08 | TD05, TB08 |
-| 14 | [ ] | **TC02** | C | Private Messages Schema and Repository Layer | TC10 | TC03, TC05, TC06, TC07 |
+| 5 | [ ] | **C11** | C | Registration API Contract | C10 | C08 |
+| 6 | [ ] | **A04** | A | Persistent App Shell Layout | A03 | A09, B01, B04, B05, D01, B06 |
+| 7 | [ ] | **A08** | A | Authenticated-Only Forum Access | A03 | A09, B01, B04, B05, D04, C08 |
+| 8 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
+| 9 | [ ] | **A09** | A | Global Logout Across the Forum | A04, A08 | D05 |
+| 10 | [ ] | **B01** | B | Feed Route in the SPA | A03, A04, A08 | B02, B03, B06, B07 |
+| 11 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
+| 12 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
+| 13 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A08 | D05, B08 |
+| 14 | [ ] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
 
 ### Wave 3 — Real-Time Chat MVP (P2 + P3)
 
@@ -78,15 +78,15 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 15 | [ ] | **TD09** | D | Frontend WebSocket Proxy | TA01 | TD04 |
-| 16 | [ ] | **TC03** | C | Chat History API | TC02 | TD02, TC08 |
-| 17 | [ ] | **TC04** | C | Presence Broadcasting | TC01 | TC06, TD04, TC08 |
-| 18 | [ ] | **TC05** | C | Chat Roster API | TC02, TC01 | TD01, TC08 |
-| 19 | [ ] | **TC06** | C | Realtime DM Send and Delivery | TC02, TC01, TC04 | TD04, TC08 |
-| 20 | [ ] | **TD01** | D | Persistent Chat Roster UI | TA04, TC05 | TD02, TD04, TD06 |
-| 21 | [ ] | **TD02** | D | Active Conversation Panel and Composer | TC03, TD01 | TD03, TD04, TD06 |
-| 22 | [ ] | **TD03** | D | Incremental History Loading | TD02 | TD06 |
-| 23 | [ ] | **TD04** | D | Browser WebSocket Chat Integration | TD09, TA08, TC01, TC04, TC06, TD01, TD02 | TD06, TD07 |
+| 15 | [ ] | **D09** | D | Frontend WebSocket Proxy | A01 | D04 |
+| 16 | [ ] | **C03** | C | Chat History API | C02 | D02, C08 |
+| 17 | [ ] | **C04** | C | Presence Broadcasting | C01 | C06, D04, C08 |
+| 18 | [ ] | **C05** | C | Chat Roster API | C02, C01 | D01, C08 |
+| 19 | [ ] | **C06** | C | Realtime DM Send and Delivery | C02, C01, C04 | D04, C08 |
+| 20 | [ ] | **D01** | D | Persistent Chat Roster UI | A04, C05 | D02, D04, D06 |
+| 21 | [ ] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
+| 22 | [ ] | **D03** | D | Incremental History Loading | D02 | D06 |
+| 23 | [ ] | **D04** | D | Browser WebSocket Chat Integration | D09, A08, C01, C04, C06, D01, D02 | D06, D07 |
 
 ### Wave 4 — Retained Legacy Features (P2)
 
@@ -94,10 +94,10 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 24 | [ ] | **TB05** | B | Activity View in the SPA | TA03, TA04, TA08 | TD05, TD07 |
-| 25 | [ ] | **TB06** | B | Notification Behavior in the SPA | TA04, TB01, TB03 | TD05, TD07 |
-| 26 | [ ] | **TB07** | B | Reaction Behavior in the SPA | TB01, TB03 | TD05, TD07 |
-| 27 | [ ] | **TB08** | B | Draft Workflows in the SPA | TB04 | TD05, TD07 |
+| 24 | [ ] | **B05** | B | Activity View in the SPA | A03, A04, A08 | D05, D07 |
+| 25 | [ ] | **B06** | B | Notification Behavior in the SPA | A04, B01, B03 | D05, D07 |
+| 26 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
+| 27 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
 
 ### Wave 5 — Migration, Testing, and Acceptance (P3–P4)
 
@@ -105,11 +105,11 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 28 | [ ] | **TC07** | C | Database Migration Strategy | TC10, TC02 | TD07 |
-| 29 | [ ] | **TC08** | C | Backend Test Coverage for Auth, Messaging, and Presence | TC11, TA08, TC01, TC03, TC04, TC05, TC06 | TD07 |
-| 30 | [ ] | **TD05** | D | SPA and Forum Frontend Regression Coverage | TD10, TA09, TB02, TB03, TB04, TB05, TB06, TB07, TB08 | TD07 |
-| 31 | [ ] | **TD06** | D | Chat Frontend Regression Coverage | TD01, TD02, TD03, TD04 | TD07 |
-| 32 | [ ] | **TD07** | D | Final Acceptance Validation | TB05, TB06, TB07, TB08, TC07, TC08, TD04, TD05, TD06, TA10, TC09, TD08 | None |
+| 28 | [ ] | **C07** | C | Database Migration Strategy | C10, C02 | D07 |
+| 29 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A08, C01, C03, C04, C05, C06 | D07 |
+| 30 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A09, B02, B03, B04, B05, B06, B07, B08 | D07 |
+| 31 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |
+| 32 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A10, C09, D08 | None |
 
 ### Wave 6 — Bonus Features (P5)
 
@@ -117,9 +117,9 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 33 | [ ] | **TA10** | A | User Profile Page (Bonus) | TC10, TA04, TA08 | TD07 |
-| 34 | [ ] | **TC09** | C | DM Image Upload Backend (Bonus) | TC02, TC06 | TD08, TD07 |
-| 35 | [ ] | **TD08** | D | DM Image Rendering Frontend (Bonus) | TC09, TD02, TD04 | TD07 |
+| 33 | [ ] | **A10** | A | User Profile Page (Bonus) | C10, A04, A08 | D07 |
+| 34 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
+| 35 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
 
 ---
 
@@ -146,10 +146,10 @@ Completing **Waves 1–3** (tickets 1–23) delivers a fully functioning real-ti
 
 ## Ticket ID Index
 
-- Track A: `TA01` through `TA10`
-- Track B: `TB01` through `TB08`
-- Track C: `TC01` through `TC11`
-- Track D: `TD01` through `TD10`
+- Track A: `A01` through `A10`
+- Track B: `B01` through `B08`
+- Track C: `C01` through `C11`
+- Track D: `D01` through `D10`
 
 ## Cross-Document References
 

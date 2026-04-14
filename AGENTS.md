@@ -66,7 +66,7 @@ Only these Go packages are permitted:
 
 **No other third-party packages are allowed.**
 
-> **Note:** `github.com/gorilla/websocket` must be added to `go.mod` when implementing TC01 (WebSocket endpoint). Run `go get github.com/gorilla/websocket` and then `go mod tidy`.
+> **Note:** `github.com/gorilla/websocket` must be added to `go.mod` when implementing C01 (WebSocket endpoint). Run `go get github.com/gorilla/websocket` and then `go mod tidy`.
 
 ## Code Conventions
 
