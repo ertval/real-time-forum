@@ -117,6 +117,19 @@ Online rule:
 
 - a user is online when active connection count is greater than zero
 
+## 4.4 DM Image Attachments (Bonus)
+
+Extend the `private_messages` table with an optional image column:
+
+- `image_path TEXT DEFAULT NULL`
+
+When an image is attached to a DM:
+
+- the image is uploaded via multipart form to a new REST endpoint
+- the image file is saved to `web/static/uploads/dm/`
+- `image_path` stores the relative URL path (e.g., `/static/uploads/dm/<filename>`)
+- the `dm.message` WebSocket event includes the `image_url` field when present
+
 ## 5. API Design
 
 ## 5.1 Existing Endpoint Changes
@@ -291,6 +304,54 @@ Error:
 }
 ```
 
+## 5.6 User Profile Endpoint (Bonus)
+
+`GET /api/v1/users/{userID}/profile`
+
+Purpose:
+
+- return public profile data for the specified user
+
+Response shape:
+
+```json
+{
+  "data": {
+    "user_id": 12,
+    "username": "maria",
+    "first_name": "Maria",
+    "last_name": "Smith",
+    "age": 25,
+    "gender": "female"
+  }
+}
+```
+
+## 5.7 DM Image Upload Endpoint (Bonus)
+
+`POST /api/v1/chats/{userID}/images`
+
+Purpose:
+
+- upload an image to be attached to a DM
+- the image is saved to disk and a URL is returned
+- the sender then includes the image URL in the `dm.send` WebSocket event
+
+Request:
+
+- `multipart/form-data` with a single `image` field
+- same validation rules as post/comment image uploads (max size, allowed types)
+
+Response shape:
+
+```json
+{
+  "data": {
+    "image_url": "/static/uploads/dm/abc123.jpg"
+  }
+}
+```
+
 ## 6. Backend Processing Rules
 
 ## 6.1 Message Send Rules
@@ -334,6 +395,7 @@ Required client routes:
 - `/create-post`
 - `/edit-post/:id`
 - `/activity`
+- `/profile/:id` (bonus)
 
 The frontend server still serves one shell for these routes.
 
@@ -421,6 +483,13 @@ The retained legacy features must still be verified after the migration:
 - drafts
 - activity view
 - current notifications
+
+## 10.4 Bonus Feature Tests
+
+- user profile page renders correct data
+- DM image upload saves to disk and returns URL
+- DM image renders inline in conversation
+- goroutine/channel patterns do not introduce data races (verified with `-race` flag)
 
 ## 11. Delivery Notes
 

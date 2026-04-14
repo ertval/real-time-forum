@@ -1,0 +1,177 @@
+# AGENTS.md — Coding Agent Guide for Real-Time Forum
+
+## Project Identity
+
+This is a **real-time forum** — a Go-based single-page application with authenticated private messaging via WebSockets. It satisfies the [01-edu real-time-forum exercise](docs/requirements.md).
+
+## Source of Truth
+
+| Document | Purpose |
+|----------|---------|
+| `docs/requirements.md` | Exercise specification — ultimate requirements authority |
+| `docs/audit.md` | Audit checklist questions that must be satisfied |
+| `docs/PRD.md` | Product requirements document |
+| `docs/SDS.md` | Software design specification — API contracts, data model, event shapes |
+| `docs/ticket-tracker.md` | Implementation order and progress tracker |
+| `docs/track-{a,b,c,d}.md` | Detailed ticket definitions per track |
+
+**Always read the relevant ticket definition in the track file before starting work.** Each ticket has a verification gate — your work is not complete until the gate is satisfied.
+
+## Architecture
+
+```
+cmd/
+  backend/       → backend server entrypoint (port 8080)
+  frontend/      → frontend server entrypoint (port 3000)
+internal/
+  auth/          → OAuth helpers (retained, not required for audit)
+  db/            → persistence layer (SQLite, repository functions)
+  env/           → environment configuration
+  handlers/      → HTTP handlers (REST API under /api/v1)
+  middleware/    → request middleware (auth, logging, CORS, recovery)
+  router/        → route registration
+  tests/         → backend integration tests
+web/
+  static/        → CSS, JS, images, sounds, uploads
+  templates/     → HTML templates (being replaced by SPA shell)
+  errors/        → error page templates
+  startupcheck/  → startup validation
+data/            → SQLite database file location
+docs/            → project documentation
+```
+
+### Topology
+
+- **Frontend server** (`:3000`): serves static assets, the SPA HTML shell, and proxies `/api/` and `/ws` to the backend.
+- **Backend server** (`:8080`): owns business logic, persistence, REST APIs, and WebSocket endpoint.
+- **Database**: SQLite — file stored in `data/`.
+
+### Key Design Rules
+
+1. **Single HTML file** — the SPA is served from one HTML document. All navigation is client-side JS.
+2. **No frontend frameworks** — vanilla JS only. No React, Angular, Vue, etc.
+3. **Session-cookie auth** — `HttpOnly` cookies. No JWT. No OAuth for the real-time forum (retained code may exist but is not required).
+4. **WebSocket for chat only** — presence and private messaging. REST for everything else.
+5. **Layered backend** — `db/` (SQL, no HTTP), `handlers/` (HTTP, no SQL), `middleware/` (cross-cutting).
+
+## Allowed Dependencies
+
+Only these Go packages are permitted:
+
+- All [standard Go packages](https://golang.org/pkg/)
+- [`github.com/gorilla/websocket`](https://pkg.go.dev/github.com/gorilla/websocket)
+- [`github.com/mattn/go-sqlite3`](https://github.com/mattn/go-sqlite3)
+- [`golang.org/x/crypto/bcrypt`](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
+- [`github.com/google/uuid`](https://github.com/google/uuid) or [`github.com/gofrs/uuid`](https://github.com/gofrs/uuid)
+
+**No other third-party packages are allowed.**
+
+> **Note:** `github.com/gorilla/websocket` must be added to `go.mod` when implementing TC01 (WebSocket endpoint). Run `go get github.com/gorilla/websocket` and then `go mod tidy`.
+
+## Code Conventions
+
+### Go Backend
+
+- **Persistence layer** (`internal/db/`):
+  - No `net/http` imports. No JSON encoding. No request parsing.
+  - All functions accept `context.Context` as first parameter.
+  - Use `database/sql` transactions for multi-step writes.
+  - Schema lives in `internal/db/forum_schema.sql`.
+
+- **Handlers** (`internal/handlers/`):
+  - Parse requests, validate input, call db functions, format JSON responses.
+  - Use `response.go` helpers for consistent JSON response structure.
+  - Pattern: `HandlePosts` (collection), `HandlePost` (single resource).
+  - All responses follow existing error schema.
+
+- **Middleware** (`internal/middleware/`):
+  - Request flow: Logger → Recoverer → CORS → OptionalAuth → Auth → Handler.
+  - Auth middleware injects `userID` into context.
+
+- **Router** (`internal/router/`):
+  - Uses `http.ServeMux`. Explicit route definitions. API versioned under `/api/v1`.
+
+- **Tests** (`internal/tests/`):
+  - Integration tests using `httptest` with in-memory SQLite.
+  - Tests validate HTTP status codes, cookies, JSON structure, and DB side-effects.
+
+### JavaScript Frontend
+
+- **Vanilla JS** — ES modules, no build step, no framework.
+- **Located in** `web/static/js/`.
+- **Event delegation** for dynamic DOM elements.
+- **API-driven** — UI state comes from REST calls and WebSocket events.
+
+### CSS
+
+- **Located in** `web/static/css/`.
+- **Vanilla CSS** — no preprocessors or utility frameworks.
+
+## API Conventions
+
+- All REST endpoints under `/api/v1/`.
+- Auth endpoints: `POST /api/v1/users/login`, `POST /api/v1/users/register`, `POST /api/v1/users/logout`, `GET /api/v1/users/me`.
+- Chat endpoints: `GET /api/v1/chats` (roster), `GET /api/v1/chats/{userID}/messages` (history).
+- Profile endpoint (bonus): `GET /api/v1/users/{userID}/profile`.
+- DM image upload (bonus): `POST /api/v1/chats/{userID}/images`.
+- WebSocket: `GET /ws` — authenticated upgrade, JSON message frames.
+- See `docs/SDS.md` sections 5.1–5.7 for full API contracts and event shapes.
+
+## Database
+
+- **Engine**: SQLite via `github.com/mattn/go-sqlite3`.
+- **Schema**: `internal/db/forum_schema.sql`.
+- **Tables**: `users`, `sessions`, `posts`, `drafts`, `comments`, `categories`, `reactions`, `notifications`, `private_messages` (new).
+- **New columns on `users`**: `age INTEGER NOT NULL`, `gender TEXT NOT NULL`, `first_name TEXT NOT NULL`, `last_name TEXT NOT NULL`.
+- **New table**: `private_messages` — see `docs/SDS.md` section 4.2 for full schema.
+- **Bonus column**: `private_messages.image_path TEXT DEFAULT NULL` for DM image attachments.
+- **Presence**: in-memory only (not stored in SQLite).
+
+## WebSocket Event Contracts
+
+### Client → Server
+
+```json
+{ "type": "dm.send", "payload": { "recipient_id": 12, "body": "hello" } }
+```
+
+### Server → Client
+
+- `presence.snapshot` — full presence state on connect
+- `presence.update` — single user online/offline transition
+- `dm.message` — new direct message
+- `chat.error` — send error (e.g., `RECIPIENT_OFFLINE`)
+
+See `docs/SDS.md` section 5.5 for full event schemas.
+
+## Build & Run
+
+```bash
+make deps          # go mod tidy
+make build-all     # build both servers
+make run-all       # start backend (8080) + frontend (3000)
+make test          # go test ./... -v
+make stop-all      # kill both servers
+```
+
+Individual targets: `build-backend`, `build-frontend`, `run-backend`, `run-frontend`.
+
+## Working on Tickets
+
+1. **Check `docs/ticket-tracker.md`** for the current implementation wave and which tickets are unblocked.
+2. **Read the full ticket definition** in the relevant track file (`docs/track-{a,b,c,d}.md`).
+3. **Check dependencies** — don't start a ticket until all its `Depends on` tickets are `[x]`.
+4. **Satisfy the verification gate** — each ticket's gate defines "done".
+5. **Update the tracker** — mark `[-]` when in progress, `[x]` when the gate is satisfied.
+6. **Run tests** — `make test` must pass after every change.
+
+## Common Pitfalls
+
+- **Don't serve multiple HTML templates** — the app is a SPA. One HTML shell, all navigation in JS.
+- **Don't allow guest access** — all forum content requires authenticated session.
+- **Don't render comments in the feed** — comments load only on post detail.
+- **Don't send DMs to offline users** — the backend must reject `dm.send` to offline recipients.
+- **Don't use polling for chat** — use WebSocket for presence and DMs. Polling is only for legacy notifications.
+- **Don't add npm/node dependencies** — the frontend is vanilla JS served by the Go frontend server.
+- **Don't use external CSS frameworks** — vanilla CSS only.
+- **Throttle/debounce scroll events** — the history pagination scroll must not spam the API.

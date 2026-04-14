@@ -11,6 +11,7 @@ Track A owns the platform and auth foundation for the real-time forum:
 - registration and login UI
 - authenticated-only forum access
 - global logout
+- user profile page (bonus)
 
 This is the main upstream track. The other tracks should assume Track A is the first shared dependency to land.
 
@@ -27,6 +28,7 @@ This track rebrands the following source tickets from `docs/tickets-by-section.m
 - `TA07` -> `RTF-07`
 - `TA08` -> `RTF-08`
 - `TA09` -> `RTF-09`
+- `TA10` -> `RTF-33` (bonus)
 
 ## Suggested Execution Order
 
@@ -34,6 +36,7 @@ This track rebrands the following source tickets from `docs/tickets-by-section.m
 2. `TA04`, `TA06`, `TA07`, `TA08`
 3. `TA09`
 4. `TA02`
+5. `TA10` (bonus)
 
 ## Tickets
 
@@ -327,3 +330,36 @@ Verification Gate:
 - logout is visible and usable from every authenticated route
 - logout clears the session and returns the user to auth flow
 - logout no longer depends on create/edit page layout
+
+### TA10 - User Profile Page (Bonus)
+
+Source:
+
+- `RTF-33`
+
+Phase:
+
+- `P5` (Bonus)
+
+Work:
+
+- add `GET /api/v1/users/{userID}/profile` endpoint returning public profile data
+- add `/profile/:id` SPA route
+- build profile page UI showing nickname, first name, last name, age, and gender
+- add profile links from roster entries and user references in posts/comments
+
+Depends on:
+
+- `TA05`
+- `TA04`
+- `TA08`
+
+Blocks:
+
+- `TD07`
+
+Verification Gate:
+
+- navigating to a user profile shows all extended registration fields
+- profile is accessible from the chat roster and post/comment author links
+- profile data matches what was entered during registration
