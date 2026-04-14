@@ -26,14 +26,17 @@ This track should stay backend-focused and avoid owning browser UI except where 
 - `TC07` -> `RTF-25`
 - `TC08` -> `RTF-26`
 - `TC09` -> `RTF-34` (bonus)
+- `TC10` -> `RTF-05`
+- `TC11` -> `RTF-06`
 
 ## Suggested Execution Order
 
-1. `TC01`, `TC02`
-2. `TC03`, `TC04`
-3. `TC05`, `TC06`
-4. `TC07`, `TC08`
-5. `TC09` (bonus)
+1. `TC01`, `TC10`
+2. `TC11`, `TC02`
+3. `TC03`, `TC04`
+4. `TC05`, `TC06`
+5. `TC07`, `TC08`
+6. `TC09` (bonus)
 
 ## Tickets
 
@@ -90,7 +93,7 @@ Work:
 
 Depends on:
 
-- `TA05`
+- `TC10`
 
 Blocks:
 
@@ -254,7 +257,7 @@ Work:
 
 Depends on:
 
-- `TA05`
+- `TC10`
 - `TC02`
 
 Blocks:
@@ -285,7 +288,7 @@ Work:
 
 Depends on:
 
-- `TA06`
+- `TC11`
 - `TA08`
 - `TC01`
 - `TC03`
@@ -339,3 +342,67 @@ Verification Gate:
 - messages with images are persisted with the `image_path` column populated
 - `dm.message` events include `image_url` when an image is attached
 - history API returns `image_url` for messages that have images
+
+### TC10 - User Profile Schema Extension
+
+Source:
+
+- `RTF-05`
+
+Phase:
+
+- `P0`
+
+Work:
+
+- extend the users schema with `age`, `gender`, `first_name`, and `last_name`
+- update repository models and scanning
+- preserve existing user reads
+
+Depends on:
+
+- None
+
+Blocks:
+
+- `TC11`
+- `TC02`
+- `TC07`
+
+Verification Gate:
+
+- new users persist all required profile fields
+- existing user reads do not break
+- repository coverage exists for the new fields
+
+
+### TC11 - Registration API Contract
+
+Source:
+
+- `RTF-06`
+
+Phase:
+
+- `P1`
+
+Work:
+
+- extend the registration payload and validation
+- validate age and required profile text fields
+- keep existing valid username, email, and password rules
+
+Depends on:
+
+- `TC10`
+
+Blocks:
+
+- `TC08`
+
+Verification Gate:
+
+- registration rejects missing required profile fields
+- valid extended payloads succeed
+- successful registration still creates a session
+
