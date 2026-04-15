@@ -42,13 +42,30 @@ Verification Gate:
 - Biome enforces consistency across code
 - All frontend JS requirements (ES2026+) and tools are enforced.
 
-### A02 - Single SPA Shell Entry
+### A02 - Frontend Architecture & Directory Restructuring
 Source: RTF-01 | Phase: P0
 Depends on: A01
+Blocks: A10, D09
+
+Work:
+- define and set up the new folder structure for the SPA in the `web/` directory
+- implement a file organization that follows modern, scalable 2026 patterns (e.g. Screaming Architecture or Vertical Sliced Architecture)
+- ensure the layout accommodates components, pages/features, core logic, router, and assets separately
+- write or update architecture documentation such as `architecture.md` and `docs/SDS.md` to reflect the new structure clearly
+- optimally point the Go server to the new SPA entry point without functionally breaking existing frontend behavior
+
+Verification Gate:
+- the directory tree reflects the approved modern structure
+- docs reflect the current implementation accurately
+- existing functionality behaves as it did before structurally breaking changes
+
+### A10 - Single SPA Shell Entry
+Source: RTF-01 | Phase: P0
+Depends on: A02
 Blocks: D09, A03
 
 Work:
-- serve one root HTML shell for the app
+- serve one root HTML shell for the app from the new structure
 - stop relying on standalone templates for app routes
 - keep static assets and existing API proxy behavior working
 
