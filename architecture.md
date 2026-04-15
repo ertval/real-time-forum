@@ -122,25 +122,26 @@ No business logic inside server package.
 Located under:
 
 web/\
-├── static/\
-│   ├── js/\
-│   │   ├── core/         (api wrapper, router, store etc.)\
-│   │   ├── features/     (vertical slices by domain: auth, chat, feed, etc.)\
-│   │   └── components/   (shared reusable UI elements)\
-│   ├── css/\
-│   ├── images/\
-│   └── sounds/\
-└── templates/\
-    └── index.html        (single SPA shell)
+├── static/js\
+├── static/css\
+└── templates
 
-Characteristics: 
-- Pure Vanilla JavaScript (ES2026+) 
-- No React/Angular/Vue
-- Single HTML document (SPA format)
-- Screaming Architecture / Clean Vertical Slices for source-code organization inside `js/features/`
-- Modular ES modules
-- Event delegation for dynamic DOM
-- API-driven UI state with REST + WebSockets
+Frontend logic modules:
+
+-   auth.js
+-   header-loader.js
+-   view-post.js
+-   home.js
+-   create-post.js
+-   drafts.js
+-   reactions.js
+-   notifications.js
+-   ui-messages.js
+-   image-picker.js
+
+Characteristics: - Pure Vanilla JavaScript - No frontend framework -
+Modular ES modules - Event delegation for dynamic DOM - API-driven UI
+state
 
 ------------------------------------------------------------------------
 
