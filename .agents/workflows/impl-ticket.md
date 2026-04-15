@@ -60,8 +60,9 @@ You are an expert Senior Full-Stack Engineer tasked with implementing a specific
 - **Final Polish**: Use **Biome** for linting and formatting (`biome check --apply .`).
 
 ### Step 4: Documentation & Handover
-- **PR Message**: Create a detailed PR message summarizing your changes, technical decisions, and verification results. 
-- **Storage**: Save the PR message as a new markdown file in `docs/pr-messages/` (e.g., `docs/pr-messages/{Ticket}.md`).
+- **PR Message**: Create a detailed PR message summarizing your changes, technical decisions, and verification results.
+- **Template Compliance**: You **must** use [docs/pr-message/pr-template.md](file:///home/ertval/code/zone-modules/real-time-forum/docs/pr-message/pr-template.md) as the blueprint for your message. Ensure the Ticket Name is in the header and all verification results (automated and manual) are documented.
+- **Storage**: Save the PR message as a new markdown file in `docs/pr-message/` using the ticket ID as the filename (e.g., `docs/pr-message/A01.md`).
 
 ---
 
