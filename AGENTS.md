@@ -99,7 +99,7 @@ Only these Go packages are permitted:
 
 - **Vanilla JS** — Modern vanilla JS ES2026+ using optimal best practice patterns. ES modules, no frontend framework.
 - **Development Tooling** — Use Bun for runtime and package management. Use Biome for fast, precise linting and static analysis. Use Vitest for all unit, integration, and end-to-end (E2E) testing workflows.
-- **Located in** `web/static/js/`.
+- **Folder Structure** — Located in `web/static/js/`. The architecture should follow Clean Vertical Slices or Screaming Architecture (e.g., grouping by feature: `features/auth`, `features/feed`, `core/api`, `core/router`, `components/shared`). Avoid scattering files by generic type without domain context.
 - **Event delegation** for dynamic DOM elements.
 - **API-driven** — UI state comes from REST calls and WebSocket events.
 
