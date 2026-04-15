@@ -102,6 +102,7 @@ The project uses a **split-server** topology:
 ### Requirements
 
 - Go 1.24+
+- Bun (primary runtime & package manager)
 - Make
 - SQLite (bundled via CGo)
 - Docker & Docker Compose (optional)
@@ -109,7 +110,7 @@ The project uses a **split-server** topology:
 ### Install & Run
 
 ```bash
-make deps          # Install Go dependencies
+make deps          # Install Go and Node dependencies
 make run-all       # Start backend (8080) + frontend (3000)
 ```
 
@@ -118,19 +119,22 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Individual Commands
 
 ```bash
+# Build
 make build-backend    # Build backend binary
 make build-frontend   # Build frontend binary
 make build-all        # Build both
 
+# Run
 make run-backend      # Start backend only
 make run-frontend     # Start frontend only
+make stop-all         # Stop all processes
 
-make stop-backend     # Stop backend
-make stop-frontend    # Stop frontend
-make stop-all         # Stop both
-
-make test             # Run all tests
-make fmt              # Format code
+# Quality Gates (Go & JS)
+make test             # Run all tests (Go + Vitest)
+make test-backend     # Run Go tests only
+make test-frontend    # Run Vitest only
+make lint             # Run Biome lint
+make format           # Run Biome & Go format
 make vet              # Run Go vet
 ```
 

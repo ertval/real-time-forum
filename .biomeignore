@@ -1,0 +1,4 @@
+web/templates/
+web/errors/
+node_modules/
+dist/

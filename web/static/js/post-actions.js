@@ -1,20 +1,16 @@
 // web/static/js/post-actions.js
 
 export function statusToggleButton(postId, currentStatus) {
-  const normalized =
-    currentStatus === "draft" ? "draft" : "published";
+	const normalized = currentStatus === "draft" ? "draft" : "published";
 
-  const iconSrc =
-    normalized === "draft"
-      ? "/static/img/publish.png"
-      : "/static/img/draft.png";
+	const iconSrc =
+		normalized === "draft"
+			? "/static/img/publish.png"
+			: "/static/img/draft.png";
 
-  const label =
-    normalized === "draft"
-      ? "Publish post"
-      : "Move to draft";
+	const label = normalized === "draft" ? "Publish post" : "Move to draft";
 
-  return `
+	return `
     <button 
       class="action-icon post-status-toggle"
       data-post-id="${postId}"
@@ -28,7 +24,7 @@ export function statusToggleButton(postId, currentStatus) {
 }
 
 export function editPostButton(postId) {
-  return `
+	return `
     <button
       class="action-icon post-edit"
       data-post-id="${postId}"
@@ -41,7 +37,7 @@ export function editPostButton(postId) {
 }
 
 export function deletePostButton(postId) {
-  return `
+	return `
     <button
       class="action-icon delete-icon post-delete"
       data-post-id="${postId}"
@@ -54,7 +50,7 @@ export function deletePostButton(postId) {
 }
 
 export function editCommentButton(commentId) {
-  return `
+	return `
     <button
       class="action-icon comment-edit"
       data-comment-id="${commentId}"
@@ -66,7 +62,7 @@ export function editCommentButton(commentId) {
 }
 
 export function deleteCommentButton(commentId) {
-  return `
+	return `
     <button
       class="action-icon delete-icon comment-delete"
       data-comment-id="${commentId}"

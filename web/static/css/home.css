@@ -3,62 +3,62 @@
 -------------*/
 
 .filters {
-  max-width: 900px;
-  margin: 0 auto 28px auto;
-  padding: 16px 20px;
+	max-width: 900px;
+	margin: 0 auto 28px auto;
+	padding: 16px 20px;
 
-  display: flex;
-  gap: 32px;
-  align-items: flex-end;
+	display: flex;
+	gap: 32px;
+	align-items: flex-end;
 
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.06);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
 }
 
 .filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
 .filter-group label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
+	font-size: 13px;
+	font-weight: 600;
+	color: #475569;
 }
 
 .filter-group select {
-  min-width: 190px;
-  padding: 8px 12px;
+	min-width: 190px;
+	padding: 8px 12px;
 
-  font-size: 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.1);
+	font-size: 14px;
+	border-radius: 8px;
+	border: 1px solid rgba(0, 0, 0, 0.1);
 
-  background-color: #f8fafc;
-  cursor: pointer;
+	background-color: #f8fafc;
+	cursor: pointer;
 
-  transition: all 0.15s ease;
+	transition: all 0.15s ease;
 }
 
 .filter-group select:hover {
-  background-color: #eef2f7;
+	background-color: #eef2f7;
 }
 
 .filter-group select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+	outline: none;
+	border-color: #3b82f6;
+	background-color: #ffffff;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .home .posts {
-  max-width: 900px;
-  margin: 0 auto;
+	max-width: 900px;
+	margin: 0 auto;
 }
 
 .home .comments-scroll {
-  max-height: 220px;
+	max-height: 220px;
 }
