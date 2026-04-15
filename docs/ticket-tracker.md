@@ -1,6 +1,6 @@
 # Ticket Progress Tracker
 
-This file tracks delivery progress for the final `A / B / C / D` track split.
+This file tracks delivery progress for the real-time forum project.
 
 Detailed ticket definitions live in:
 
@@ -9,11 +9,12 @@ Detailed ticket definitions live in:
 - `docs/track-c.md`
 - `docs/track-d.md`
 
-The original coverage and source-ticket mapping remain canonical in:
+The canonical product and technical requirements are in:
 
-- `docs/tickets-by-section.md`
-- `docs/PRD.md`
-- `docs/SDS.md`
+- `docs/requirements.md` — exercise specification (source of truth)
+- `docs/audit.md` — audit checklist questions (source of truth)
+- `docs/PRD.md` — product requirements document
+- `docs/SDS.md` — software design specification
 
 ## Update Rules
 
@@ -30,88 +31,130 @@ The original coverage and source-ticket mapping remain canonical in:
 - `[-]` = Partially Implemented / In Progress
 - `[x]` = Done
 
-## Execution Policy (Low-Blocking First)
-
-1. Respect the canonical phase order: `P0 -> P1 -> P2 -> P3 -> P4`.
-2. Inside each phase, prioritize tickets that unblock the most other tracks.
-3. Track `A` owns platform, SPA shell, auth, and shared boot behavior.
-4. Track `B` owns forum content migration and retained non-chat forum UX.
-5. Track `C` owns realtime backend, persistence, migrations, and backend validation.
-6. Track `D` owns browser realtime chat integration, frontend regression coverage, and final acceptance.
-
 ## Summary Snapshot
 
-- Total tickets: `32`
+- Total tickets: `35`
 - Done: `0`
 - Partially Implemented: `0`
-- Not Started: `32`
+- Not Started: `35`
 
-## Low-Blocking Claim Queue (Global)
+---
 
-Use this as the default claim order for the next wave of work:
+## Implementation Order — MVP-First Strategy
 
-1. **Q0 P0 Shared Foundations**: `TA01`, `TA03`, `TA05`, `TC01`
-2. **Q1 P1 Shell/Auth Completion + Forum Base**: `TA04`, `TA06`, `TA07`, `TA08`, `TA09`, `TB01`, `TB04`, `TB05`, `TC02`
-3. **Q2 P2 Independent Build-Out**: `TA02`, `TB02`, `TB03`, `TB06`, `TB07`, `TB08`, `TC03`, `TC04`, `TC05`, `TC06`
-4. **Q3 P3 Browser Integration + Early SPA Regression**: `TD01`, `TD02`, `TD03`, `TD04`, `TC07`, `TD05`
-5. **Q4 P4 Verification**: `TC08`, `TD06`, `TD07`
+The implementation is organized into **6 waves**. Waves 1–3 deliver a functioning **MVP** that satisfies all mandatory audit requirements. Waves 4–5 deliver retained legacy features and final verification. Wave 6 delivers audit bonus features.
+
+### Wave 1 — Foundations (P0)
+
+> **Goal:** SPA shell, client routing, user schema, and WebSocket transport — the building blocks everything else depends on.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 1 | [ ] | **A01** | A | Single SPA Shell Entry | None | D09, A03 |
+| 2 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
+| 3 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
+| 4 | [ ] | **A03** | A | SPA Boot and Client Routing | A01 | A04, D10, A08, B01, B05 |
+
+### Wave 2 — Auth + Shell + Core Forum (P1)
+
+> **Goal:** Auth gating, persistent shell, login/register UI, feed, post detail, comments — the core forum experience required by the audit.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 5 | [ ] | **C11** | C | Registration API Contract | C10 | C08 |
+| 6 | [ ] | **A04** | A | Persistent App Shell Layout | A03 | A09, B01, B04, B05, D01, B06 |
+| 7 | [ ] | **A08** | A | Authenticated-Only Forum Access | A03 | A09, B01, B04, B05, D04, C08 |
+| 8 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
+| 9 | [ ] | **A09** | A | Global Logout Across the Forum | A04, A08 | D05 |
+| 10 | [ ] | **B01** | B | Feed Route in the SPA | A03, A04, A08 | B02, B03, B06, B07 |
+| 11 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
+| 12 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
+| 13 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A08 | D05, B08 |
+| 14 | [ ] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
+
+### Wave 3 — Real-Time Chat MVP (P2 + P3)
+
+> **Goal:** Full chat system — roster, history, presence, DM delivery, and browser integration. Completing this wave satisfies **all mandatory audit requirements**.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 15 | [ ] | **D09** | D | Frontend WebSocket Proxy | A01 | D04 |
+| 16 | [ ] | **C03** | C | Chat History API | C02 | D02, C08 |
+| 17 | [ ] | **C04** | C | Presence Broadcasting | C01 | C06, D04, C08 |
+| 18 | [ ] | **C05** | C | Chat Roster API | C02, C01 | D01, C08 |
+| 19 | [ ] | **C06** | C | Realtime DM Send and Delivery | C02, C01, C04 | D04, C08 |
+| 20 | [ ] | **D01** | D | Persistent Chat Roster UI | A04, C05 | D02, D04, D06 |
+| 21 | [ ] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
+| 22 | [ ] | **D03** | D | Incremental History Loading | D02 | D06 |
+| 23 | [ ] | **D04** | D | Browser WebSocket Chat Integration | D09, A08, C01, C04, C06, D01, D02 | D06, D07 |
+
+### Wave 4 — Retained Legacy Features (P2)
+
+> **Goal:** Migrate retained non-chat features (activity, notifications, reactions, drafts) into the SPA. These are preserved features from the previous forum, not strictly required by the real-time-forum audit but part of the product.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 24 | [ ] | **B05** | B | Activity View in the SPA | A03, A04, A08 | D05, D07 |
+| 25 | [ ] | **B06** | B | Notification Behavior in the SPA | A04, B01, B03 | D05, D07 |
+| 26 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
+| 27 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
+
+### Wave 5 — Migration, Testing, and Acceptance (P3–P4)
+
+> **Goal:** Database migration, backend and frontend test coverage, and final acceptance validation.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 28 | [ ] | **C07** | C | Database Migration Strategy | C10, C02 | D07 |
+| 29 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A08, C01, C03, C04, C05, C06 | D07 |
+| 30 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A09, B02, B03, B04, B05, B06, B07, B08 | D07 |
+| 31 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |
+| 32 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A10, C09, D08 | None |
+
+### Wave 6 — Bonus Features (P5)
+
+> **Goal:** Audit bonus points — user profiles, DM image attachments, and concurrency patterns. These are optional features that score bonus audit points.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 33 | [ ] | **A10** | A | User Profile Page (Bonus) | C10, A04, A08 | D07 |
+| 34 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
+| 35 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
+
+---
+
+## MVP Boundary
+
+Completing **Waves 1–3** (tickets 1–23) delivers a fully functioning real-time forum that passes **all mandatory audit requirements**:
+
+- ✅ SPA with single HTML file
+- ✅ Registration with all required fields
+- ✅ Login with nickname or email
+- ✅ Auth-gated forum access
+- ✅ Logout from any page
+- ✅ Posts with categories in feed
+- ✅ Comments only on post detail
+- ✅ Online/offline user list
+- ✅ Roster ordered by last message / alphabetical
+- ✅ Private messaging in real time
+- ✅ Message format with date and username
+- ✅ Last 10 messages loaded initially
+- ✅ Scroll-up pagination with throttle/debounce
+- ✅ Real-time notification of new messages
+
+---
 
 ## Ticket ID Index
 
-- Track A: `TA01` through `TA09`
-- Track B: `TB01` through `TB08`
-- Track C: `TC01` through `TC08`
-- Track D: `TD01` through `TD07`
-
-## Ordered Tickets By Track
-
-### Track A
-
-- [ ] **TA01** P0 - Single SPA Shell Entry | Serve one HTML app shell and route SPA paths through it while keeping static assets and `/api` proxying intact. (Depends on: None) | Blocks: TA02; TA03
-- [ ] **TA02** P2 - Frontend WebSocket Proxy | Proxy `/ws` through the frontend server with authenticated cookies preserved. (Depends on: TA01) | Blocks: TD04
-- [ ] **TA03** P0 - SPA Boot and Client Routing | Build app boot, client-side routes, browser history support, and deep-link entry. (Depends on: TA01) | Blocks: TA04; TA07; TA08; TB01; TB05
-- [ ] **TA04** P1 - Persistent App Shell Layout | Build the shared authenticated shell with navigation, logout, main outlet, and chat container. (Depends on: TA03) | Blocks: TA09; TB01; TB04; TB05; TD01; TB06
-- [ ] **TA05** P0 - User Profile Schema Extension | Add and persist `age`, `gender`, `first_name`, and `last_name` in the users schema and repository layer. (Depends on: None) | Blocks: TA06; TC02; TC07
-- [ ] **TA06** P1 - Registration API Contract | Extend registration payload validation and keep valid existing auth rules intact. (Depends on: TA05) | Blocks: TC08
-- [ ] **TA07** P1 - SPA Login and Registration Views | Build SPA auth views with extended registration fields and username-or-email login UX. (Depends on: TA03) | Blocks: TD05
-- [ ] **TA08** P1 - Authenticated-Only Forum Access | Gate forum content behind authenticated app boot and authenticated backend access rules. (Depends on: TA03) | Blocks: TA09; TB01; TB04; TB05; TD04; TC08
-- [ ] **TA09** P1 - Global Logout Across the Forum | Make logout reachable from every authenticated screen through the shared shell. (Depends on: TA04; TA08) | Blocks: TD05
-
-### Track B
-
-- [ ] **TB01** P1 - Feed Route in the SPA | Move the feed into the SPA outlet with filtering, pagination, and SPA-style post navigation. (Depends on: TA03; TA04; TA08) | Blocks: TB02; TB03; TB06; TB07
-- [ ] **TB02** P1 - Remove Feed Comment Rendering | Remove comment previews from feed cards and stop feed-level comment fetching. (Depends on: TB01) | Blocks: TD05
-- [ ] **TB03** P1 - Post Detail Route and Comment Flow | Build SPA post detail with comments, comment creation, and comment image uploads. (Depends on: TB01) | Blocks: TD05; TB06; TB07
-- [ ] **TB04** P1 - Create and Edit Post SPA Flows | Move create/edit post flows into the SPA while preserving image and category behavior. (Depends on: TA04; TA08) | Blocks: TD05; TB08
-- [ ] **TB05** P1 - Activity View in the SPA | Move the activity screen into the shared shell and preserve activity data loading. (Depends on: TA03; TA04; TA08) | Blocks: TD05; TD07
-- [ ] **TB06** P2 - Notification Behavior in the SPA | Preserve polling, unread counts, mark-read behavior, and click/deep-link navigation after SPA migration. (Depends on: TA04; TB01; TB03) | Blocks: TD05; TD07
-- [ ] **TB07** P2 - Reaction Behavior in the SPA | Preserve post and comment reaction behavior after SPA migration. (Depends on: TB01; TB03) | Blocks: TD05; TD07
-- [ ] **TB08** P2 - Draft Workflows in the SPA | Preserve save-draft, edit-draft, and publish-draft behavior inside SPA routes. (Depends on: TB04) | Blocks: TD05; TD07
-
-### Track C
-
-- [ ] **TC01** P0 - Authenticated WebSocket Endpoint and Connection Manager | Add the backend WebSocket transport with session validation and per-user connection tracking. (Depends on: None) | Blocks: TC04; TC05; TC06; TD04; TC08
-- [ ] **TC02** P1 - Private Messages Schema and Repository Layer | Add `private_messages` persistence and pair-based history lookup. (Depends on: TA05) | Blocks: TC03; TC05; TC06; TC07
-- [ ] **TC03** P2 - Chat History API | Add latest-10 and older-than paginated history API for direct messages. (Depends on: TC02) | Blocks: TD02; TC08
-- [ ] **TC04** P2 - Presence Broadcasting | Add presence snapshots and online/offline transition updates from active socket state. (Depends on: TC01) | Blocks: TC06; TD04; TC08
-- [ ] **TC05** P2 - Chat Roster API | Add roster API with presence and last-message metadata plus required ordering rules. (Depends on: TC02; TC01) | Blocks: TD01; TC08
-- [ ] **TC06** P2 - Realtime DM Send and Delivery | Validate, persist, and broadcast `dm.send` events plus error responses. (Depends on: TC02; TC01; TC04) | Blocks: TD04; TC08
-- [ ] **TC07** P3 - Database Migration Strategy | Define and implement migration handling for new user fields and direct messages. (Depends on: TA05; TC02) | Blocks: TD07
-- [ ] **TC08** P4 - Backend Test Coverage for Auth, Messaging, and Presence | Add backend coverage for auth modes, auth gating, roster/history, websocket auth, presence, and direct-message integration. (Depends on: TA06; TA08; TC01; TC03; TC04; TC05; TC06) | Blocks: TD07
-
-### Track D
-
-- [ ] **TD01** P3 - Persistent Chat Roster UI | Build the always-visible roster UI with presence, ordering, previews, and offline-user selection. (Depends on: TA04; TC05) | Blocks: TD02; TD04; TD06
-- [ ] **TD02** P3 - Active Conversation Panel and Composer | Build selected-conversation rendering, offline-aware composer state, and empty conversation state. (Depends on: TC03; TD01) | Blocks: TD03; TD04; TD06
-- [ ] **TD03** P3 - Incremental History Loading | Add throttled or debounced upward history loading in batches of `10`. (Depends on: TD02) | Blocks: TD06
-- [ ] **TD04** P3 - Browser WebSocket Chat Integration | Wire browser-side WebSocket connect, send, receive, presence, ordering, and error handling. Reconnection is explicitly deferred for this ticket. (Depends on: TA02; TA08; TC01; TC04; TC06; TD01; TD02) | Blocks: TD06; TD07
-- [ ] **TD05** P4 - SPA and Forum Frontend Regression Coverage | Add frontend coverage for auth, SPA navigation, content migration, retained forum UX, and image-upload flows. (Depends on: TA07; TA09; TB02; TB03; TB04; TB05; TB06; TB07; TB08) | Blocks: TD07
-- [ ] **TD06** P4 - Chat Frontend Regression Coverage | Add frontend coverage for offline chat behavior, live messaging, roster updates, and chat history loading. (Depends on: TD01; TD02; TD03; TD04) | Blocks: TD07
-- [ ] **TD07** P4 - Final Acceptance Validation | Execute the final PRD/SDS acceptance sweep and record any remaining gaps as follow-up work. (Depends on: TB05; TB06; TB07; TB08; TC07; TC08; TD04; TD05; TD06) | Blocks: None
+- Track A: `A01` through `A10`
+- Track B: `B01` through `B08`
+- Track C: `C01` through `C11`
+- Track D: `D01` through `D10`
 
 ## Cross-Document References
 
-- Source backlog and canonical mapping: `docs/tickets-by-section.md`
+- Exercise specification: `docs/requirements.md`
+- Audit checklist: `docs/audit.md`
 - Product requirements: `docs/PRD.md`
 - Technical design: `docs/SDS.md`
 - Track A definitions: `docs/track-a.md`
