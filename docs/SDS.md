@@ -387,7 +387,7 @@ On `dm.send`:
 ## 7.0 Tooling & Practices (ES2026+)
 
 - The frontend must be implemented in modern vanilla JS (ES2026+) using optimal best practice patterns.
-- **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `web/static/js/` (e.g. `core/`, `components/`, and vertical `features/` rather than grouping by file type).
+- **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `web/SPA/` (e.g. `core/`, `components/`, and vertical `features/` rather than grouping by file type).
 - Bun is the required runtime and package manager for frontend dev tools.
 - Biome handles all linting, formatting, and static testing checks.
 - Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests.

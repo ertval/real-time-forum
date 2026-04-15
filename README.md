@@ -85,8 +85,11 @@ internal/
   router/            → Route registration
   tests/             → Backend integration tests
 web/
-  static/            → CSS, JS, images, sounds, uploads
-  templates/         → SPA HTML shell
+  static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
+  templates/         → HTML templates (legacy)
+  SPA/               → Single Page Application entrypoint
+    index.html       → SPA shell
+    js/              → Modern frontend modules (core, components, features)
 data/                → SQLite database file
 docs/                → Project documentation (PRD, SDS, tickets)
 ```
