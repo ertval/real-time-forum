@@ -61,17 +61,37 @@ stop-all: stop-backend stop-frontend
 # 🧪 Code Quality
 # -----------------------------------------------------
 
-test:
+test: test-backend test-frontend
+
+test-backend:
 	@go test ./... -v
 
-fmt:
+test-frontend:
+	@./node_modules/.bin/bun run test
+
+lint:
+	@./node_modules/.bin/bun run lint
+
+format: format-backend format-frontend
+
+format-backend:
 	@go fmt ./...
+
+format-frontend:
+	@./node_modules/.bin/bun run lint:fix
+
+fmt: format
 
 vet:
 	@go vet ./...
 
-deps:
+deps: deps-backend deps-frontend
+
+deps-backend:
 	@go mod tidy
+
+deps-frontend:
+	@./node_modules/.bin/bun install
 
 # -----------------------------------------------------
 # 🐳 Docker (Backend Only – Production)

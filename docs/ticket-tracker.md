@@ -61,7 +61,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 1 | [ ] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup | None | A02 |
+| 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup | None | A02 |
 | 2 | [ ] | **A02** | A | Single SPA Shell Entry | A01 | D09, A03 |
 | 3 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
 | 4 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
