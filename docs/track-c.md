@@ -5,6 +5,7 @@
 Track C owns the realtime server spine:
 
 - authenticated WebSocket transport
+- user-profile schema changes
 - direct-message persistence
 - roster and history APIs
 - presence broadcasting
