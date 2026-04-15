@@ -164,7 +164,15 @@ Individual targets: `build-backend`, `build-frontend`, `run-backend`, `run-front
 3. **Check dependencies** — don't start a ticket until all its `Depends on` tickets are `[x]`.
 4. **Satisfy the verification gate** — each ticket's gate defines "done".
 5. **Update the tracker** — mark `[-]` when in progress, `[x]` when the gate is satisfied.
-6. **Run tests** — `make test` must pass after every change.
+6. Run tests — `make test` must pass after every change.
+
+## Bug Workflow
+
+If you encounter or identify a bug during development:
+1. **Reproduce**: Create a minimal test case (in Go or Vitest) that isolates and reproduces the bug.
+2. **Fix**: Implement the fix while ensuring the reproduction test now passes.
+3. **Verify**: Run the full test suite (`make test` and `bun test` / `vitest`) to ensure no regressions.
+4. **Clean**: Fix any linting or formatting issues using Biome (`bun x biome`).
 
 ## Common Pitfalls
 

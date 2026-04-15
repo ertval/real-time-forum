@@ -7,7 +7,6 @@ Track A owns the platform and auth foundation for the real-time forum:
 - single-page shell
 - route bootstrapping
 - persistent app layout
-- user-profile schema changes
 - registration and login UI
 - authenticated-only forum access
 - global logout

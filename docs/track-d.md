@@ -133,7 +133,7 @@ Verification Gate:
 
 ### D07 - Final Acceptance Validation
 Source: RTF-28 | Phase: P4
-Depends on: B05, B06, B07, B08, C07, C08, D04, D05, D06
+Depends on: B05, B06, B07, B08, C07, C08, D04, D05, D06, A07, C09, D08
 Blocks: None
 
 Work:

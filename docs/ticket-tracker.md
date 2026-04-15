@@ -111,27 +111,27 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 27 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
 | 28 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
 
-### Wave 5 — Migration, Testing, and Acceptance (P3–P4)
-
-> **Goal:** Database migration, backend and frontend test coverage, and final acceptance validation.
-
-| # | Status | Ticket | Track | Description | Depends on | Blocks |
-|---|--------|--------|-------|-------------|------------|--------|
-| 29 | [ ] | **C07** | C | Database Migration Strategy | C10, C02 | D07 |
-| 30 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A05, C01, C03, C04, C05, C06 | D07 |
-| 31 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A06, B02, B03, B04, B05, B06, B07, B08 | D07 |
-| 32 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |
-| 33 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A07, C09, D08 | None |
-
-### Wave 6 — Bonus Features (P5)
+### Wave 5 — Bonus Features (P5)
 
 > **Goal:** Audit bonus points — user profiles, DM image attachments, and concurrency patterns. These are optional features that score bonus audit points.
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 34 | [ ] | **A07** | A | User Profile Page (Bonus) | C10, A04, A05 | D07 |
-| 35 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
-| 36 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
+| 29 | [ ] | **A07** | A | User Profile Page (Bonus) | C10, A04, A05 | D07 |
+| 30 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
+| 31 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
+
+### Wave 6 — Finalization & Acceptance (P3–P4)
+
+> **Goal:** Database migration, full test coverage, and final project acceptance.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 32 | [ ] | **C07** | C | Database Migration Strategy | C10, C02 | D07 |
+| 33 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A05, C01, C03, C04, C05, C06 | D07 |
+| 34 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A06, B02, B03, B04, B05, B06, B07, B08 | D07 |
+| 35 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |
+| 36 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A07, C09, D08 | None |
 
 ---
 
