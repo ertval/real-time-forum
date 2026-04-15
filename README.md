@@ -1,277 +1,209 @@
-# Forum Project --- How to Run (Backend + Frontend)
+# Real-Time Forum
+
+A full-stack, real-time single-page forum built with Go and vanilla JavaScript. Users register, log in, create posts, comment, and exchange live private messages through WebSockets — all from a single HTML page.
+
+This project satisfies the [01-edu real-time-forum](docs/requirements.md) exercise requirements.
+
+---
+
+## Features
+
+### Authentication
+- Registration with nickname, email, password, age, gender, first name, and last name
+- Login with nickname **or** email + password
+- Session-based authentication with `HttpOnly` cookies
+- Logout available from every page
+- All forum content requires authentication — no guest access
+
+### Posts & Comments
+- Create, edit, and view posts with category tagging
+- Image upload support in posts and comments
+- Posts displayed in a paginated feed
+- Comments visible **only** on the post detail view (not in the feed)
+- Publish and draft state management
+
+### Private Messaging (Real-Time)
+- Always-visible chat sidebar with user roster
+- Online/offline presence indicators (real-time via WebSocket)
+- Roster ordered by last message activity; new users listed alphabetically
+- Send private messages to online users
+- Read chat history with offline users
+- Messages display sender username and timestamp
+- Last 10 messages loaded on conversation open
+- Scroll up to load 10 more messages (throttled to prevent API spam)
+- Messages delivered in real-time without page refresh
+
+### Retained Features
+- Post and comment reactions (like/dislike)
+- Notification system with polling, badges, and mark-as-read
+- My Activity dashboard
+- Draft workflows
+
+### Bonus Features
+- User profile pages with extended registration data
+- Image attachments in private messages
+- Concurrency patterns (goroutines/channels, Promises) for performance
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | Go 1.24+ (standard library) |
+| Database | SQLite via `mattn/go-sqlite3` |
+| WebSocket | `gorilla/websocket` |
+| Auth | `bcrypt` (password hashing), `google/uuid` (sessions) |
+| Frontend | Vanilla JavaScript, HTML, CSS |
+| Containerization | Docker / Docker Compose (optional) |
+
+### Allowed Packages
+
+Only the following Go packages are permitted:
+
+- All [standard Go packages](https://golang.org/pkg/)
+- [gorilla/websocket](https://pkg.go.dev/github.com/gorilla/websocket)
+- [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)
+- [golang.org/x/crypto/bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
+- [google/uuid](https://github.com/google/uuid) or [gofrs/uuid](https://github.com/gofrs/uuid)
+
+No frontend frameworks (React, Angular, Vue, etc.) are used.
+
+---
+
+## Architecture
+
+```
+cmd/
+  backend/           → Backend API server (port 8080)
+  frontend/          → Frontend server (port 3000) — serves SPA + proxies API/WS
+internal/
+  db/                → Persistence layer (SQLite, repository functions, schema)
+  handlers/          → HTTP handlers (REST API under /api/v1)
+  middleware/        → Request middleware (auth, logging, CORS, recovery)
+  router/            → Route registration
+  tests/             → Backend integration tests
+web/
+  static/            → CSS, JS, images, sounds, uploads
+  templates/         → SPA HTML shell
+data/                → SQLite database file
+docs/                → Project documentation (PRD, SDS, tickets)
+```
+
+The project uses a **split-server** topology:
+- **Frontend server** (`:3000`): serves the single HTML shell, static assets, and proxies `/api/` and `/ws` to the backend.
+- **Backend server** (`:8080`): owns business logic, persistence, REST APIs, and WebSocket endpoint.
+
+---
+
+## Quick Start
+
+### Requirements
 
-This document explains step-by-step how to set up and run the Forum
-project, including both the backend and frontend servers.
+- Go 1.24+
+- Make
+- SQLite (bundled via CGo)
+- Docker & Docker Compose (optional)
 
-------------------------------------------------------------------------
+### Install & Run
 
-## 🚀 1. Requirements
+```bash
+make deps          # Install Go dependencies
+make run-all       # Start backend (8080) + frontend (3000)
+```
 
-Ensure the following are installed:
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
--   Go 1.24+
--   Make
--   SQLite (optional)
--   Docker & Docker Compose (optional --- backend only)
+### Individual Commands
 
-------------------------------------------------------------------------
+```bash
+make build-backend    # Build backend binary
+make build-frontend   # Build frontend binary
+make build-all        # Build both
 
-## 🛠️ 2. Install Dependencies
+make run-backend      # Start backend only
+make run-frontend     # Start frontend only
 
-### Using Make:
+make stop-backend     # Stop backend
+make stop-frontend    # Stop frontend
+make stop-all         # Stop both
 
-make deps
+make test             # Run all tests
+make fmt              # Format code
+make vet              # Run Go vet
+```
 
-### Without Make:
+### Docker (Optional)
 
-go mod tidy
+```bash
+make docker-build     # Build Docker image
+make docker-run       # Run backend container
+make docker-up        # Docker Compose up
+make docker-down      # Docker Compose down
+```
 
-------------------------------------------------------------------------
+---
 
-## 🗄️ 3. Initialize / Reset Database
+## API Overview
 
-If you want a clean SQLite database:
+All REST endpoints are under `/api/v1/`:
 
-make reset-db
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/users/register` | Register a new user |
+| `POST` | `/api/v1/users/login` | Login (nickname or email) |
+| `POST` | `/api/v1/users/logout` | Logout |
+| `GET` | `/api/v1/users/me` | Current session user |
+| `GET` | `/api/v1/posts` | List posts (feed) |
+| `POST` | `/api/v1/posts` | Create a post |
+| `GET` | `/api/v1/chats` | Chat roster (all users + presence) |
+| `GET` | `/api/v1/chats/{userID}/messages` | Chat history (paginated) |
+| `GET` | `/api/v1/users/{userID}/profile` | User profile (bonus) |
+| `POST` | `/api/v1/chats/{userID}/images` | DM image upload (bonus) |
+| `GET` | `/ws` | WebSocket — presence + private messaging |
 
-------------------------------------------------------------------------
+See [docs/SDS.md](docs/SDS.md) for full API contracts and WebSocket event schemas.
 
-## 🧱 4. Build the Project
+---
 
-### Backend only:
+## Documentation
 
-make build-backend
+| Document | Description |
+|----------|-------------|
+| [docs/requirements.md](docs/requirements.md) | Exercise specification (source of truth) |
+| [docs/audit.md](docs/audit.md) | Audit checklist questions |
+| [docs/PRD.md](docs/PRD.md) | Product requirements document |
+| [docs/SDS.md](docs/SDS.md) | Software design specification |
+| [docs/ticket-tracker.md](docs/ticket-tracker.md) | Implementation progress tracker |
+| [architecture.md](architecture.md) | Codebase architecture overview |
+| [AGENTS.md](AGENTS.md) | Coding agent guide |
 
-### Frontend only:
+---
 
-make build-frontend
-
-### Build everything:
-
-make build-all
-
-------------------------------------------------------------------------
-
-## 🌍 5. Run the Application
-
-The project uses two separate servers:
-
--   Backend API → http://localhost:8080
--   Frontend UI → http://localhost:3000
-
-### Run backend:
-
-make run-backend
-
-### Run frontend (auto-opens browser):
-
-make run-frontend
-
-### Run both:
-
-make run-all
-
-------------------------------------------------------------------------
-
-## 🛑 6. Stopping the Servers
-
-### Stop backend:
-
-make stop-backend
-
-### Stop frontend:
-
-make stop-frontend
-
-### Stop both:
-
-make stop-all
-
-------------------------------------------------------------------------
-
-## 🐳 7. Running Backend with Docker (Optional)
-
-### Build Docker image:
-
-make docker-build
-
-### Run backend container:
-
-make docker-run
-
-### Using Docker Compose:
-
-make docker-up
-
-### Stop Compose:
-
-make docker-down
-
-------------------------------------------------------------------------
-
-## ✔️ Recommended Workflow
-
-make deps\
-make reset-db (optional)\
-make run-all
-
-Frontend will open automatically at:\
-http://localhost:3000
-
-------------------------------------------------------------------------
-
-# Project Title: Forum Project
-
-## Description
-
-The **Forum project** is a full-stack web-based application that allows
-users to register, log in, create posts, comment, react, and receive
-real-time notifications.
-
-The system is built with a clean backend API architecture and a dynamic
-frontend UI that communicates through REST endpoints.
-
-------------------------------------------------------------------------
-
-## 🚀 Core Features
-
-### 🔐 Authentication
-
--   Traditional email/password authentication
--   Secure password hashing with bcrypt
--   Session management using UUID and cookies
--   OAuth authentication with:
-    -   Google Login
-    -   GitHub Login
--   Protected routes with middleware-based access control
-
-------------------------------------------------------------------------
-
-### 📝 Posts
-
--   Create, update, delete, and view posts
--   Image upload support in posts
--   Category tagging
--   Publish / Draft state management
-
-------------------------------------------------------------------------
-
-### 💬 Comments
-
--   Add, update, and delete comments
--   Image upload support in comments
--   Highlight new or specific comments
--   Automatic scroll to newest comment
-
-------------------------------------------------------------------------
-
-### 👍 Reactions
-
--   Like / Dislike posts
--   Like / Dislike comments
--   Mutual exclusion logic (cannot like and dislike simultaneously)
--   Instant UI updates after reaction
-
-------------------------------------------------------------------------
-
-### 🔔 Real-Time Notifications
-
--   Notifications for:
-    -   Post reactions
-    -   Comment reactions
-    -   New comments on your posts
--   Live polling system
--   Sound effects for new notifications
--   Notification badge counter
--   Dropdown notification panel
--   Auto-mark as read behavior
-
-------------------------------------------------------------------------
-
-### 📊 My Activity Dashboard
-
-All user-related actions are organized and accessible through **My
-Activity**, including:
-
--   User's posts
--   User's comments
--   Reactions received
--   Notifications history
--   Activity-based navigation
-
-------------------------------------------------------------------------
-
-## 🧩 Technologies Used
-
--   Go (Backend)
--   SQLite (Database)
--   bcrypt (Password hashing)
--   uuid (Session management)
--   OAuth2 (Google & GitHub authentication)
--   Vanilla JavaScript (Frontend)
--   Docker (Containerization)
--   Docker Compose (Orchestration)
-
-------------------------------------------------------------------------
-
-## Folder Structure
-
-/cmd\
-/backend\
-/frontend\
-/internal\
-/db\
-/handlers\
-/templates\
-/static\
-/data
-
-------------------------------------------------------------------------
-
-## 🧯 Troubleshooting
+## Troubleshooting
 
 ### Port 8080 already in use
 
-If you see:
+```bash
+fuser -k 8080/tcp          # Linux
+lsof -i :8080              # Find PID, then kill -9 <PID>
+```
 
-listen tcp :8080: bind: address already in use
+### Port 3000 already in use
 
-It means another process is already using the backend port.
+```bash
+fuser -k 3000/tcp
+```
 
-#### Option 1 (Linux - using fuser)
+---
 
-fuser -k 8080/tcp
+## Contributors
 
-#### Option 2 (Linux / macOS - using lsof)
+- Chris Baikas (chbaikas)
+- Alex Smyroglou (asmyrogl)
 
-lsof -i :8080\
-kill -9 `<PID>`{=html}
-
-#### Option 3 (Cross-platform alternative)
-
-Change the backend port in your configuration if killing the process is
-not desired.
-
-After freeing the port, run again:
-
-make run-all
-
-------------------------------------------------------------------------
-
-## Known Issues or Limitations
-
--   Nested threaded replies are limited to a single level.
--   Advanced user profile customization is not yet implemented.
-
-------------------------------------------------------------------------
-
-## Contributors / Authors
-
--   Chris Baikas (chbaikas)
--   Alex Smyroglou (asmyrogl)
-
-------------------------------------------------------------------------
+---
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
