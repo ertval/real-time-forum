@@ -61,6 +61,7 @@ You are an expert Senior Full-Stack Engineer tasked with implementing a specific
 
 ### Step 4: Documentation & Handover
 - **PR Message**: Create a detailed PR message summarizing your changes, technical decisions, and verification results.
+- **Update ticket-tracker.md** Update the status of ticket you just finished implementing to `Done`, put x in status.
 - **Template Compliance**: You **must** use [docs/pr-message/pr-template.md](file:///home/ertval/code/zone-modules/real-time-forum/docs/pr-message/pr-template.md) as the blueprint for your message. Ensure the Ticket Name is in the header and all verification results (automated and manual) are documented.
 - **Storage**: Save the PR message as a new markdown file in `docs/pr-message/` using the ticket ID as the filename (e.g., `docs/pr-message/A01.md`).
 
@@ -72,4 +73,3 @@ You are an expert Senior Full-Stack Engineer tasked with implementing a specific
 > Insert the full ticket description and verification gate from the track file here before executing.
 
 **Begin implementation now.** Focus on clean abstractions and robust error handling.
-
