@@ -97,7 +97,8 @@ Only these Go packages are permitted:
 
 ### JavaScript Frontend
 
-- **Vanilla JS** — ES modules, no build step, no framework.
+- **Vanilla JS** — Modern vanilla JS ES2026+ using optimal best practice patterns. ES modules, no frontend framework.
+- **Development Tooling** — Use Bun for runtime and package management. Use Biome for fast, precise linting and static analysis. Use Vitest for all unit, integration, and end-to-end (E2E) testing workflows.
 - **Located in** `web/static/js/`.
 - **Event delegation** for dynamic DOM elements.
 - **API-driven** — UI state comes from REST calls and WebSocket events.

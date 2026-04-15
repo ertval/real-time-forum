@@ -54,7 +54,8 @@ This project satisfies the [01-edu real-time-forum](docs/requirements.md) exerci
 | Database | SQLite via `mattn/go-sqlite3` |
 | WebSocket | `gorilla/websocket` |
 | Auth | `bcrypt` (password hashing), `google/uuid` (sessions) |
-| Frontend | Vanilla JavaScript, HTML, CSS |
+| Frontend | Vanilla JS (ES2026+), HTML, CSS |
+| Dev Tools | Bun, Biome, Vitest |
 | Containerization | Docker / Docker Compose (optional) |
 
 ### Allowed Packages
@@ -67,7 +68,7 @@ Only the following Go packages are permitted:
 - [golang.org/x/crypto/bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
 - [google/uuid](https://github.com/google/uuid) or [gofrs/uuid](https://github.com/gofrs/uuid)
 
-No frontend frameworks (React, Angular, Vue, etc.) are used.
+No frontend frameworks (React, Angular, Vue, etc.) are used. Tooling relies on modernized standards including Bun for speed, Biome for linting, and Vitest for testing.
 
 ---
 
