@@ -134,7 +134,7 @@ Verification Gate:
 
 ### C08 - Backend Test Coverage for Auth, Messaging, and Presence
 Source: RTF-26 | Phase: P4
-Depends on: C11, A08, C01, C03, C04, C05, C06
+Depends on: C11, A05, C01, C03, C04, C05, C06
 Blocks: D07
 
 Work:

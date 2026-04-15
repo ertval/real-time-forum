@@ -384,6 +384,13 @@ On `dm.send`:
 
 ## 7. Frontend Design
 
+## 7.0 Tooling & Practices (ES2026+)
+
+- The frontend must be implemented in modern vanilla JS (ES2026+) using optimal best practice patterns.
+- Bun is the required runtime and package manager for frontend dev tools.
+- Biome handles all linting, formatting, and static testing checks.
+- Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests.
+
 ## 7.1 SPA Routes
 
 Required client routes:
