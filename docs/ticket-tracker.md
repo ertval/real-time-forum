@@ -44,10 +44,10 @@ The canonical product and technical requirements are in:
 
 ## Summary Snapshot
 
-- Total tickets: `36`
+- Total tickets: `37`
 - Done: `0`
 - Partially Implemented: `0`
-- Not Started: `36`
+- Not Started: `37`
 
 ---
 
@@ -62,10 +62,11 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
 | 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup | None | A02 |
-| 2 | [ ] | **A02** | A | Single SPA Shell Entry | A01 | D09, A03 |
-| 3 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
-| 4 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
-| 5 | [ ] | **A03** | A | SPA Boot and Client Routing | A02 | A04, D10, A05, B01, B05 |
+| 2 | [ ] | **A02** | A | Frontend Architecture & Directory Restructuring | A01 | A10, D09 |
+| 3 | [ ] | **A10** | A | Single SPA Shell Entry | A02 | D09, A03 |
+| 4 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
+| 5 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
+| 6 | [ ] | **A03** | A | SPA Boot and Client Routing | A10 | A04, D10, A05, B01, B05 |
 
 ### Wave 2 — Auth + Shell + Core Forum (P1)
 
@@ -158,7 +159,7 @@ Completing **Waves 1–3** (tickets 1–23) delivers a fully functioning real-ti
 
 ## Ticket ID Index
 
-- Track A: `A01` through `A07`
+- Track A: `A01` through `A10`
 - Track B: `B01` through `B08`
 - Track C: `C01` through `C11`
 - Track D: `D01` through `D10`
