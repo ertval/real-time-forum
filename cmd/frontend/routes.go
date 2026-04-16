@@ -40,6 +40,17 @@ func NewMux() *http.ServeMux {
 		),
 	)
 
+	/*-----------------------------
+	  SPA Assets and Shell (/spa/*)
+	-----------------------------*/
+	mux.Handle(
+		"/spa/",
+		http.StripPrefix(
+			"/spa/",
+			http.FileServer(http.Dir("./web/SPA")),
+		),
+	)
+
 	// ---- API proxy to backend (8080) ----
 	backendURL, err := url.Parse(backendBaseURL)
 	if err != nil {
