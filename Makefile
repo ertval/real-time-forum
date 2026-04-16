@@ -67,6 +67,7 @@ test-backend:
 	@go test ./... -v
 
 test-frontend:
+	@go test ./internal/tests/... -v
 	@./node_modules/.bin/bun run test
 
 lint:
@@ -91,7 +92,7 @@ deps-backend:
 	@go mod tidy
 
 deps-frontend:
-	@./node_modules/.bin/bun install
+	@command -v bun >/dev/null 2>&1 && bun install || (npm install && ./node_modules/.bin/bun install)
 
 # -----------------------------------------------------
 # 🐳 Docker (Backend Only – Production)

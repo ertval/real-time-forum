@@ -92,8 +92,19 @@ Only these Go packages are permitted:
   - Uses `http.ServeMux`. Explicit route definitions. API versioned under `/api/v1`.
 
 - **Tests** (`internal/tests/`):
-  - Integration tests using `httptest` with in-memory SQLite.
-  - Tests validate HTTP status codes, cookies, JSON structure, and DB side-effects.
+  - **Integration Tests**: Using `httptest` with in-memory SQLite to validate API behavior.
+  - **Unit Tests**: Co-located with source code (`_test.go`) in backend subpackages.
+  - **E2E Tests**: High-level tests simulating full user journeys using Vitest.
+
+### Test Architecture
+
+The project follows a tiered testing strategy to ensure reliability across the stack:
+
+| Tier | Goal | Tools | Locations |
+| :--- | :--- | :--- | :--- |
+| **Unit** | Test individual functions/logic in isolation. | Go `testing`, Vitest | `.../*.go`, `.../*.test.js` |
+| **Integration** | Test component interactions, database cycles, and API contracts. | Go `httptest`, Vitest | `internal/tests/`, `web/SPA/features/*/tests/` |
+| **E2E** | Test full user journeys in a browser-like environment. | Vitest | `web/SPA/e2e/` (planned) |
 
 ### JavaScript Frontend
 

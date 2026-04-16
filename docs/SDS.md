@@ -481,6 +481,14 @@ On application load:
 - live message rendering on active chat
 - throttled or debounced history loading during upward scroll
 
+### 10.2.1 Test Categories (Vitest framework)
+
+| Category | Description |
+| :--- | :--- |
+| **Unit** | Isolated component and helper logic tests. |
+| **Integration** | Feature-level interaction tests (e.g., Auth + Feed). |
+| **E2E** | Multi-step user journey verification. |
+
 ## 10.3 Regression Coverage
 
 The retained legacy features must still be verified after the migration:
