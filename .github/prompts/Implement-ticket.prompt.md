@@ -1,7 +1,6 @@
 ---
 name: Implement-ticket
 description: Orchestrate the implementation of a specific ticket for the Real-Time Forum.
-agentdescription: Implement a specific feature for the Real-Time Forum project.
 agent: agent
 tools: [execute, read, edit, search, web, agent, todo]
 ---
