@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { createApp, matchRoute, normalizePathname } from './main.js';
+import { createApp, matchRoute, normalizePathname } from '../../main.js';
 
 function createMockBrowser(initialPath = '/') {
 	const documentListeners = new Map();

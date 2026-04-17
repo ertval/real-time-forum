@@ -16,7 +16,7 @@ func TestSPARouting(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	spaDir := filepath.Join(tmpDir, "web/SPA")
+	spaDir := filepath.Join(tmpDir, "SPA")
 	staticDir := filepath.Join(tmpDir, "web/static")
 	os.MkdirAll(spaDir, 0755)
 	os.MkdirAll(staticDir, 0755)
