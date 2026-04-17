@@ -50,14 +50,14 @@ internal/
 web/
   static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
   templates/         → HTML templates (legacy)
-  SPA/               → Single Page Application Shell (Vanilla JS ES2026+)
-    index.html       → SPA Entrypoint
-    main.js          → Bootstrap Application Logic
-    assets/          → Global CSS & Static Images
-    core/            → State, Router, and API Logic
-    components/      → Shared UI Elements
-    features/        → Domain Slices (Auth, Feed, Chat, etc.)
-    tests/           → Vitest Unit & Integration Tests
+SPA/                 → Single Page Application Shell (Vanilla JS ES2026+)
+  index.html         → SPA Entrypoint
+  main.js            → Bootstrap Application Logic
+  assets/            → Global CSS & Static Images
+  core/              → State, Router, and API Logic
+  components/        → Shared UI Elements
+  features/        → Domain Slices (Auth, Feed, Chat, etc.)
+  tests/           → Vitest Unit & Integration Tests
 data/                → SQLite database file
 docs/                → Project documentation (PRD, SDS, tickets)
 ```
