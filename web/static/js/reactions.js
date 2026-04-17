@@ -1,12 +1,12 @@
 // web/static/js/reactions.js
 
-import { Auth } from "./auth.js";
-import { playReaction } from "./sound-effects.js";
-import { API_BASE } from "./utils.js";
+import { Auth } from './auth.js';
+import { playReaction } from './sound-effects.js';
+import { API_BASE } from './utils.js';
 
 export function initReactions() {
-	document.addEventListener("change", async (e) => {
-		const btn = e.target.closest("[data-reaction]");
+	document.addEventListener('change', async (e) => {
+		const btn = e.target.closest('[data-reaction]');
 		if (!btn) return;
 
 		e.stopPropagation();
@@ -24,15 +24,13 @@ export function initReactions() {
 		const commentId = btn.dataset.commentId;
 
 		const scope = postId
-			? btn.closest("article[data-post-id]")
-			: btn.closest(".comment, .activity-comment");
+			? btn.closest('article[data-post-id]')
+			: btn.closest('.comment, .activity-comment');
 
 		if (!scope) return;
 
-		const oppositeType = type === "like" ? "dislike" : "like";
-		const opposite = scope.querySelector(
-			`input[data-reaction="${oppositeType}"]`,
-		);
+		const oppositeType = type === 'like' ? 'dislike' : 'like';
+		const opposite = scope.querySelector(`input[data-reaction="${oppositeType}"]`);
 
 		const oppositePreviousState = opposite ? opposite.checked : null;
 
@@ -42,9 +40,9 @@ export function initReactions() {
 
 		try {
 			const res = await fetch(url, {
-				method: "POST",
-				credentials: "include",
-				headers: { Accept: "application/json" },
+				method: 'POST',
+				credentials: 'include',
+				headers: { Accept: 'application/json' },
 			});
 
 			if (res.status === 401) {
@@ -72,12 +70,11 @@ export function initReactions() {
 
 			const { data } = await res.json();
 
-			scope.querySelector("[data-like-count]").textContent = data.likes_count;
+			scope.querySelector('[data-like-count]').textContent = data.likes_count;
 
-			scope.querySelector("[data-dislike-count]").textContent =
-				data.dislikes_count;
+			scope.querySelector('[data-dislike-count]').textContent = data.dislikes_count;
 		} catch (err) {
-			console.error("Reaction failed:", err);
+			console.error('Reaction failed:', err);
 
 			btn.checked = previousState;
 			if (opposite && oppositePreviousState !== null) {

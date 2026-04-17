@@ -1,16 +1,16 @@
 // web/static/js/sound-effects.js
 
-const SFX_KEY = "app:sfx-enabled";
+const SFX_KEY = 'app:sfx-enabled';
 
 function isSFXEnabled() {
-	return localStorage.getItem(SFX_KEY) !== "false";
+	return localStorage.getItem(SFX_KEY) !== 'false';
 }
 
 // --- Preload sounds ---
-const reactionSound = new Audio("/static/sounds/reaction.mp3");
-const uploadSound = new Audio("/static/sounds/upload.mp3");
-const deleteSound = new Audio("/static/sounds/delete.mp3");
-const notificationSound = new Audio("/static/sounds/notification.mp3");
+const reactionSound = new Audio('/static/sounds/reaction.mp3');
+const uploadSound = new Audio('/static/sounds/upload.mp3');
+const deleteSound = new Audio('/static/sounds/delete.mp3');
+const notificationSound = new Audio('/static/sounds/notification.mp3');
 
 // Default volumes
 reactionSound.volume = 0.35;

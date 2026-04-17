@@ -12,10 +12,10 @@ const MAX_TOASTS = 4;
 function ensureToastRoot() {
 	if (toastRoot) return toastRoot;
 
-	toastRoot = document.querySelector(".ui-toasts");
+	toastRoot = document.querySelector('.ui-toasts');
 	if (!toastRoot) {
-		toastRoot = document.createElement("div");
-		toastRoot.className = "ui-toasts";
+		toastRoot = document.createElement('div');
+		toastRoot.className = 'ui-toasts';
 		document.body.appendChild(toastRoot);
 	}
 	return toastRoot;
@@ -23,27 +23,27 @@ function ensureToastRoot() {
 
 function typeToTitle(type) {
 	switch (type) {
-		case "success":
-			return "Success";
-		case "warn":
-			return "Warning";
-		case "danger":
-			return "Error";
+		case 'success':
+			return 'Success';
+		case 'warn':
+			return 'Warning';
+		case 'danger':
+			return 'Error';
 		default:
-			return "Info";
+			return 'Info';
 	}
 }
 
 function getTypeClass(type) {
 	switch (type) {
-		case "success":
-			return "ui-type-success";
-		case "warn":
-			return "ui-type-warn";
-		case "danger":
-			return "ui-type-danger";
+		case 'success':
+			return 'ui-type-success';
+		case 'warn':
+			return 'ui-type-warn';
+		case 'danger':
+			return 'ui-type-danger';
 		default:
-			return "ui-type-info";
+			return 'ui-type-info';
 	}
 }
 
@@ -53,7 +53,7 @@ function getTypeClass(type) {
  * @param {{type?: "info"|"success"|"warn"|"danger", timeoutMs?: number}} opts
  */
 export function uiNotify(message, opts = {}) {
-	const type = opts.type || "info";
+	const type = opts.type || 'info';
 	const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : 2600;
 
 	const root = ensureToastRoot();
@@ -63,16 +63,16 @@ export function uiNotify(message, opts = {}) {
 		root.firstChild.remove();
 	}
 
-	const toast = document.createElement("div");
-	toast.className = "ui-toast";
-	toast.setAttribute("role", "status");
-	toast.setAttribute("aria-live", "polite");
+	const toast = document.createElement('div');
+	toast.className = 'ui-toast';
+	toast.setAttribute('role', 'status');
+	toast.setAttribute('aria-live', 'polite');
 
-	const bar = document.createElement("div");
+	const bar = document.createElement('div');
 	bar.className = `ui-toast__bar ${getTypeClass(type)}`;
 
-	const content = document.createElement("div");
-	content.className = "ui-toast__content";
+	const content = document.createElement('div');
+	content.className = 'ui-toast__content';
 
 	if (opts.html === true) {
 		content.innerHTML = message;
@@ -80,13 +80,13 @@ export function uiNotify(message, opts = {}) {
 		content.textContent = message;
 	}
 
-	const closeBtn = document.createElement("button");
-	closeBtn.className = "ui-toast__close";
-	closeBtn.type = "button";
-	closeBtn.setAttribute("aria-label", "Close");
-	closeBtn.textContent = "×";
+	const closeBtn = document.createElement('button');
+	closeBtn.className = 'ui-toast__close';
+	closeBtn.type = 'button';
+	closeBtn.setAttribute('aria-label', 'Close');
+	closeBtn.textContent = '×';
 
-	closeBtn.addEventListener("click", () => toast.remove());
+	closeBtn.addEventListener('click', () => toast.remove());
 
 	toast.appendChild(bar);
 	toast.appendChild(content);
@@ -118,54 +118,54 @@ export function uiNotify(message, opts = {}) {
 export function uiConfirm(message, opts = {}) {
 	if (activeConfirm) return activeConfirm;
 
-	const type = opts.type || "warn";
+	const type = opts.type || 'warn';
 	const title = opts.title || typeToTitle(type);
-	const okText = opts.okText || "OK";
-	const cancelText = opts.cancelText || "Cancel";
+	const okText = opts.okText || 'OK';
+	const cancelText = opts.cancelText || 'Cancel';
 
 	activeConfirm = new Promise((resolve) => {
-		const overlay = document.createElement("div");
-		overlay.className = "ui-overlay";
-		overlay.setAttribute("role", "presentation");
+		const overlay = document.createElement('div');
+		overlay.className = 'ui-overlay';
+		overlay.setAttribute('role', 'presentation');
 
-		const dialog = document.createElement("div");
-		dialog.className = "ui-dialog";
-		dialog.setAttribute("role", "dialog");
-		dialog.setAttribute("aria-modal", "true");
-		dialog.setAttribute("aria-label", title);
+		const dialog = document.createElement('div');
+		dialog.className = 'ui-dialog';
+		dialog.setAttribute('role', 'dialog');
+		dialog.setAttribute('aria-modal', 'true');
+		dialog.setAttribute('aria-label', title);
 
-		const header = document.createElement("div");
-		header.className = "ui-dialog__header";
+		const header = document.createElement('div');
+		header.className = 'ui-dialog__header';
 
-		const badge = document.createElement("div");
+		const badge = document.createElement('div');
 		badge.className = `ui-badge ${getTypeClass(type)}`;
 
-		const h = document.createElement("h2");
-		h.className = "ui-dialog__title";
+		const h = document.createElement('h2');
+		h.className = 'ui-dialog__title';
 		h.textContent = title;
 
 		header.appendChild(badge);
 		header.appendChild(h);
 
-		const body = document.createElement("div");
-		body.className = "ui-dialog__body";
+		const body = document.createElement('div');
+		body.className = 'ui-dialog__body';
 		body.textContent = message;
 
-		const footer = document.createElement("div");
-		footer.className = "ui-dialog__footer";
+		const footer = document.createElement('div');
+		footer.className = 'ui-dialog__footer';
 
-		const cancelBtn = document.createElement("button");
-		cancelBtn.className = "ui-btn ui-btn--ghost";
-		cancelBtn.type = "button";
+		const cancelBtn = document.createElement('button');
+		cancelBtn.className = 'ui-btn ui-btn--ghost';
+		cancelBtn.type = 'button';
 		cancelBtn.textContent = cancelText;
 
-		const okBtn = document.createElement("button");
-		okBtn.className = "ui-btn ui-btn--primary";
-		okBtn.type = "button";
+		const okBtn = document.createElement('button');
+		okBtn.className = 'ui-btn ui-btn--primary';
+		okBtn.type = 'button';
 		okBtn.textContent = okText;
 
 		function cleanup(result) {
-			document.removeEventListener("keydown", onKeydown);
+			document.removeEventListener('keydown', onKeydown);
 			overlay.remove();
 			activeConfirm = null;
 			resolve(result);
@@ -173,14 +173,14 @@ export function uiConfirm(message, opts = {}) {
 
 		function onKeydown(e) {
 			if (!overlay.isConnected) return;
-			if (e.key === "Escape") cleanup(false);
-			if (e.key === "Enter") cleanup(true);
+			if (e.key === 'Escape') cleanup(false);
+			if (e.key === 'Enter') cleanup(true);
 		}
 
-		cancelBtn.addEventListener("click", () => cleanup(false));
-		okBtn.addEventListener("click", () => cleanup(true));
+		cancelBtn.addEventListener('click', () => cleanup(false));
+		okBtn.addEventListener('click', () => cleanup(true));
 
-		overlay.addEventListener("click", (e) => {
+		overlay.addEventListener('click', (e) => {
 			if (e.target === overlay) cleanup(false);
 		});
 
@@ -194,7 +194,7 @@ export function uiConfirm(message, opts = {}) {
 		overlay.appendChild(dialog);
 		document.body.appendChild(overlay);
 
-		document.addEventListener("keydown", onKeydown);
+		document.addEventListener('keydown', onKeydown);
 
 		// focus OK by default
 		okBtn.focus();

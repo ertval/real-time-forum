@@ -1,8 +1,8 @@
 // /web/static/js/notifications.js
 
-import { playNotification } from "./sound-effects.js";
-import { uiNotify } from "./ui-messages.js";
-import { API_BASE } from "./utils.js";
+import { playNotification } from './sound-effects.js';
+import { uiNotify } from './ui-messages.js';
+import { API_BASE } from './utils.js';
 
 const seenNotificationIds = new Set();
 let pollInterval = null;
@@ -14,7 +14,7 @@ let initialized = false;
 export function startNotificationPolling() {
 	if (pollInterval) return;
 
-	const bell = document.getElementById("notification-bell");
+	const bell = document.getElementById('notification-bell');
 	if (!bell) return; // guest user
 
 	resetState();
@@ -48,8 +48,8 @@ function resetState() {
 async function fetchNotifications() {
 	try {
 		const res = await fetch(`${API_BASE}/notifications`, {
-			credentials: "include",
-			headers: { Accept: "application/json" },
+			credentials: 'include',
+			headers: { Accept: 'application/json' },
 		});
 
 		// If session expired → stop polling
@@ -70,7 +70,7 @@ async function fetchNotifications() {
 
 		initialized = true;
 	} catch (err) {
-		console.error("notifications error:", err);
+		console.error('notifications error:', err);
 	}
 }
 
@@ -78,15 +78,15 @@ async function fetchNotifications() {
    BADGE
 -------------------------- */
 function updateBadge(count) {
-	const badge = document.getElementById("notification-badge");
+	const badge = document.getElementById('notification-badge');
 	if (!badge) return;
 
 	if (count > 0) {
 		badge.textContent = count;
-		badge.classList.remove("hidden");
+		badge.classList.remove('hidden');
 	} else {
-		badge.textContent = "";
-		badge.classList.add("hidden");
+		badge.textContent = '';
+		badge.classList.add('hidden');
 	}
 }
 
@@ -94,7 +94,7 @@ function updateBadge(count) {
    DROPDOWN RENDER
 -------------------------- */
 function renderDropdown(notifications) {
-	const dropdown = document.getElementById("notification-dropdown");
+	const dropdown = document.getElementById('notification-dropdown');
 	if (!dropdown) return;
 
 	dropdown.innerHTML = `
@@ -106,10 +106,10 @@ function renderDropdown(notifications) {
 
 	dropdown.scrollTop = 0;
 
-	const markAllBtn = document.getElementById("mark-all-read-btn");
+	const markAllBtn = document.getElementById('mark-all-read-btn');
 
 	if (!notifications.length) {
-		if (markAllBtn) markAllBtn.style.display = "none";
+		if (markAllBtn) markAllBtn.style.display = 'none';
 
 		dropdown.innerHTML += `
       <div class="notification-empty">
@@ -122,26 +122,26 @@ function renderDropdown(notifications) {
 	const hasUnread = notifications.some((n) => !n.is_read);
 
 	if (markAllBtn && !hasUnread) {
-		markAllBtn.style.display = "none";
+		markAllBtn.style.display = 'none';
 	}
 
 	notifications.forEach((n) => {
-		const div = document.createElement("div");
-		div.className = "notification-item";
+		const div = document.createElement('div');
+		div.className = 'notification-item';
 
-		if (!n.is_read) div.classList.add("unread");
+		if (!n.is_read) div.classList.add('unread');
 
 		div.innerHTML = buildMessage(n);
 
-		div.addEventListener("click", async () => {
+		div.addEventListener('click', async () => {
 			if (!n.is_read) {
 				await markOneAsRead(n.id);
 
-				div.classList.remove("unread");
+				div.classList.remove('unread');
 
-				const badge = document.getElementById("notification-badge");
+				const badge = document.getElementById('notification-badge');
 
-				if (badge && badge.textContent !== "") {
+				if (badge && badge.textContent !== '') {
 					let count = Number(badge.textContent) || 0;
 					count = Math.max(count - 1, 0);
 					updateBadge(count);
@@ -149,7 +149,7 @@ function renderDropdown(notifications) {
 			}
 
 			if (n.post_id) {
-				if (n.type === "comment") {
+				if (n.type === 'comment') {
 					window.location.href = `/view-post/${n.post_id}?highlight=last`;
 					return;
 				}
@@ -167,14 +167,14 @@ function renderDropdown(notifications) {
 	});
 
 	if (markAllBtn) {
-		markAllBtn.addEventListener("click", async (e) => {
+		markAllBtn.addEventListener('click', async (e) => {
 			e.stopPropagation();
 
 			await markAllAsRead();
 
 			document
-				.querySelectorAll(".notification-item.unread")
-				.forEach((el) => el.classList.remove("unread"));
+				.querySelectorAll('.notification-item.unread')
+				.forEach((el) => el.classList.remove('unread'));
 
 			updateBadge(0);
 		});
@@ -187,11 +187,11 @@ function renderDropdown(notifications) {
 async function markOneAsRead(id) {
 	try {
 		await fetch(`${API_BASE}/notifications/${id}/read`, {
-			method: "PATCH",
-			credentials: "include",
+			method: 'PATCH',
+			credentials: 'include',
 		});
 	} catch (err) {
-		console.error("mark-one error:", err);
+		console.error('mark-one error:', err);
 	}
 }
 
@@ -201,13 +201,13 @@ async function markOneAsRead(id) {
 async function markAllAsRead() {
 	try {
 		const res = await fetch(`${API_BASE}/notifications/read-all`, {
-			method: "PATCH",
-			credentials: "include",
+			method: 'PATCH',
+			credentials: 'include',
 		});
 
 		if (res.status === 401) return;
 	} catch (err) {
-		console.error("mark-all error:", err);
+		console.error('mark-all error:', err);
 	}
 }
 
@@ -225,7 +225,7 @@ function processNewNotifications(notifications) {
 			seenNotificationIds.add(n.id);
 
 			if (!n.is_read) {
-				uiNotify(buildMessage(n), { type: "info", html: true });
+				uiNotify(buildMessage(n), { type: 'info', html: true });
 				playNotification();
 			}
 		}
@@ -237,7 +237,7 @@ function processNewNotifications(notifications) {
 -------------------------- */
 function buildMessage(n) {
 	const truncate = (str, len = 20) => {
-		if (!str) return "";
+		if (!str) return '';
 		return str.length > len ? `${str.slice(0, len)}…` : str;
 	};
 
@@ -245,23 +245,23 @@ function buildMessage(n) {
 	const excerpt = `<em>${truncate(n.comment_excerpt)}</em>`;
 
 	switch (n.type) {
-		case "post_like":
+		case 'post_like':
 			return `${n.actor_username} liked your post: ${title} 👍`;
 
-		case "post_dislike":
+		case 'post_dislike':
 			return `${n.actor_username} disliked your post: ${title} 👎`;
 
-		case "comment":
+		case 'comment':
 			return `${n.actor_username} commented ${excerpt} on ${title} 💬`;
 
-		case "comment_like":
+		case 'comment_like':
 			return `${n.actor_username} liked your comment: ${excerpt} 👍`;
 
-		case "comment_dislike":
+		case 'comment_dislike':
 			return `${n.actor_username} disliked your comment: ${excerpt} 👎`;
 
 		default:
-			return "New notification 🔔";
+			return 'New notification 🔔';
 	}
 }
 
@@ -269,19 +269,19 @@ function buildMessage(n) {
    BELL CLICK HANDLER
 -------------------------- */
 export function initNotificationBell() {
-	const bell = document.getElementById("notification-bell");
-	const dropdown = document.getElementById("notification-dropdown");
+	const bell = document.getElementById('notification-bell');
+	const dropdown = document.getElementById('notification-dropdown');
 
 	if (!bell || !dropdown) return;
 
-	bell.addEventListener("click", (e) => {
+	bell.addEventListener('click', (e) => {
 		e.stopPropagation();
-		dropdown.classList.toggle("hidden");
+		dropdown.classList.toggle('hidden');
 	});
 
-	document.addEventListener("click", (e) => {
+	document.addEventListener('click', (e) => {
 		if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
-			dropdown.classList.add("hidden");
+			dropdown.classList.add('hidden');
 		}
 	});
 }

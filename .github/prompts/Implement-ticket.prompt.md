@@ -111,11 +111,11 @@ Spawn two new subagents for Phase 3 after Phase 2 completes: one read-only QA su
 
 #### Agent C: Testing, QA & Verification
 - Tool access: verification plus bug-fix edits. This subagent may run tests, inspect outputs, and edit code in place to fix defects it finds within the ticket scope.
-- **Full Regression**: Execute `make test` and `vitest` to ensure no regressions across the stack.
+- **Full Regression**: Execute `make test` and `bun run policy` to ensure no regressions across the stack.
 - **Gate Audit**: Perform a manual/automated audit to ensure the **Verification Gate** is 100% satisfied.
 - **Bug Workflow**: If issues are found, create a failing test to reproduce them, apply the fix in place, rerun the relevant tests, and then rerun the full verification gate before handing off.
 - **Polish**: Use **Biome** for final linting and formatting (`biome check --apply .`).
-- **Output**: Return a pass/fail report, a command-by-command QA checklist covering every check run, concrete evidence for each verification gate item, and a list of any fixes made in place with the exact files and tests rerun.
+- **Output**: Return a pass/fail report, a command-by-command QA checklist covering every check run, concrete evidence for each verification gate item, and a list of any fixes made in place with the exact files and tests rerun. **Dont return unless all verification gate items are satisfied and all tests pass!!**
 
 #### Agent D: Documentation & Handover
 - Tool access: write-enabled for docs only, including tracker updates and the PR message archive.
