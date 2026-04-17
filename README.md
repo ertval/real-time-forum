@@ -88,6 +88,7 @@ make run-all
 ```bash
 make test          # Run the full suite (Go + Vitest)
 make lint          # Execute Biome static analysis
+make lint:fix      # Fix Biome static analysis
 make format        # Standardize code formatting
 ```
 

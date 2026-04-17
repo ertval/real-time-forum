@@ -5,32 +5,23 @@ import "forum/web/startupcheck"
 
 func StartupCheckConfig() startupcheck.Config {
 	return startupcheck.Config{
-		WebRoot: "web",
+		WebRoot: ".",
 
 		CriticalHTML: []string{
-			"templates/home.html",
-			"templates/login.html",
-			"templates/register.html",
-			"templates/create-post.html",
-			"templates/edit-post.html",
-			"templates/activity.html",
-			"templates/view-post.html",
-			"static/partials/header.html",
-			"errors/error.html",
+			"SPA/index.html",
+			"web/errors/error.html",
 		},
 
 		JSDirs: []string{
-			"static/js",
+			"SPA",
 		},
 
 		CriticalCSS: []string{
-			"static/css/base.css",
-			"static/css/home.css",
-			"static/css/posts.css",
+			"SPA/assets/css/main.css",
 		},
 
-		MinJSFiles:   0,  // disabled
-		ExactJSFiles: 34, // enforced
+		MinJSFiles:   1,
+		ExactJSFiles: 0,
 	}
 }
 

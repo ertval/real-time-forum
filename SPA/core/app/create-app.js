@@ -1,0 +1,179 @@
+import { renderAuthenticatedShell } from '../../features/shell/views.js';
+import { renderTemplate } from '../router/render-template.js';
+import { matchRoute, normalizePathname } from '../router/routes.js';
+
+function hideLoadingOverlay(documentRef, setTimeoutRef) {
+	const overlay = documentRef.getElementById('loading-overlay');
+	if (!overlay) {
+		return;
+	}
+
+	overlay.style.opacity = '0';
+	setTimeoutRef(() => overlay.remove(), 200);
+}
+
+async function resolveSession(fetchRef) {
+	if (typeof fetchRef !== 'function') {
+		return { isAuthenticated: false, status: 0 };
+	}
+
+	try {
+		const response = await fetchRef('/api/v1/users/me', {
+			method: 'GET',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+
+		return { isAuthenticated: response.ok, status: response.status };
+	} catch {
+		return { isAuthenticated: false, status: 0 };
+	}
+}
+
+function enforceRouteAccess(match, isAuthenticated) {
+	if (!match) {
+		return {
+			redirectTo: isAuthenticated ? '/' : '/login',
+			match: null,
+		};
+	}
+
+	if (match.route.access === 'protected' && !isAuthenticated) {
+		return { redirectTo: '/login', match: null };
+	}
+
+	if (match.route.access === 'public-only' && isAuthenticated) {
+		return { redirectTo: '/', match: null };
+	}
+
+	return { redirectTo: null, match };
+}
+
+export function createApp(options = {}) {
+	const windowRef = options.windowRef ?? (typeof window !== 'undefined' ? window : null);
+	const documentRef = options.documentRef ?? (typeof document !== 'undefined' ? document : null);
+	const fetchRef = options.fetchRef ?? (typeof fetch === 'function' ? fetch : null);
+
+	if (!windowRef || !documentRef) {
+		return null;
+	}
+
+	const mainContent = documentRef.getElementById('main-content');
+	const setTimeoutRef =
+		typeof options.setTimeoutRef === 'function'
+			? options.setTimeoutRef
+			: windowRef.setTimeout.bind(windowRef);
+
+	const state = {
+		isAuthenticated: false,
+		activePath: normalizePathname(windowRef.location.pathname || '/'),
+	};
+
+	function renderRoute(match) {
+		if (!mainContent) {
+			return;
+		}
+
+		const routeMarkup = renderTemplate(match);
+		mainContent.innerHTML =
+			match.route.access === 'protected' ? renderAuthenticatedShell(routeMarkup) : routeMarkup;
+	}
+
+	function goTo(pathname, replace = false) {
+		const normalizedTarget = normalizePathname(pathname);
+		const currentPath = normalizePathname(windowRef.location.pathname || '/');
+
+		if (replace) {
+			windowRef.history.replaceState({}, '', normalizedTarget);
+		} else if (normalizedTarget !== currentPath) {
+			windowRef.history.pushState({}, '', normalizedTarget);
+		}
+
+		state.activePath = normalizedTarget;
+		handleLocationChange();
+	}
+
+	function handleLocationChange() {
+		const normalizedPath = normalizePathname(windowRef.location.pathname || '/');
+
+		if (normalizedPath !== windowRef.location.pathname) {
+			windowRef.history.replaceState({}, '', normalizedPath);
+		}
+
+		const match = matchRoute(normalizedPath);
+		const access = enforceRouteAccess(match, state.isAuthenticated);
+
+		if (access.redirectTo) {
+			const normalizedRedirect = normalizePathname(access.redirectTo);
+			if (normalizedRedirect !== normalizedPath) {
+				goTo(normalizedRedirect, true);
+				return;
+			}
+		}
+
+		if (!access.match) {
+			return;
+		}
+
+		state.activePath = normalizedPath;
+		renderRoute(access.match);
+	}
+
+	function onDocumentClick(event) {
+		if (event.defaultPrevented || event.button !== 0) {
+			return;
+		}
+
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+			return;
+		}
+
+		const anchor = event.target?.closest?.('a[data-link]');
+		if (!anchor) {
+			return;
+		}
+
+		const href = anchor.getAttribute('href');
+		if (!href || href.startsWith('http') || href.startsWith('mailto:')) {
+			return;
+		}
+
+		event.preventDefault();
+		goTo(href, false);
+	}
+
+	function onPopState() {
+		handleLocationChange();
+	}
+
+	async function boot() {
+		const session = await resolveSession(fetchRef);
+		state.isAuthenticated = session.isAuthenticated;
+
+		handleLocationChange();
+		hideLoadingOverlay(documentRef, setTimeoutRef);
+	}
+
+	function start() {
+		documentRef.addEventListener('click', onDocumentClick);
+		windowRef.addEventListener('popstate', onPopState);
+		return boot();
+	}
+
+	function stop() {
+		documentRef.removeEventListener('click', onDocumentClick);
+		windowRef.removeEventListener('popstate', onPopState);
+	}
+
+	return {
+		boot: start,
+		stop,
+		navigate: (pathname, navigationOptions = {}) => {
+			goTo(pathname, Boolean(navigationOptions.replace));
+		},
+		handleLocationChange,
+		getState: () => ({ ...state }),
+	};
+}
