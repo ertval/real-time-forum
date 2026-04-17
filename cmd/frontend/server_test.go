@@ -30,9 +30,9 @@ func TestSPARouting(t *testing.T) {
 
 	// Override paths for testing (if possible, but let's just use the real structure)
 	// For this test, I'll use a mocked mux that points to the temp dir.
-	
+
 	mux := http.NewServeMux()
-	
+
 	// Static
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
