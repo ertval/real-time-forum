@@ -23,12 +23,12 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 
 ### Phase 1: Planning (Spawn Research Agent)
 **Task**: `spawn subagent` to analyze the codebase and define the technical contract.
-1. **Output**: A `PLAN.md` in `.agents/scratch/` containing:
+1. **Output**: A `PLAN-{TicketID}.md` in `.agents/scratch/` containing:
    - Specific files to modify.
    - API/WS contracts (JSON shapes).
    - DB Schema migrations.
    - A pass/fail checklist derived from the ticket's **Verification Gate**.
-2. **Loop**: If `PLAN.md` is ambiguous or missing requirements, command the Research Agent to refine it.
+2. **Loop**: If `PLAN-{TicketID}.md` is ambiguous or missing requirements, command the Research Agent to refine it.
 
 ### Phase 2: Parallel Execution (Spawn Implementation Agents)
 **Task**: `spawn subagent` for Backend and `spawn subagent` for Frontend in parallel.
