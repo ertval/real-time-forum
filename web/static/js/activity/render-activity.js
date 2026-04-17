@@ -1,11 +1,11 @@
 // /static/js/activity/render-activity.js
 
-import { deleteCommentButton, editCommentButton } from "../post-actions.js";
-import { reactionTemplate, renderPostCard } from "../posts.js";
-import { initReactions } from "../reactions.js";
-import { escapeHTML, formatCreatedAt, resolveUsername } from "../utils.js";
-import { loadActivity } from "./api-activity.js";
-import { activityState } from "./state-activity.js";
+import { deleteCommentButton, editCommentButton } from '../post-actions.js';
+import { reactionTemplate, renderPostCard } from '../posts.js';
+import { initReactions } from '../reactions.js';
+import { escapeHTML, formatCreatedAt, resolveUsername } from '../utils.js';
+import { loadActivity } from './api-activity.js';
+import { activityState } from './state-activity.js';
 
 function asItems(section) {
 	return Array.isArray(section?.items) ? section.items : [];
@@ -23,26 +23,21 @@ export async function renderActivity(state, pager) {
 
 	renderPostsSection(
 		data.created_posts,
-		"created-posts-output",
-		"created-posts-empty",
-		"created-count",
+		'created-posts-output',
+		'created-posts-empty',
+		'created-count',
 		{ showOwnerActions: true },
 	);
 
 	renderCommentsSection(data.comments);
 
-	renderPostsSection(
-		data.liked_posts,
-		"liked-posts-output",
-		"liked-posts-empty",
-		"liked-count",
-	);
+	renderPostsSection(data.liked_posts, 'liked-posts-output', 'liked-posts-empty', 'liked-count');
 
 	renderPostsSection(
 		data.disliked_posts,
-		"disliked-posts-output",
-		"disliked-posts-empty",
-		"disliked-count",
+		'disliked-posts-output',
+		'disliked-posts-empty',
+		'disliked-count',
 	);
 
 	initReactions();
@@ -56,7 +51,7 @@ export async function renderActivity(state, pager) {
 
 	pager.set(state.page, totalPages);
 
-	const paginationEl = document.getElementById("activity-pagination");
+	const paginationEl = document.getElementById('activity-pagination');
 	if (paginationEl) {
 		paginationEl.hidden = totalPages <= 1;
 	}
@@ -74,7 +69,7 @@ function renderPostsSection(
 	const count = document.getElementById(countId);
 	if (!output || !empty || !count) return;
 
-	output.innerHTML = "";
+	output.innerHTML = '';
 	empty.hidden = true;
 
 	const items = asItems(section);
@@ -88,8 +83,7 @@ function renderPostsSection(
 	}
 
 	items.forEach((post) => {
-		const isOwner =
-			Number(post.author_id) === Number(activityState.activityUserID);
+		const isOwner = Number(post.author_id) === Number(activityState.activityUserID);
 		const enableActions = showOwnerActions && isOwner;
 
 		const article = renderPostCard(post, {
@@ -99,18 +93,18 @@ function renderPostsSection(
 			showEdit: enableActions,
 		});
 
-		article.querySelector(".post-comments")?.remove();
+		article.querySelector('.post-comments')?.remove();
 		output.appendChild(article);
 	});
 }
 
 function renderCommentsSection(section) {
-	const output = document.getElementById("comments-output");
-	const empty = document.getElementById("comments-empty");
-	const count = document.getElementById("comments-count");
+	const output = document.getElementById('comments-output');
+	const empty = document.getElementById('comments-empty');
+	const count = document.getElementById('comments-count');
 	if (!output || !empty || !count) return;
 
-	output.innerHTML = "";
+	output.innerHTML = '';
 	empty.hidden = true;
 
 	const items = asItems(section);
@@ -126,15 +120,15 @@ function renderCommentsSection(section) {
 	items.forEach((comment) => {
 		const commentID = Number(comment.id) || 0;
 		const username = resolveUsername(comment);
-		const commentBody = typeof comment.body === "string" ? comment.body : "";
+		const commentBody = typeof comment.body === 'string' ? comment.body : '';
 		const commentImageURL =
-			typeof comment.image_url === "string" && comment.image_url.trim()
+			typeof comment.image_url === 'string' && comment.image_url.trim()
 				? comment.image_url.trim()
-				: "";
+				: '';
 
 		const bodyMarkup = commentBody.trim()
 			? `<p class="activity-comment-body">${escapeHTML(commentBody)}</p>`
-			: "";
+			: '';
 
 		const imageMarkup = commentImageURL
 			? `
@@ -147,15 +141,15 @@ function renderCommentsSection(section) {
             />
           </div>
         `
-			: "";
+			: '';
 
 		const postForCard = mapActivityCommentPostToCard(comment);
 		const postArticle = renderPostCard(postForCard, { clickable: true });
-		postArticle.classList.add("activity-comment-related-post");
-		postArticle.querySelector(".post-comments")?.remove();
+		postArticle.classList.add('activity-comment-related-post');
+		postArticle.querySelector('.post-comments')?.remove();
 
-		const article = document.createElement("article");
-		article.className = "activity-comment card card-pad";
+		const article = document.createElement('article');
+		article.className = 'activity-comment card card-pad';
 		article.dataset.commentId = commentID;
 		article.dataset.commentBody = commentBody;
 		article.dataset.commentImageUrl = commentImageURL;
@@ -180,8 +174,8 @@ function renderCommentsSection(section) {
       </div>
     `;
 
-		const entry = document.createElement("div");
-		entry.className = "activity-comment-entry";
+		const entry = document.createElement('div');
+		entry.className = 'activity-comment-entry';
 		entry.appendChild(postArticle);
 		entry.appendChild(article);
 
@@ -202,20 +196,17 @@ function mapActivityCommentPostToCard(comment) {
 
 	const postID = Number(comment?.post_id ?? post.id) || 0;
 	const createdAt =
-		typeof post.created_at === "string" && post.created_at.trim()
+		typeof post.created_at === 'string' && post.created_at.trim()
 			? post.created_at
 			: comment?.created_at;
 
 	return {
 		id: postID,
 		author_id: Number(post.author_id) || 0,
-		author: typeof post.author === "string" ? post.author : "",
-		title:
-			typeof post.title === "string" && post.title.trim()
-				? post.title
-				: "Untitled",
-		body: typeof post.body === "string" ? post.body : "",
-		image_url: typeof post.image_url === "string" ? post.image_url : "",
+		author: typeof post.author === 'string' ? post.author : '',
+		title: typeof post.title === 'string' && post.title.trim() ? post.title : 'Untitled',
+		body: typeof post.body === 'string' ? post.body : '',
+		image_url: typeof post.image_url === 'string' ? post.image_url : '',
 		created_at: createdAt,
 		categories,
 		likes: Number(post.likes ?? post.likes_count) || 0,
@@ -226,21 +217,19 @@ function mapActivityCommentPostToCard(comment) {
 
 function normalizePostCategories(post, comment) {
 	const fromNested = Array.isArray(post?.categories) ? post.categories : [];
-	const fromComment = Array.isArray(comment?.categories)
-		? comment.categories
-		: [];
+	const fromComment = Array.isArray(comment?.categories) ? comment.categories : [];
 	const source = fromNested.length ? fromNested : fromComment;
 
 	return source
 		.map((category) => {
-			if (!category || typeof category !== "object") return null;
+			if (!category || typeof category !== 'object') return null;
 			const id = Number(category.id ?? category.ID) || 0;
 			const name =
-				typeof category.name === "string"
+				typeof category.name === 'string'
 					? category.name
-					: typeof category.Name === "string"
+					: typeof category.Name === 'string'
 						? category.Name
-						: "";
+						: '';
 			if (!id && !name) return null;
 			return { id, name };
 		})

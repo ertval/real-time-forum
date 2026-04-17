@@ -1,12 +1,6 @@
 // /web/static/js/pagination.js
 
-export function createPagination({
-	prevBtn,
-	nextBtn,
-	numbersEl,
-	onPageChange,
-	maxVisible = 5,
-}) {
+export function createPagination({ prevBtn, nextBtn, numbersEl, onPageChange, maxVisible = 5 }) {
 	let currentPage = 1;
 	let totalPages = 1;
 
@@ -18,29 +12,29 @@ export function createPagination({
 	}
 
 	function addPageButton(page) {
-		const btn = document.createElement("button");
-		btn.type = "button";
-		btn.className = "pagination-btn";
+		const btn = document.createElement('button');
+		btn.type = 'button';
+		btn.className = 'pagination-btn';
 		btn.textContent = String(page);
 
 		if (page === currentPage) {
-			btn.classList.add("is-active");
+			btn.classList.add('is-active');
 			btn.disabled = true;
 		}
 
-		btn.addEventListener("click", () => goToPage(page));
+		btn.addEventListener('click', () => goToPage(page));
 		numbersEl.appendChild(btn);
 	}
 
 	function addEllipsis() {
-		const span = document.createElement("span");
-		span.className = "pagination-ellipsis";
-		span.textContent = "…";
+		const span = document.createElement('span');
+		span.className = 'pagination-ellipsis';
+		span.textContent = '…';
 		numbersEl.appendChild(span);
 	}
 
 	function render() {
-		numbersEl.innerHTML = "";
+		numbersEl.innerHTML = '';
 
 		// Prev/Next buttons state
 		prevBtn.disabled = currentPage <= 1;

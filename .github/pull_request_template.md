@@ -23,7 +23,7 @@ This PR fully satisfies the verification gate for ticket **[Ticket ID]**:
 
 ### Automated Test Suite
 - [ ] `make test` — [Result/Output Summary]
-- [ ] `bun test` — [Result/Output Summary]
+- [ ] `bun run policy` — [Result/Output Summary]
 - [ ] `bun x biome check .` — [Result/Output Summary]
 - [ ] [Additional command]: [Result/Output Summary]
 
