@@ -92,19 +92,31 @@ Only these Go packages are permitted:
   - Uses `http.ServeMux`. Explicit route definitions. API versioned under `/api/v1`.
 
 - **Tests** (`internal/tests/`):
-  - Integration tests using `httptest` with in-memory SQLite.
-  - Tests validate HTTP status codes, cookies, JSON structure, and DB side-effects.
+  - **Integration Tests**: Using `httptest` with in-memory SQLite to validate API behavior.
+  - **Unit Tests**: Co-located with source code (`_test.go`) in backend subpackages.
+  - **E2E Tests**: High-level tests simulating full user journeys using Vitest.
+
+### Test Architecture
+
+The project follows a tiered testing strategy to ensure reliability across the stack:
+
+| Tier | Goal | Tools | Locations |
+| :--- | :--- | :--- | :--- |
+| **Unit** | Test individual functions/logic in isolation. | Go `testing`, Vitest | `.../*.go`, `.../*.test.js` |
+| **Integration** | Test component interactions, database cycles, and API contracts. | Go `httptest`, Vitest | `internal/tests/`, `web/SPA/features/*/tests/` |
+| **E2E** | Test full user journeys in a browser-like environment. | Vitest | `web/SPA/e2e/` (planned) |
 
 ### JavaScript Frontend
 
-- **Vanilla JS** — ES modules, no build step, no framework.
-- **Located in** `web/static/js/`.
+- **Vanilla JS** — Modern vanilla JS ES2026+ using optimal best practice patterns. ES modules, no frontend framework.
+- **Development Tooling** — Use Bun for runtime and package management. Use Biome for fast, precise linting and static analysis. Use Vitest for all unit, integration, and end-to-end (E2E) testing workflows.
+- **Folder Structure** — Located in `web/SPA/`. The architecture should follow Clean Vertical Slices or Screaming Architecture (e.g., grouping by feature: `features/auth`, `features/feed`, `core/api`, `core/router`, `components/shared`). Avoid scattering files by generic type without domain context.
 - **Event delegation** for dynamic DOM elements.
 - **API-driven** — UI state comes from REST calls and WebSocket events.
 
 ### CSS
 
-- **Located in** `web/static/css/`.
+- **Located in** `web/SPA/` (co-located with features or globally) or a dedicated CSS folder.
 - **Vanilla CSS** — no preprocessors or utility frameworks.
 
 ## API Conventions
@@ -163,7 +175,15 @@ Individual targets: `build-backend`, `build-frontend`, `run-backend`, `run-front
 3. **Check dependencies** — don't start a ticket until all its `Depends on` tickets are `[x]`.
 4. **Satisfy the verification gate** — each ticket's gate defines "done".
 5. **Update the tracker** — mark `[-]` when in progress, `[x]` when the gate is satisfied.
-6. **Run tests** — `make test` must pass after every change.
+6. Run tests — `make test` must pass after every change.
+
+## Bug Workflow
+
+If you encounter or identify a bug during development:
+1. **Reproduce**: Create a minimal test case (in Go or Vitest) that isolates and reproduces the bug.
+2. **Fix**: Implement the fix while ensuring the reproduction test now passes.
+3. **Verify**: Run the full test suite (`make test` and `bun test` / `vitest`) to ensure no regressions.
+4. **Clean**: Fix any linting or formatting issues using Biome (`bun x biome`).
 
 ## Common Pitfalls
 

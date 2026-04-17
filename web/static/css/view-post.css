@@ -3,30 +3,30 @@
 ================================================== */
 
 .view-post .viewpost-card {
-  max-width: 900px;
-  margin: 0 auto;
+	max-width: 900px;
+	margin: 0 auto;
 }
 
 .view-post .viewpost-title {
-  margin: 0 0 6px;
+	margin: 0 0 6px;
 }
 
 .view-post .viewpost-author {
-  margin: 0;
+	margin: 0;
 }
 
 .view-post .viewpost-time {
-  white-space: nowrap;
+	white-space: nowrap;
 }
 
 .view-post .viewpost-body-text {
-  margin: 12px 0 0;
+	margin: 12px 0 0;
 }
 
 .view-post .comments-list {
-  max-height: 320px;
+	max-height: 320px;
 }
 
 .view-post .comment-form {
-  margin-top: 20px;
+	margin-top: 20px;
 }

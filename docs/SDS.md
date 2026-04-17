@@ -384,6 +384,14 @@ On `dm.send`:
 
 ## 7. Frontend Design
 
+## 7.0 Tooling & Practices (ES2026+)
+
+- The frontend must be implemented in modern vanilla JS (ES2026+) using optimal best practice patterns.
+- **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `web/SPA/` (e.g. `core/`, `components/`, and vertical `features/` rather than grouping by file type).
+- Bun is the required runtime and package manager for frontend dev tools.
+- Biome handles all linting, formatting, and static testing checks.
+- Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests.
+
 ## 7.1 SPA Routes
 
 Required client routes:
@@ -472,6 +480,14 @@ On application load:
 - disabled composer for offline selected user
 - live message rendering on active chat
 - throttled or debounced history loading during upward scroll
+
+### 10.2.1 Test Categories (Vitest framework)
+
+| Category | Description |
+| :--- | :--- |
+| **Unit** | Isolated component and helper logic tests. |
+| **Integration** | Feature-level interaction tests (e.g., Auth + Feed). |
+| **E2E** | Multi-step user journey verification. |
 
 ## 10.3 Regression Coverage
 
