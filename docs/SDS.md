@@ -35,7 +35,38 @@ The current implementation is not yet suitable for the target state because:
 
 ## 3. Target Architecture
 
-## 3.1 High-Level Design
+## 3.1 Project Structure
+
+```
+cmd/
+  backend/           → Backend API server (port 8080)
+  frontend/          → Frontend server (port 3000) — serves SPA + proxies API/WS
+internal/
+  db/                → Persistence layer (SQLite, repository functions, schema)
+  handlers/          → HTTP handlers (REST API under /api/v1)
+  middleware/        → Request middleware (auth, logging, CORS, recovery)
+  router/            → Route registration
+  tests/             → Backend integration tests
+web/
+  static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
+  templates/         → HTML templates (legacy)
+  SPA/               → Single Page Application Shell (Vanilla JS ES2026+)
+    index.html       → SPA Entrypoint
+    main.js          → Bootstrap Application Logic
+    assets/          → Global CSS & Static Images
+    core/            → State, Router, and API Logic
+    components/      → Shared UI Elements
+    features/        → Domain Slices (Auth, Feed, Chat, etc.)
+    tests/           → Vitest Unit & Integration Tests
+data/                → SQLite database file
+docs/                → Project documentation (PRD, SDS, tickets)
+```
+
+The project uses a **split-server** topology:
+- **Frontend server** (`:3000`): serves the single HTML shell, static assets, and proxies `/api/` and `/ws` to the backend.
+- **Backend server** (`:8080`): owns business logic, persistence, REST APIs, and WebSocket endpoint.
+
+## 3.2 High-Level Design
 
 - Frontend server responsibilities:
   - serve one HTML app shell
@@ -47,7 +78,7 @@ The current implementation is not yet suitable for the target state because:
   - serve authenticated REST APIs
   - expose a WebSocket endpoint for presence and direct messages
 
-## 3.2 Frontend Runtime Model
+## 3.3 Frontend Runtime Model
 
 - The frontend uses one root HTML document.
 - The frontend owns route changes in JavaScript.
@@ -57,7 +88,7 @@ The current implementation is not yet suitable for the target state because:
   - route outlet for page content
   - persistent direct-message roster and active-chat area
 
-## 3.3 Backend Runtime Model
+## 3.4 Backend Runtime Model
 
 - REST remains the transport for standard CRUD flows.
 - WebSocket is added only for presence and private messaging in this phase.
