@@ -113,6 +113,7 @@ The project follows a tiered testing strategy to ensure reliability across the s
 - **Folder Structure** — Located in `SPA/`. The architecture should follow Clean Vertical Slices or Screaming Architecture (e.g., grouping by feature: `features/auth`, `features/feed`, `core/api`, `core/router`, `components/shared`). Avoid scattering files by generic type without domain context.
 - **Event delegation** for dynamic DOM elements.
 - **API-driven** — UI state comes from REST calls and WebSocket events.
+- **Frontend Design** — Always use the `frontend-design` skill when implementing or modifying frontend components, layouts, or styles to ensure premium aesthetics and state-of-the-art UI/UX.
 
 ### CSS
 
