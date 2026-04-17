@@ -21,7 +21,7 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 
 ## 1. Workflow Phases
 
-### Phase 1: Planning (Spawn Research Agent)
+### Phase 1: Planning (Spawn Planning Agent)
 **Task**: `spawn subagent` to analyze the codebase and define the technical contract.
 1. **Output**: A `PLAN-{TicketID}.md` in `.agents/scratch/` containing:
    - Specific files to modify.
@@ -33,7 +33,7 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 ### Phase 2: Parallel Execution (Spawn Implementation Agents)
 **Task**: `spawn subagent` for Backend and `spawn subagent` for Frontend in parallel.
 - **Backend Agent**:
-  - Implement in `internal/`.
+  - Implement using idomatic Go best practices and KISS principles in `internal/`.
   - **Loop**: Must run `make test` and iterate until all ticket-related tests pass.
 - **Frontend Agent**:
   - Implement in `SPA/` using ES2026+ Vanilla JS and `frontend-design` skill.
@@ -42,7 +42,7 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 
 ### Phase 3: Independent Audit (Spawn Audit Agent)
 **Task**: `spawn subagent` for a cold-start audit. This agent MUST NOT be the same as the implementation agents.
-1. **Scope**: The Audit Agent **MUST NOT** read `PLAN.md` or implementation logs. It must evaluate the work solely against the **Source of Truth** (`docs/audit.md`, `docs/requirements.md`, `docs/SDS.md`, and `docs/PRD.md`).
+1. **Scope**: The Audit Agent **MUST NOT** read ``PLAN-{TicketID}.md` or implementation logs. It must evaluate the work solely against the **Source of Truth** (`docs/audit.md`, `docs/requirements.md`, `docs/SDS.md`, and `docs/PRD.md`).
 2. **Quality Audit**: Review code logic, design patterns, and quality of implementation. Check for Dead Code, Unused Variables, etc, Best Practices. Ensure it matches the high standards defined in `AGENTS.md`.
 3. **Compliance Audit**: Check for 100% compliance with the ticket requirements, correctness, and the verification gate.
 4. **Automated Testing**: Run **ONLY** `make test` (backend) and `bun run policy` (frontend/SPA) to validate the QA gate.
@@ -51,7 +51,7 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
    - Identify the failure clearly referencing the authoritative documentation.
    - Send the failure back to the relevant Implementation Agent (Phase 2).
    - Restart the Audit once implementation is fixed.
-7. **Audit Report**: Return a detailed audit summary (the "Verification Manifest" content) to the Orchestrator, including proof of all passing checks and an evaluation of implementation quality.
+7. **Audit Report**: Return a detailed audit summary (the "Verification Manifest" content) to the Orchestrator, including proof of all passing checks and an evaluation of implementation quality to be included in the final PR.
 
 ### Phase 4: Closure (Spawn Documentation Agent)
 **Task**: `spawn subagent` to finalize the ticket.
@@ -62,10 +62,26 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 
 ---
 
-## 2. Technical Standards (ES2026+ Baseline)
-- **Temporal API**: Use for all time handling. No `new Date()`.
-- **Resource Management**: Use `using` for cleanup (WebSockets, etc.).
-- **Vanilla SPA**: Single HTML file, client-side routing, `Proxy` state management.
+## 2. Technical Standards & Best Practices
+
+### Core Philosophy
+- **KISS Principle**: Keep It Simple, Stupid. Prefer straightforward, readable code over complex "clever" abstractions.
+- **Vertical Integrity**: Maintain strict separation between layers (Backend: Handler vs DB; Frontend: View vs API).
+
+### Go Backend (Idiomatic Go & AGENTS.md)
+- **Zero-Trust Dependencies**: ONLY use standard library and explicitly permitted packages (`gorilla/websocket`, `go-sqlite3`, `bcrypt`, `uuid`).
+- **Data Layer Boundary**: `internal/db/` functions MUST NOT import `net/http` or `json`. Every function must accept `context.Context`.
+- **Atomic Transactions**: Use `database/sql` transactions for all multi-step database writes.
+- **Standardized Responses**: ALL API responses MUST use the helper functions in `internal/handlers/response.go`.
+- **Error Strategy**: Handle errors at the site of failure. Use `%w` for wrapping.
+
+### JavaScript Frontend (ES2026+ Baseline)
+- **Screaming Architecture**: Follow Clean Vertical Slices. Group logic by feature (e.g., `SPA/features/auth/`) rather than by technical type.
+- **Pure Vanilla**: No frameworks, no external CSS libraries, and no additional `npm` dependencies. Use native `Proxy` for state.
+- **Single HTML Shell**: Strictly one HTML entry point. Client-side routing via `history.pushState`.
+- **Modern Standards**: **Temporal API** for all time handling. `using` keyword for cleaning up WebSockets and EventListeners.
+- **Security**: Rooted in `HttpOnly` session cookies. No JWT, no localStorage for sensitive data.
+- **Event Delegation**: Use parent-level listeners for dynamic DOM elements to prevent memory leaks and performance degradation.
 
 ---
 
