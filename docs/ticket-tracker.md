@@ -2,6 +2,17 @@
 
 This file tracks delivery progress for the real-time forum project.
 
+## Team Assignment
+
+| Track | Dev | Focus Area |
+|-------|-----|------------|
+| **A** | Dev 1 | Platform & SPA Foundations (shell, routing, auth-gating) |
+| **B** | Dev 2 | Forum MVP & Features (feed, post detail, notifications, activity) |
+| **C** | Dev 3 | Realtime Backend & Persistence (schema, WS server, chat APIs) |
+| **D** | Dev 4 | Realtime Frontend & Verification (chat UI, WS integration, tests) |
+
+---
+
 Detailed ticket definitions live in:
 
 - `docs/track-a.md`
@@ -33,10 +44,10 @@ The canonical product and technical requirements are in:
 
 ## Summary Snapshot
 
-- Total tickets: `35`
-- Done: `0`
+- Total tickets: `37`
+- Done: `1`
 - Partially Implemented: `0`
-- Not Started: `35`
+- Not Started: `36`
 
 ---
 
@@ -50,10 +61,12 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 1 | [ ] | **A01** | A | Single SPA Shell Entry | None | D09, A03 |
-| 2 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
-| 3 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
-| 4 | [ ] | **A03** | A | SPA Boot and Client Routing | A01 | A04, D10, A08, B01, B05 |
+| 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup | None | A02 |
+| 2 | [ ] | **A02** | A | Frontend Architecture & Directory Restructuring | A01 | A10, D09 |
+| 3 | [ ] | **A10** | A | Single SPA Shell Entry | A02 | D09, A03 |
+| 4 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
+| 5 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
+| 6 | [ ] | **A03** | A | SPA Boot and Client Routing | A10 | A04, D10, A05, B01, B05 |
 
 ### Wave 2 — Auth + Shell + Core Forum (P1)
 
@@ -61,16 +74,16 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 5 | [ ] | **C11** | C | Registration API Contract | C10 | C08 |
-| 6 | [ ] | **A04** | A | Persistent App Shell Layout | A03 | A09, B01, B04, B05, D01, B06 |
-| 7 | [ ] | **A08** | A | Authenticated-Only Forum Access | A03 | A09, B01, B04, B05, D04, C08 |
-| 8 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
-| 9 | [ ] | **A09** | A | Global Logout Across the Forum | A04, A08 | D05 |
-| 10 | [ ] | **B01** | B | Feed Route in the SPA | A03, A04, A08 | B02, B03, B06, B07 |
-| 11 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
-| 12 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
-| 13 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A08 | D05, B08 |
-| 14 | [ ] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
+| 6 | [ ] | **C11** | C | Registration API Contract | C10 | C08 |
+| 7 | [ ] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
+| 8 | [ ] | **A05** | A | Authenticated-Only Forum Access | A03 | A06, B01, B04, B05, D04, C08 |
+| 9 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
+| 10 | [ ] | **A06** | A | Global Logout Across the Forum | A04, A05 | D05 |
+| 11 | [ ] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
+| 12 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
+| 13 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
+| 14 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
+| 15 | [ ] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
 
 ### Wave 3 — Real-Time Chat MVP (P2 + P3)
 
@@ -78,15 +91,15 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 15 | [ ] | **D09** | D | Frontend WebSocket Proxy | A01 | D04 |
-| 16 | [ ] | **C03** | C | Chat History API | C02 | D02, C08 |
-| 17 | [ ] | **C04** | C | Presence Broadcasting | C01 | C06, D04, C08 |
-| 18 | [ ] | **C05** | C | Chat Roster API | C02, C01 | D01, C08 |
-| 19 | [ ] | **C06** | C | Realtime DM Send and Delivery | C02, C01, C04 | D04, C08 |
-| 20 | [ ] | **D01** | D | Persistent Chat Roster UI | A04, C05 | D02, D04, D06 |
-| 21 | [ ] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
-| 22 | [ ] | **D03** | D | Incremental History Loading | D02 | D06 |
-| 23 | [ ] | **D04** | D | Browser WebSocket Chat Integration | D09, A08, C01, C04, C06, D01, D02 | D06, D07 |
+| 16 | [ ] | **D09** | D | Frontend WebSocket Proxy | A02 | D04 |
+| 17 | [ ] | **C03** | C | Chat History API | C02 | D02, C08 |
+| 18 | [ ] | **C04** | C | Presence Broadcasting | C01 | C06, D04, C08 |
+| 19 | [ ] | **C05** | C | Chat Roster API | C02, C01 | D01, C08 |
+| 20 | [ ] | **C06** | C | Realtime DM Send and Delivery | C02, C01, C04 | D04, C08 |
+| 21 | [ ] | **D01** | D | Persistent Chat Roster UI | A04, C05 | D02, D04, D06 |
+| 22 | [ ] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
+| 23 | [ ] | **D03** | D | Incremental History Loading | D02 | D06 |
+| 24 | [ ] | **D04** | D | Browser WebSocket Chat Integration | D09, A05, C01, C04, C06, D01, D02 | D06, D07 |
 
 ### Wave 4 — Retained Legacy Features (P2)
 
@@ -94,32 +107,32 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 24 | [ ] | **B05** | B | Activity View in the SPA | A03, A04, A08 | D05, D07 |
-| 25 | [ ] | **B06** | B | Notification Behavior in the SPA | A04, B01, B03 | D05, D07 |
-| 26 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
-| 27 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
+| 25 | [ ] | **B05** | B | Activity View in the SPA | A03, A04, A05 | D05, D07 |
+| 26 | [ ] | **B06** | B | Notification Behavior in the SPA | A04, B01, B03 | D05, D07 |
+| 27 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
+| 28 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
 
-### Wave 5 — Migration, Testing, and Acceptance (P3–P4)
-
-> **Goal:** Database migration, backend and frontend test coverage, and final acceptance validation.
-
-| # | Status | Ticket | Track | Description | Depends on | Blocks |
-|---|--------|--------|-------|-------------|------------|--------|
-| 28 | [ ] | **C07** | C | Database Migration Strategy | C10, C02 | D07 |
-| 29 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A08, C01, C03, C04, C05, C06 | D07 |
-| 30 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A09, B02, B03, B04, B05, B06, B07, B08 | D07 |
-| 31 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |
-| 32 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A10, C09, D08 | None |
-
-### Wave 6 — Bonus Features (P5)
+### Wave 5 — Bonus Features (P5)
 
 > **Goal:** Audit bonus points — user profiles, DM image attachments, and concurrency patterns. These are optional features that score bonus audit points.
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 33 | [ ] | **A10** | A | User Profile Page (Bonus) | C10, A04, A08 | D07 |
-| 34 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
-| 35 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
+| 29 | [ ] | **A07** | A | User Profile Page (Bonus) | C10, A04, A05 | D07 |
+| 30 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
+| 31 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
+
+### Wave 6 — Finalization & Acceptance (P3–P4)
+
+> **Goal:** Database migration, full test coverage, and final project acceptance.
+
+| # | Status | Ticket | Track | Description | Depends on | Blocks |
+|---|--------|--------|-------|-------------|------------|--------|
+| 32 | [ ] | **C07** | C | Database Migration Strategy | C10, C02 | D07 |
+| 33 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A05, C01, C03, C04, C05, C06 | D07 |
+| 34 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A06, B02, B03, B04, B05, B06, B07, B08 | D07 |
+| 35 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |
+| 36 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A07, C09, D08 | None |
 
 ---
 

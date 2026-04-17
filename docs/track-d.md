@@ -23,6 +23,8 @@ This track is the main integration consumer. It depends on Track A for shell/aut
 
 `D05` is intentionally split so SPA/forum regression work can start once Track B stabilizes; it does not need to wait for `D04`.
 
+All frontend implementations must use only modern vanilla JS ES2026+ with optimal best practice patterns. Dev tools and runtime use Bun, linting/formatting via Biome, and all testing (unit, integration, e2e) uses Vitest.
+
 ## Tickets
 
 ### D01 - Persistent Chat Roster UI
@@ -76,7 +78,7 @@ Verification Gate:
 
 ### D04 - Browser WebSocket Chat Integration
 Source: RTF-24 | Phase: P3
-Depends on: D09, A08, C01, C04, C06, D01, D02
+Depends on: D09, A05, C01, C04, C06, D01, D02
 Blocks: D06, D07
 
 Work:
@@ -97,7 +99,7 @@ Verification Gate:
 
 ### D05 - SPA and Forum Frontend Regression Coverage
 Source: RTF-27 | Phase: P4
-Depends on: D10, A09, B02, B03, B04, B05, B06, B07, B08
+Depends on: D10, A06, B02, B03, B04, B05, B06, B07, B08
 Blocks: D07
 
 Work:
@@ -131,13 +133,14 @@ Verification Gate:
 
 ### D07 - Final Acceptance Validation
 Source: RTF-28 | Phase: P4
-Depends on: B05, B06, B07, B08, C07, C08, D04, D05, D06
+Depends on: B05, B06, B07, B08, C07, C08, D04, D05, D06, A07, C09, D08
 Blocks: None
 
 Work:
 - execute the final acceptance checklist against the PRD and SDS
 - verify retained legacy features still function
 - record any remaining gaps as follow-up work instead of hidden work
+- confirm Vitest covers unit, integration, and E2E tests properly
 
 Verification Gate:
 - the build satisfies the documented product success criteria
@@ -165,7 +168,7 @@ Verification Gate:
 
 ### D09 - Frontend WebSocket Proxy
 Source: RTF-02 | Phase: P2
-Depends on: A01
+Depends on: A02
 Blocks: D04
 
 Work:

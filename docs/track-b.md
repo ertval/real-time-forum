@@ -24,7 +24,7 @@ This track should treat Track A as its main upstream dependency and otherwise mo
 
 ### B01 - Feed Route in the SPA
 Source: RTF-10 | Phase: P1
-Depends on: A03, A04, A08
+Depends on: A03, A04, A05
 Blocks: B02, B03, B06, B07
 
 Work:
@@ -68,7 +68,7 @@ Verification Gate:
 
 ### B04 - Create and Edit Post SPA Flows
 Source: RTF-13 | Phase: P1
-Depends on: A04, A08
+Depends on: A04, A05
 Blocks: D05, B08
 
 Work:
@@ -83,7 +83,7 @@ Verification Gate:
 
 ### B05 - Activity View in the SPA
 Source: RTF-14 | Phase: P1
-Depends on: A03, A04, A08
+Depends on: A03, A04, A05
 Blocks: D05, D07
 
 Work:

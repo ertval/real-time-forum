@@ -1,0 +1,21 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+	"files": {
+		"includes": ["cmd/**", "internal/**", "web/static/**"]
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"a11y": { "recommended": false },
+			"complexity": { "recommended": false },
+			"style": { "recommended": false },
+			"suspicious": { "recommended": false },
+			"correctness": { "recommended": true }
+		}
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	}
+}

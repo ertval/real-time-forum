@@ -5,64 +5,64 @@
 ========================= */
 
 .settings-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .settings-modal.hidden {
-  display: none;
+	display: none;
 }
 
 .settings-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(8px);
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.35);
+	backdrop-filter: blur(8px);
 }
 
 .settings-card {
-  position: relative;
-  width: 360px;
-  padding: 28px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  animation: fadeIn 0.2s ease;
+	position: relative;
+	width: 360px;
+	padding: 28px;
+	border-radius: 20px;
+	background: rgba(255, 255, 255, 0.85);
+	backdrop-filter: blur(20px);
+	border: 1px solid rgba(255, 255, 255, 0.6);
+	box-shadow:
+		0 30px 80px rgba(0, 0, 0, 0.25),
+		inset 0 1px 0 rgba(255, 255, 255, 0.7);
+	animation: fadeIn 0.2s ease;
 }
 
 .settings-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
 }
 
 .settings-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #111;
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: #111;
 }
 
 #settings-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  color: #666;
-  transition: 0.2s ease;
+	background: none;
+	border: none;
+	font-size: 16px;
+	cursor: pointer;
+	color: #666;
+	transition: 0.2s ease;
 }
 
 #settings-close:hover {
-  color: #000;
+	color: #000;
 }
 
 /* =========================
@@ -70,15 +70,15 @@
 ========================= */
 
 .setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 20px;
 }
 
 .toggle-wrapper {
-  display: flex;
-  align-items: center;
+	display: flex;
+	align-items: center;
 }
 
 /* =========================
@@ -87,35 +87,35 @@
 
 /* Hide native checkbox */
 #sfxToggle {
-  display: none;
+	display: none;
 }
 
 /* Toggle circle */
 .toggleSwitch {
-  width: 50px;
-  height: 50px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #1f1f1f; /* default OFF */
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  flex-shrink: 0;
+	width: 50px;
+	height: 50px;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #1f1f1f; /* default OFF */
+	border-radius: 50%;
+	cursor: pointer;
+	transition: all 0.25s ease;
+	box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.15);
+	overflow: hidden;
+	flex-shrink: 0;
 }
 
 /* Hover lift */
 .toggleSwitch:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 /* Press */
 #sfxToggle:active + .toggleSwitch {
-  transform: scale(0.92);
+	transform: scale(0.92);
 }
 
 /* =========================
@@ -124,10 +124,10 @@
 
 /* ON = checked */
 #sfxToggle:checked + .toggleSwitch {
-  background-color: #0f9d58;
-  box-shadow:
-    0 0 0 3px rgba(15, 157, 88, 0.25),
-    0 6px 20px rgba(0, 0, 0, 0.25);
+	background-color: #0f9d58;
+	box-shadow:
+		0 0 0 3px rgba(15, 157, 88, 0.25),
+		0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 /* =========================
@@ -136,76 +136,77 @@
 
 .speaker,
 .mute-speaker {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.25s ease;
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: opacity 0.25s ease;
 }
 
 .speaker svg,
 .mute-speaker svg {
-  width: 22px;
+	width: 22px;
 }
 
 /* Default OFF */
 .speaker {
-  opacity: 0;
-  z-index: 2;
+	opacity: 0;
+	z-index: 2;
 }
 
 .mute-speaker {
-  opacity: 1;
-  z-index: 3;
+	opacity: 1;
+	z-index: 3;
 }
 
 /* ON state (checked) */
 #sfxToggle:checked + .toggleSwitch .speaker {
-  opacity: 1;
+	opacity: 1;
 }
 
 #sfxToggle:checked + .toggleSwitch .mute-speaker {
-  opacity: 0;
+	opacity: 0;
 }
 
 /* Logout */
 
 .settings-footer {
-  margin-top: 36px;
-  padding-top: 22px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  display: flex;
-  justify-content: center;
+	margin-top: 36px;
+	padding-top: 22px;
+	border-top: 1px solid rgba(0, 0, 0, 0.05);
+	display: flex;
+	justify-content: center;
 }
 
 .settings-logout {
-  background: linear-gradient(135deg, #e5484d, #d63c41);
-  color: #ffffff;
-  border: none;
-  padding: 13px 36px;
-  border-radius: 14px;
+	background: linear-gradient(135deg, #e5484d, #d63c41);
+	color: #ffffff;
+	border: none;
+	padding: 13px 36px;
+	border-radius: 14px;
 
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: 0.5px;
 
-  cursor: pointer;
+	cursor: pointer;
 
-  box-shadow: 0 6px 14px rgba(229, 72, 77, 0.22);
+	box-shadow: 0 6px 14px rgba(229, 72, 77, 0.22);
 
-  transition: background 0.18s ease,
-              box-shadow 0.18s ease,
-              transform 0.15s ease;
+	transition:
+		background 0.18s ease,
+		box-shadow 0.18s ease,
+		transform 0.15s ease;
 }
 
 .settings-logout:hover {
-  background: #d63c41;
-  box-shadow: 0 8px 18px rgba(214, 60, 65, 0.28);
-  transform: translateY(-1px);
+	background: #d63c41;
+	box-shadow: 0 8px 18px rgba(214, 60, 65, 0.28);
+	transform: translateY(-1px);
 }
 
 .settings-logout:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 10px rgba(214, 60, 65, 0.18);
+	transform: translateY(0);
+	box-shadow: 0 4px 10px rgba(214, 60, 65, 0.18);
 }

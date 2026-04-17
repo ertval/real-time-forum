@@ -3,7 +3,7 @@
 const SFX_KEY = "app:sfx-enabled";
 
 function isSFXEnabled() {
-  return localStorage.getItem(SFX_KEY) !== "false";
+	return localStorage.getItem(SFX_KEY) !== "false";
 }
 
 // --- Preload sounds ---
@@ -15,46 +15,46 @@ const notificationSound = new Audio("/static/sounds/notification.mp3");
 // Default volumes
 reactionSound.volume = 0.35;
 uploadSound.volume = 0.35;
-deleteSound.volume = 0.40;
-notificationSound.volume = 0.30;
+deleteSound.volume = 0.4;
+notificationSound.volume = 0.3;
 
 // --- Playback helpers ---
 export function playReaction() {
-  if (!isSFXEnabled()) return;
-  try {
-    reactionSound.currentTime = 0;
-    reactionSound.play().catch(() => {});
-  } catch (_) {}
+	if (!isSFXEnabled()) return;
+	try {
+		reactionSound.currentTime = 0;
+		reactionSound.play().catch(() => {});
+	} catch (_) {}
 }
 
 export function playUpload() {
-  if (!isSFXEnabled()) return;
-  try {
-    uploadSound.currentTime = 0;
-    uploadSound.play().catch(() => {});
-  } catch (_) {}
+	if (!isSFXEnabled()) return;
+	try {
+		uploadSound.currentTime = 0;
+		uploadSound.play().catch(() => {});
+	} catch (_) {}
 }
 
 export function playDelete() {
-  if (!isSFXEnabled()) return;
-  try {
-    deleteSound.currentTime = 0;
-    deleteSound.play().catch(() => {});
-  } catch (_) {}
+	if (!isSFXEnabled()) return;
+	try {
+		deleteSound.currentTime = 0;
+		deleteSound.play().catch(() => {});
+	} catch (_) {}
 }
 
 export function playNotification() {
-  if (!isSFXEnabled()) return;
-  try {
-    notificationSound.currentTime = 0;
-    notificationSound.play().catch(() => {});
-  } catch (_) {}
+	if (!isSFXEnabled()) return;
+	try {
+		notificationSound.currentTime = 0;
+		notificationSound.play().catch(() => {});
+	} catch (_) {}
 }
 
 // --- Optional preload ---
 export function initSounds() {
-  reactionSound.load();
-  uploadSound.load();
-  deleteSound.load();
-  notificationSound.load();
+	reactionSound.load();
+	uploadSound.load();
+	deleteSound.load();
+	notificationSound.load();
 }

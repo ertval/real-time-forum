@@ -1,18 +1,17 @@
 // web/static/js/posts.js
 
-import {
-  API_BASE,
-  buildImageRequestOptions,
-  formatCreatedAt,
-  IMAGE_ACCEPT_ATTR,
-  resolveUsername,
-  escapeHTML,
-} from "./utils.js";
-
 import { Auth } from "./auth.js";
+import { setupImagePicker } from "./image-picker.js";
 import { playUpload } from "./sound-effects.js";
 import { uiNotify } from "./ui-messages.js";
-import { setupImagePicker } from "./image-picker.js";
+import {
+	API_BASE,
+	buildImageRequestOptions,
+	escapeHTML,
+	formatCreatedAt,
+	IMAGE_ACCEPT_ATTR,
+	resolveUsername,
+} from "./utils.js";
 
 let imageLightbox = null;
 let imageLightboxImg = null;
@@ -24,25 +23,25 @@ let lastFocusedElement = null;
 -----------*/
 
 export function renderPostCard(
-  post,
-  {
-    clickable = true,
-    showStatusToggle = false,
-    showDelete = false,
-    showEdit = false,
-  } = {}
+	post,
+	{
+		clickable = true,
+		showStatusToggle = false,
+		showDelete = false,
+		showEdit = false,
+	} = {},
 ) {
-  const article = document.createElement("article");
-  article.className = "post card card-pad";
-  article.dataset.postId = post.id;
+	const article = document.createElement("article");
+	article.className = "post card card-pad";
+	article.dataset.postId = post.id;
 
-  const imageUrl =
-    typeof post.image_url === "string" && post.image_url.trim()
-      ? post.image_url
-      : "";
+	const imageUrl =
+		typeof post.image_url === "string" && post.image_url.trim()
+			? post.image_url
+			: "";
 
-  const imageMarkup = imageUrl
-    ? `
+	const imageMarkup = imageUrl
+		? `
       <div class="post-image">
         <div class="post-image-ambient" aria-hidden="true"></div>
         <img
@@ -56,13 +55,11 @@ export function renderPostCard(
         />
       </div>
     `
-    : "";
+		: "";
 
-  const bodyMarkup = post.body
-    ? `<p>${escapeHTML(post.body)}</p>`
-    : "";
+	const bodyMarkup = post.body ? `<p>${escapeHTML(post.body)}</p>` : "";
 
-  article.innerHTML = `
+	article.innerHTML = `
     <header class="post-header ${clickable ? "clickable" : ""}">
       <div>
         ${renderCategories(post.categories)}
@@ -90,33 +87,31 @@ export function renderPostCard(
     <section class="post-comments" data-comments></section>
   `;
 
-  if (clickable) {
-    article.querySelectorAll(".clickable").forEach(el => {
-      el.addEventListener("click", () => {
-        window.location.href = `/view-post/${post.id}`;
-      });
-    });
-  }
+	if (clickable) {
+		article.querySelectorAll(".clickable").forEach((el) => {
+			el.addEventListener("click", () => {
+				window.location.href = `/view-post/${post.id}`;
+			});
+		});
+	}
 
-  const postImage = article.querySelector(".post-image img");
-  bindExpandableImage(postImage, "post");
+	const postImage = article.querySelector(".post-image img");
+	bindExpandableImage(postImage, "post");
 
-  const postImageFrame = article.querySelector(".post-image");
-  const postImageAmbient = article.querySelector(".post-image-ambient");
-  syncImageTransparencyPresentation({
-    imgEl: postImage,
-    frameEl: postImageFrame,
-    checkerboardClass: "post-image--checkerboard",
-    ambientEl: postImageAmbient,
-  });
+	const postImageFrame = article.querySelector(".post-image");
+	const postImageAmbient = article.querySelector(".post-image-ambient");
+	syncImageTransparencyPresentation({
+		imgEl: postImage,
+		frameEl: postImageFrame,
+		checkerboardClass: "post-image--checkerboard",
+		ambientEl: postImageAmbient,
+	});
 
-  article
-    .querySelectorAll(".post-comments, textarea, form")
-    .forEach(el =>
-      el.addEventListener("click", e => e.stopPropagation())
-    );
+	article
+		.querySelectorAll(".post-comments, textarea, form")
+		.forEach((el) => el.addEventListener("click", (e) => e.stopPropagation()));
 
-  return article;
+	return article;
 }
 
 /*----------
@@ -124,57 +119,55 @@ export function renderPostCard(
 ----------*/
 
 export async function loadPostCommentsPreview(postId, article) {
-  const container = article.querySelector("[data-comments]");
-  if (!container) return;
+	const container = article.querySelector("[data-comments]");
+	if (!container) return;
 
-  try {
-    const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
+	try {
+		const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
+			credentials: "include",
+			headers: { Accept: "application/json" },
+		});
 
-    if (!res.ok) return;
+		if (!res.ok) return;
 
-    const payload = await res.json();
-    const comments = extractArray(payload);
+		const payload = await res.json();
+		const comments = extractArray(payload);
 
-    const list = document.createElement("div");
-    list.className = "comments comments-scroll";
+		const list = document.createElement("div");
+		list.className = "comments comments-scroll";
 
-    if (comments.length === 0) {
-      list.innerHTML = `<p class="muted">No comments yet.</p>`;
-    } else {
-      comments.forEach(c => list.appendChild(renderComment(c)));
-    }
+		if (comments.length === 0) {
+			list.innerHTML = `<p class="muted">No comments yet.</p>`;
+		} else {
+			comments.forEach((c) => list.appendChild(renderComment(c)));
+		}
 
-    container.appendChild(list);
-    list.scrollTop = list.scrollHeight;
+		container.appendChild(list);
+		list.scrollTop = list.scrollHeight;
 
-    maybeRenderCommentForm(container, postId);
-
-  } catch (err) {
-    console.error("Failed to load comments:", err);
-  }
+		maybeRenderCommentForm(container, postId);
+	} catch (err) {
+		console.error("Failed to load comments:", err);
+	}
 }
 
-
 function renderComment(comment) {
-  const div = document.createElement("div");
-  div.className = "comment";
-  div.dataset.commentId = comment.id;
-  div.id = `comment-${comment.id}`;   
+	const div = document.createElement("div");
+	div.className = "comment";
+	div.dataset.commentId = comment.id;
+	div.id = `comment-${comment.id}`;
 
-  const commentImageUrl =
-    typeof comment.image_url === "string" && comment.image_url.trim()
-      ? comment.image_url
-      : "";
+	const commentImageUrl =
+		typeof comment.image_url === "string" && comment.image_url.trim()
+			? comment.image_url
+			: "";
 
-  const commentBody = typeof comment.body === "string" ? comment.body : "";
-  const bodyMarkup = commentBody.trim()
-    ? `<p class="comment-text">${escapeHTML(commentBody)}</p>`
-    : "";
-  const imageMarkup = commentImageUrl
-    ? `
+	const commentBody = typeof comment.body === "string" ? comment.body : "";
+	const bodyMarkup = commentBody.trim()
+		? `<p class="comment-text">${escapeHTML(commentBody)}</p>`
+		: "";
+	const imageMarkup = commentImageUrl
+		? `
       <div class="comment-image">
         <img
           src="${escapeHTML(commentImageUrl)}"
@@ -186,9 +179,9 @@ function renderComment(comment) {
         />
       </div>
     `
-    : "";
+		: "";
 
-  div.innerHTML = `
+	div.innerHTML = `
     <div class="comment-meta muted">
       <strong>${resolveUsername(comment)}</strong>
       · ${formatCreatedAt(comment.created_at)}
@@ -204,15 +197,15 @@ function renderComment(comment) {
     </div>
   `;
 
-  const commentImage = div.querySelector(".comment-image img");
-  bindExpandableImage(commentImage, "comment");
-  syncImageTransparencyPresentation({
-    imgEl: commentImage,
-    frameEl: div.querySelector(".comment-image"),
-    checkerboardClass: "comment-image--checkerboard",
-  });
+	const commentImage = div.querySelector(".comment-image img");
+	bindExpandableImage(commentImage, "comment");
+	syncImageTransparencyPresentation({
+		imgEl: commentImage,
+		frameEl: div.querySelector(".comment-image"),
+		checkerboardClass: "comment-image--checkerboard",
+	});
 
-  return div;
+	return div;
 }
 
 /*--------------
@@ -220,11 +213,11 @@ function renderComment(comment) {
 --------------*/
 
 function maybeRenderCommentForm(container, postId) {
-  const form = document.createElement("form");
-  form.className = "comment-form";
-  form.noValidate = true;
+	const form = document.createElement("form");
+	form.className = "comment-form";
+	form.noValidate = true;
 
-  form.innerHTML = `
+	form.innerHTML = `
     <div class="comment-textarea-wrap">
       <textarea placeholder="Write a comment..." rows="2"></textarea>
       <button type="button" class="comment-image-btn" aria-label="Attach image">
@@ -242,141 +235,142 @@ function maybeRenderCommentForm(container, postId) {
     <button class="btn btn-primary" type="submit">Comment</button>
   `;
 
-  const textarea = form.querySelector("textarea");
-  const imageButton = form.querySelector(".comment-image-btn");
-  const imageInput = form.querySelector(".comment-image-input");
-  const imageName = form.querySelector(".comment-image-name");
-  const imageClear = form.querySelector(".image-clear");
-  const imagePreview = form.querySelector(".comment-image-preview");
-  const imagePreviewImg = imagePreview?.querySelector("img");
-  const submitButton = form.querySelector("button[type='submit']");
-  let isSubmitting = false;
-  let imagePicker = null;
+	const textarea = form.querySelector("textarea");
+	const imageButton = form.querySelector(".comment-image-btn");
+	const imageInput = form.querySelector(".comment-image-input");
+	const imageName = form.querySelector(".comment-image-name");
+	const imageClear = form.querySelector(".image-clear");
+	const imagePreview = form.querySelector(".comment-image-preview");
+	const imagePreviewImg = imagePreview?.querySelector("img");
+	const submitButton = form.querySelector("button[type='submit']");
+	let isSubmitting = false;
+	let imagePicker = null;
 
-  const ensureImagePicker = () => {
-    if (imagePicker) return imagePicker;
-    imagePicker = setupImagePicker({
-      input: imageInput,
-      triggerButton: imageButton,
-      clearButton: imageClear,
-      nameLabel: imageName,
-      previewContainer: imagePreview,
-      previewImage: imagePreviewImg,
-      onTooLarge: () => {
-        uiNotify("Image must be 20MB or smaller.", { type: "danger" });
-      },
-    });
-    return imagePicker;
-  };
+	const ensureImagePicker = () => {
+		if (imagePicker) return imagePicker;
+		imagePicker = setupImagePicker({
+			input: imageInput,
+			triggerButton: imageButton,
+			clearButton: imageClear,
+			nameLabel: imageName,
+			previewContainer: imagePreview,
+			previewImage: imagePreviewImg,
+			onTooLarge: () => {
+				uiNotify("Image must be 20MB or smaller.", { type: "danger" });
+			},
+		});
+		return imagePicker;
+	};
 
-  imageButton?.addEventListener("click", e => {
-    if (imagePicker) return;
-    e.preventDefault();
-    e.stopPropagation();
-    ensureImagePicker();
-    imageInput?.click();
-  }, { capture: true });
+	imageButton?.addEventListener(
+		"click",
+		(e) => {
+			if (imagePicker) return;
+			e.preventDefault();
+			e.stopPropagation();
+			ensureImagePicker();
+			imageInput?.click();
+		},
+		{ capture: true },
+	);
 
-  ["click", "mousedown", "keydown", "submit"].forEach(evt =>
-    form.addEventListener(evt, e => {
-      e.stopPropagation();
-      if (evt === "submit") e.preventDefault();
-    })
-  );
+	["click", "mousedown", "keydown", "submit"].forEach((evt) =>
+		form.addEventListener(evt, (e) => {
+			e.stopPropagation();
+			if (evt === "submit") e.preventDefault();
+		}),
+	);
 
-  form.addEventListener("submit", async () => {
-    if (isSubmitting) return;
-    isSubmitting = true;
-    if (submitButton instanceof HTMLButtonElement) {
-      submitButton.disabled = true;
-    }
+	form.addEventListener("submit", async () => {
+		if (isSubmitting) return;
+		isSubmitting = true;
+		if (submitButton instanceof HTMLButtonElement) {
+			submitButton.disabled = true;
+		}
 
-    try {
-      const allowed = await Auth.requireOrPrompt();
-      if (!allowed) return;
+		try {
+			const allowed = await Auth.requireOrPrompt();
+			if (!allowed) return;
 
-      const body = textarea.value.trim();
-      const imageFile =
-        imagePicker?.getFile() ||
-        imageInput?.files?.[0] ||
-        null;
-      const hasImage = !!imageFile;
+			const body = textarea.value.trim();
+			const imageFile =
+				imagePicker?.getFile() || imageInput?.files?.[0] || null;
+			const hasImage = !!imageFile;
 
-      if (!body && !hasImage) {
-        uiNotify("Cannot submit an empty comment.", { type: "warn" });
-        return;
-      }
+			if (!body && !hasImage) {
+				uiNotify("Cannot submit an empty comment.", { type: "warn" });
+				return;
+			}
 
-      const res = await fetch(
-        `${API_BASE}/posts/${postId}/comments`,
-        buildImageRequestOptions({
-          method: "POST",
-          imageFile,
-          buildMultipartBody: file => {
-            const formData = new FormData();
-            formData.append("body", body);
-            formData.append("image", file);
-            return formData;
-          },
-          jsonBody: { body },
-          multipartHeaders: { Accept: "application/json" },
-          jsonHeaders: { Accept: "application/json" },
-        })
-      );
+			const res = await fetch(
+				`${API_BASE}/posts/${postId}/comments`,
+				buildImageRequestOptions({
+					method: "POST",
+					imageFile,
+					buildMultipartBody: (file) => {
+						const formData = new FormData();
+						formData.append("body", body);
+						formData.append("image", file);
+						return formData;
+					},
+					jsonBody: { body },
+					multipartHeaders: { Accept: "application/json" },
+					jsonHeaders: { Accept: "application/json" },
+				}),
+			);
 
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        const message = payload?.error?.message || "Failed to submit comment.";
-        uiNotify(message, {
-          type: res.status >= 500 ? "danger" : "warn",
-        });
-        return;
-      }
+			if (!res.ok) {
+				const payload = await res.json().catch(() => null);
+				const message = payload?.error?.message || "Failed to submit comment.";
+				uiNotify(message, {
+					type: res.status >= 500 ? "danger" : "warn",
+				});
+				return;
+			}
 
-      const payload = await res.json();
-      const newComment = payload.data ?? payload;
+			const payload = await res.json();
+			const newComment = payload.data ?? payload;
 
-      textarea.value = "";
-      if (imagePicker) {
-        imagePicker.clearSelectedFile();
-      } else if (imageInput) {
-        imageInput.value = "";
-      }
+			textarea.value = "";
+			if (imagePicker) {
+				imagePicker.clearSelectedFile();
+			} else if (imageInput) {
+				imageInput.value = "";
+			}
 
-      playUpload();
+			playUpload();
 
-      const list = container.querySelector(".comments-scroll");
-      list?.appendChild(renderComment(newComment));
-      list.scrollTop = list.scrollHeight;
+			const list = container.querySelector(".comments-scroll");
+			list?.appendChild(renderComment(newComment));
+			list.scrollTop = list.scrollHeight;
 
-      /* highlight newly added comment */
-      const newEl = document.getElementById(`comment-${newComment.id}`);
-      if (newEl) {
-        newEl.classList.add("highlight-comment");
+			/* highlight newly added comment */
+			const newEl = document.getElementById(`comment-${newComment.id}`);
+			if (newEl) {
+				newEl.classList.add("highlight-comment");
 
-        // fade-out starts after 1s
-        setTimeout(() => {
-          newEl.classList.add("fade-out");
+				// fade-out starts after 1s
+				setTimeout(() => {
+					newEl.classList.add("fade-out");
 
-          // remove highlight classes once fade-out finishes (~1.2s)
-          setTimeout(() => {
-            newEl.classList.remove("highlight-comment", "fade-out");
-          }, 1200);
+					// remove highlight classes once fade-out finishes (~1.2s)
+					setTimeout(() => {
+						newEl.classList.remove("highlight-comment", "fade-out");
+					}, 1200);
+				}, 1000);
+			}
+		} catch (err) {
+			console.error("Failed to submit comment:", err);
+			uiNotify("Failed to submit comment.", { type: "danger" });
+		} finally {
+			isSubmitting = false;
+			if (submitButton instanceof HTMLButtonElement) {
+				submitButton.disabled = false;
+			}
+		}
+	});
 
-        }, 1000);
-      }
-    } catch (err) {
-      console.error("Failed to submit comment:", err);
-      uiNotify("Failed to submit comment.", { type: "danger" });
-    } finally {
-      isSubmitting = false;
-      if (submitButton instanceof HTMLButtonElement) {
-        submitButton.disabled = false;
-      }
-    }
-  });
-
-  container.appendChild(form);
+	container.appendChild(form);
 }
 
 /*--------------------
@@ -384,14 +378,14 @@ function maybeRenderCommentForm(container, postId) {
 --------------------*/
 
 export function reactionTemplate(item, isComment = false) {
-  const idAttr = isComment
-    ? `data-comment-id="${item.id}"`
-    : `data-post-id="${item.id}"`;
+	const idAttr = isComment
+		? `data-comment-id="${item.id}"`
+		: `data-post-id="${item.id}"`;
 
-  const isLiked = item.my_reaction === 1;
-  const isDisliked = item.my_reaction === -1;
+	const isLiked = item.my_reaction === 1;
+	const isDisliked = item.my_reaction === -1;
 
-  return `
+	return `
     <div class="reaction">
       <label class="reaction-toggle reaction-toggle--like" aria-label="Like">
         <input 
@@ -438,31 +432,28 @@ export function reactionTemplate(item, isComment = false) {
 ---------*/
 
 function extractArray(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (payload?.data && Array.isArray(payload.data)) return payload.data;
-  if (payload?.data?.data && Array.isArray(payload.data.data)) {
-    return payload.data.data;
-  }
-  return [];
+	if (Array.isArray(payload)) return payload;
+	if (payload?.data && Array.isArray(payload.data)) return payload.data;
+	if (payload?.data?.data && Array.isArray(payload.data.data)) {
+		return payload.data.data;
+	}
+	return [];
 }
 
 function statusToggleTemplate(post) {
-  const currentStatus =
-    typeof post?.status === "string" && post.status.toLowerCase() === "draft"
-      ? "draft"
-      : "published";
+	const currentStatus =
+		typeof post?.status === "string" && post.status.toLowerCase() === "draft"
+			? "draft"
+			: "published";
 
-  const iconSrc =
-    currentStatus === "draft"
-      ? "/static/img/publish.png"
-      : "/static/img/draft.png";
+	const iconSrc =
+		currentStatus === "draft"
+			? "/static/img/publish.png"
+			: "/static/img/draft.png";
 
-  const label =
-    currentStatus === "draft"
-      ? "Publish post"
-      : "Move to draft";
+	const label = currentStatus === "draft" ? "Publish post" : "Move to draft";
 
-  return `
+	return `
     <button 
       class="action-icon post-status-toggle"
       data-post-id="${post.id}"
@@ -476,16 +467,16 @@ function statusToggleTemplate(post) {
 }
 
 function renderCategories(categories = []) {
-  if (!Array.isArray(categories) || categories.length === 0) return "";
-  return `
+	if (!Array.isArray(categories) || categories.length === 0) return "";
+	return `
     <div class="post-categories">
-      ${categories.map(c => `<span class="category-badge">${c.name}</span>`).join("")}
+      ${categories.map((c) => `<span class="category-badge">${c.name}</span>`).join("")}
     </div>
   `;
 }
 
 function deletePostTemplate(post) {
-  return `
+	return `
     <button
       class="action-icon delete-icon post-delete"
       data-post-id="${post.id}"
@@ -498,7 +489,7 @@ function deletePostTemplate(post) {
 }
 
 function editPostTemplate(post) {
-  return `
+	return `
     <button
       class="action-icon post-edit"
       data-post-id="${post.id}"
@@ -511,124 +502,124 @@ function editPostTemplate(post) {
 }
 
 function bindExpandableImage(imgEl, variant = "post") {
-  if (!(imgEl instanceof HTMLImageElement)) return;
+	if (!(imgEl instanceof HTMLImageElement)) return;
 
-  const openImage = e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const useCheckerboard = imgEl.dataset.transparent === "true";
-    const imageRect = imgEl.getBoundingClientRect();
-    const minDimensions = {
-      minWidth: Math.max(0, Math.round(imageRect.width)),
-      minHeight: Math.max(0, Math.round(imageRect.height)),
-    };
+	const openImage = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const useCheckerboard = imgEl.dataset.transparent === "true";
+		const imageRect = imgEl.getBoundingClientRect();
+		const minDimensions = {
+			minWidth: Math.max(0, Math.round(imageRect.width)),
+			minHeight: Math.max(0, Math.round(imageRect.height)),
+		};
 
-    if (variant === "comment") {
-      const postImage = document.querySelector(".post-image img");
-      if (postImage instanceof HTMLImageElement) {
-        const postRect = postImage.getBoundingClientRect();
-        minDimensions.minWidth = Math.max(
-          minDimensions.minWidth,
-          Math.round(postRect.width)
-        );
-        minDimensions.minHeight = Math.max(
-          minDimensions.minHeight,
-          Math.round(postRect.height)
-        );
-      }
-    }
+		if (variant === "comment") {
+			const postImage = document.querySelector(".post-image img");
+			if (postImage instanceof HTMLImageElement) {
+				const postRect = postImage.getBoundingClientRect();
+				minDimensions.minWidth = Math.max(
+					minDimensions.minWidth,
+					Math.round(postRect.width),
+				);
+				minDimensions.minHeight = Math.max(
+					minDimensions.minHeight,
+					Math.round(postRect.height),
+				);
+			}
+		}
 
-    openImageLightbox(
-      imgEl.currentSrc || imgEl.src,
-      imgEl.alt,
-      variant,
-      useCheckerboard,
-      minDimensions
-    );
-  };
+		openImageLightbox(
+			imgEl.currentSrc || imgEl.src,
+			imgEl.alt,
+			variant,
+			useCheckerboard,
+			minDimensions,
+		);
+	};
 
-  imgEl.addEventListener("click", openImage);
-  imgEl.addEventListener("keydown", e => {
-    if (e.key === "Enter" || e.key === " ") {
-      openImage(e);
-    }
-  });
+	imgEl.addEventListener("click", openImage);
+	imgEl.addEventListener("keydown", (e) => {
+		if (e.key === "Enter" || e.key === " ") {
+			openImage(e);
+		}
+	});
 }
 
 function syncImageTransparencyPresentation({
-  imgEl,
-  frameEl = null,
-  checkerboardClass = "",
-  ambientEl = null,
+	imgEl,
+	frameEl = null,
+	checkerboardClass = "",
+	ambientEl = null,
 } = {}) {
-  if (!(imgEl instanceof HTMLImageElement)) return;
+	if (!(imgEl instanceof HTMLImageElement)) return;
 
-  const sync = async () => {
-    const src = imgEl.currentSrc || imgEl.src;
-    if (!src) return;
-    const hasTransparency = await isTransparentPng(imgEl, src);
-    if ((imgEl.currentSrc || imgEl.src) !== src) return;
+	const sync = async () => {
+		const src = imgEl.currentSrc || imgEl.src;
+		if (!src) return;
+		const hasTransparency = await isTransparentPng(imgEl, src);
+		if ((imgEl.currentSrc || imgEl.src) !== src) return;
 
-    imgEl.dataset.transparent = hasTransparency ? "true" : "false";
-    if (frameEl instanceof Element && checkerboardClass) {
-      frameEl.classList.toggle(checkerboardClass, hasTransparency);
-    }
-    if (ambientEl instanceof HTMLElement) {
-      ambientEl.style.backgroundImage = hasTransparency ? "" : `url("${src}")`;
-    }
-  };
+		imgEl.dataset.transparent = hasTransparency ? "true" : "false";
+		if (frameEl instanceof Element && checkerboardClass) {
+			frameEl.classList.toggle(checkerboardClass, hasTransparency);
+		}
+		if (ambientEl instanceof HTMLElement) {
+			ambientEl.style.backgroundImage = hasTransparency ? "" : `url("${src}")`;
+		}
+	};
 
-  sync();
-  imgEl.addEventListener("load", sync);
+	sync();
+	imgEl.addEventListener("load", sync);
 }
 
 function isPngSource(src) {
-  if (!src) return false;
-  try {
-    const parsed = new URL(src, window.location.href);
-    return parsed.pathname.toLowerCase().endsWith(".png");
-  } catch {
-    return src.split("?")[0].toLowerCase().endsWith(".png");
-  }
+	if (!src) return false;
+	try {
+		const parsed = new URL(src, window.location.href);
+		return parsed.pathname.toLowerCase().endsWith(".png");
+	} catch {
+		return src.split("?")[0].toLowerCase().endsWith(".png");
+	}
 }
 
 async function isTransparentPng(imgEl, srcHint = "") {
-  const src = srcHint || imgEl.currentSrc || imgEl.src;
-  if (!isPngSource(src)) return false;
+	const src = srcHint || imgEl.currentSrc || imgEl.src;
+	if (!isPngSource(src)) return false;
 
-  if (!imgEl.naturalWidth || !imgEl.naturalHeight) return false;
+	if (!imgEl.naturalWidth || !imgEl.naturalHeight) return false;
 
-  try {
-    const sampleWidth = Math.min(80, imgEl.naturalWidth);
-    const sampleHeight = Math.min(80, imgEl.naturalHeight);
+	try {
+		const sampleWidth = Math.min(80, imgEl.naturalWidth);
+		const sampleHeight = Math.min(80, imgEl.naturalHeight);
 
-    const canvas = document.createElement("canvas");
-    canvas.width = sampleWidth;
-    canvas.height = sampleHeight;
+		const canvas = document.createElement("canvas");
+		canvas.width = sampleWidth;
+		canvas.height = sampleHeight;
 
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return false;
+		const ctx = canvas.getContext("2d", { willReadFrequently: true });
+		if (!ctx) return false;
 
-    ctx.drawImage(imgEl, 0, 0, sampleWidth, sampleHeight);
-    const { data } = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+		ctx.drawImage(imgEl, 0, 0, sampleWidth, sampleHeight);
+		const { data } = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
 
-    for (let i = 3; i < data.length; i += 4) {
-      if (data[i] < 250) return true;
-    }
-  } catch {
-    return false;
-  }
+		for (let i = 3; i < data.length; i += 4) {
+			if (data[i] < 250) return true;
+		}
+	} catch {
+		return false;
+	}
 
-  return false;
+	return false;
 }
 
 function ensureImageLightbox() {
-  if (imageLightbox) return;
+	if (imageLightbox) return;
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "image-lightbox";
-  wrapper.hidden = true;
-  wrapper.innerHTML = `
+	const wrapper = document.createElement("div");
+	wrapper.className = "image-lightbox";
+	wrapper.hidden = true;
+	wrapper.innerHTML = `
     <div class="image-lightbox-backdrop" data-close-lightbox></div>
     <figure class="image-lightbox-content" role="dialog" aria-modal="true" aria-label="Expanded post image">
       <button type="button" class="image-lightbox-close" aria-label="Close expanded image">
@@ -638,75 +629,75 @@ function ensureImageLightbox() {
     </figure>
   `;
 
-  document.body.appendChild(wrapper);
-  imageLightbox = wrapper;
-  imageLightboxImg = wrapper.querySelector(".image-lightbox-image");
-  imageLightboxCloseBtn = wrapper.querySelector(".image-lightbox-close");
+	document.body.appendChild(wrapper);
+	imageLightbox = wrapper;
+	imageLightboxImg = wrapper.querySelector(".image-lightbox-image");
+	imageLightboxCloseBtn = wrapper.querySelector(".image-lightbox-close");
 
-  wrapper.addEventListener("click", e => {
-    const target = e.target;
-    if (!(target instanceof Element)) return;
-    if (
-      target.matches("[data-close-lightbox]") ||
-      target.closest(".image-lightbox-close")
-    ) {
-      closeImageLightbox();
-    }
-  });
+	wrapper.addEventListener("click", (e) => {
+		const target = e.target;
+		if (!(target instanceof Element)) return;
+		if (
+			target.matches("[data-close-lightbox]") ||
+			target.closest(".image-lightbox-close")
+		) {
+			closeImageLightbox();
+		}
+	});
 
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && imageLightbox && !imageLightbox.hidden) {
-      closeImageLightbox();
-    }
-  });
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && imageLightbox && !imageLightbox.hidden) {
+			closeImageLightbox();
+		}
+	});
 }
 
 function openImageLightbox(
-  src,
-  alt = "",
-  variant = "post",
-  useCheckerboard = false,
-  minDimensions = {}
+	src,
+	alt = "",
+	variant = "post",
+	useCheckerboard = false,
+	minDimensions = {},
 ) {
-  if (!src) return;
-  ensureImageLightbox();
-  if (!imageLightbox || !imageLightboxImg) return;
+	if (!src) return;
+	ensureImageLightbox();
+	if (!imageLightbox || !imageLightboxImg) return;
 
-  lastFocusedElement = document.activeElement;
-  const { minWidth = 0, minHeight = 0 } = minDimensions;
-  imageLightboxImg.style.setProperty(
-    "--lightbox-min-width",
-    `${Math.max(0, minWidth)}px`
-  );
-  imageLightboxImg.style.setProperty(
-    "--lightbox-min-height",
-    `${Math.max(0, minHeight)}px`
-  );
-  imageLightboxImg.src = src;
-  imageLightboxImg.alt = alt || "Expanded post image";
-  if (useCheckerboard) {
-    imageLightbox.dataset.checkerboard = "true";
-  } else {
-    delete imageLightbox.dataset.checkerboard;
-  }
-  imageLightbox.dataset.variant = variant;
-  imageLightbox.hidden = false;
-  document.body.classList.add("image-lightbox-open");
-  imageLightboxCloseBtn?.focus();
+	lastFocusedElement = document.activeElement;
+	const { minWidth = 0, minHeight = 0 } = minDimensions;
+	imageLightboxImg.style.setProperty(
+		"--lightbox-min-width",
+		`${Math.max(0, minWidth)}px`,
+	);
+	imageLightboxImg.style.setProperty(
+		"--lightbox-min-height",
+		`${Math.max(0, minHeight)}px`,
+	);
+	imageLightboxImg.src = src;
+	imageLightboxImg.alt = alt || "Expanded post image";
+	if (useCheckerboard) {
+		imageLightbox.dataset.checkerboard = "true";
+	} else {
+		delete imageLightbox.dataset.checkerboard;
+	}
+	imageLightbox.dataset.variant = variant;
+	imageLightbox.hidden = false;
+	document.body.classList.add("image-lightbox-open");
+	imageLightboxCloseBtn?.focus();
 }
 
 function closeImageLightbox() {
-  if (!imageLightbox || imageLightbox.hidden) return;
+	if (!imageLightbox || imageLightbox.hidden) return;
 
-  imageLightbox.hidden = true;
-  delete imageLightbox.dataset.variant;
-  delete imageLightbox.dataset.checkerboard;
-  document.body.classList.remove("image-lightbox-open");
-  imageLightboxImg?.style.removeProperty("--lightbox-min-width");
-  imageLightboxImg?.style.removeProperty("--lightbox-min-height");
-  imageLightboxImg?.removeAttribute("src");
+	imageLightbox.hidden = true;
+	delete imageLightbox.dataset.variant;
+	delete imageLightbox.dataset.checkerboard;
+	document.body.classList.remove("image-lightbox-open");
+	imageLightboxImg?.style.removeProperty("--lightbox-min-width");
+	imageLightboxImg?.style.removeProperty("--lightbox-min-height");
+	imageLightboxImg?.removeAttribute("src");
 
-  if (lastFocusedElement instanceof HTMLElement) {
-    lastFocusedElement.focus();
-  }
+	if (lastFocusedElement instanceof HTMLElement) {
+		lastFocusedElement.focus();
+	}
 }

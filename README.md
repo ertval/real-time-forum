@@ -54,7 +54,8 @@ This project satisfies the [01-edu real-time-forum](docs/requirements.md) exerci
 | Database | SQLite via `mattn/go-sqlite3` |
 | WebSocket | `gorilla/websocket` |
 | Auth | `bcrypt` (password hashing), `google/uuid` (sessions) |
-| Frontend | Vanilla JavaScript, HTML, CSS |
+| Frontend | Vanilla JS (ES2026+), HTML, CSS |
+| Dev Tools | Bun, Biome, Vitest |
 | Containerization | Docker / Docker Compose (optional) |
 
 ### Allowed Packages
@@ -67,7 +68,7 @@ Only the following Go packages are permitted:
 - [golang.org/x/crypto/bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
 - [google/uuid](https://github.com/google/uuid) or [gofrs/uuid](https://github.com/gofrs/uuid)
 
-No frontend frameworks (React, Angular, Vue, etc.) are used.
+No frontend frameworks (React, Angular, Vue, etc.) are used. Tooling relies on modernized standards including Bun for speed, Biome for linting, and Vitest for testing.
 
 ---
 
@@ -84,8 +85,11 @@ internal/
   router/            → Route registration
   tests/             → Backend integration tests
 web/
-  static/            → CSS, JS, images, sounds, uploads
-  templates/         → SPA HTML shell
+  static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
+  templates/         → HTML templates (legacy)
+  SPA/               → Single Page Application entrypoint
+    index.html       → SPA shell
+    js/              → Modern frontend modules (core, components, features)
 data/                → SQLite database file
 docs/                → Project documentation (PRD, SDS, tickets)
 ```
@@ -101,6 +105,7 @@ The project uses a **split-server** topology:
 ### Requirements
 
 - Go 1.24+
+- Bun (primary runtime & package manager)
 - Make
 - SQLite (bundled via CGo)
 - Docker & Docker Compose (optional)
@@ -108,7 +113,7 @@ The project uses a **split-server** topology:
 ### Install & Run
 
 ```bash
-make deps          # Install Go dependencies
+make deps          # Install Go and Node dependencies
 make run-all       # Start backend (8080) + frontend (3000)
 ```
 
@@ -117,19 +122,22 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Individual Commands
 
 ```bash
+# Build
 make build-backend    # Build backend binary
 make build-frontend   # Build frontend binary
 make build-all        # Build both
 
+# Run
 make run-backend      # Start backend only
 make run-frontend     # Start frontend only
+make stop-all         # Stop all processes
 
-make stop-backend     # Stop backend
-make stop-frontend    # Stop frontend
-make stop-all         # Stop both
-
-make test             # Run all tests
-make fmt              # Format code
+# Quality Gates (Go & JS)
+make test             # Run all tests (Go + Vitest)
+make test-backend     # Run Go tests only
+make test-frontend    # Run Vitest only
+make lint             # Run Biome lint
+make format           # Run Biome & Go format
 make vet              # Run Go vet
 ```
 
