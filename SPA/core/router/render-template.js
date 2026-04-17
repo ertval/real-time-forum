@@ -1,11 +1,11 @@
-import { renderActivityView } from '../../features/activity/views.js';
-import { renderLoginView, renderRegisterView } from '../../features/auth/views.js';
-import { renderFeedView } from '../../features/feed/views.js';
+import { renderActivityView } from '../../features/activity/activity.views.js';
+import { renderLoginView, renderRegisterView } from '../../features/auth/auth.views.js';
+import { renderFeedView } from '../../features/feed/feed.views.js';
 import {
 	renderCreatePostView,
 	renderEditPostView,
 	renderPostDetailView,
-} from '../../features/post/views.js';
+} from '../../features/post/post.views.js';
 import { escapeHTML } from '../utils/html.js';
 
 export function renderTemplate(match) {

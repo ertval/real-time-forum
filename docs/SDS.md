@@ -56,7 +56,7 @@ SPA/                 → Single Page Application Shell (Vanilla JS ES2026+)
   assets/            → Global CSS & Static Images
   core/              → State, Router, and API Logic
   components/        → Shared UI Elements
-  features/        → Domain Slices (Auth, Feed, Chat, etc.)
+  features/        → Domain Slices (each with its {feature}.views.js)
   tests/           → Vitest Unit & Integration Tests
 data/                → SQLite database file
 docs/                → Project documentation (PRD, SDS, tickets)
@@ -420,7 +420,7 @@ On `dm.send`:
 - The frontend must be implemented in modern vanilla JS (ES2026+) using optimal best practice patterns.
 - **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `SPA/`. The structure is organized as follows:
   - `SPA/components/`: Shared, reusable UI components (e.g., buttons, modals, cards).
-  - `SPA/features/`: Vertical slices for major application domains (e.g., `auth/`, `feed/`, `chat/`, `post/`, `profile/`). Each slice contains its own logic, components, and tests.
+  - `SPA/features/`: Vertical slices for major application domains (e.g., `auth/auth.views.js`, `feed/feed.views.js`, `chat/chat.views.js`, `post/post.views.js`, `profile/profile.views.js`). Each slice contains its own logic, components, and tests.
   - `SPA/core/`: Application-wide infrastructure:
     - `api/`: API clients and service definitions.
     - `router/`: Client-side routing logic.

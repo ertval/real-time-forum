@@ -1,4 +1,4 @@
-import { renderAuthenticatedShell } from '../../features/shell/views.js';
+import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
 import { matchRoute, normalizePathname } from '../router/routes.js';
 
