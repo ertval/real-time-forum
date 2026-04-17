@@ -162,6 +162,36 @@ function createMockBrowser(initialPath = '/') {
 		return event;
 	}
 
+	function clickLogout() {
+		const logoutButton = {
+			tagName: 'BUTTON',
+		};
+
+		const event = {
+			type: 'click',
+			button: 0,
+			metaKey: false,
+			ctrlKey: false,
+			shiftKey: false,
+			altKey: false,
+			defaultPrevented: false,
+			target: {
+				closest(selector) {
+					if (selector === '[data-action="logout"]') {
+						return logoutButton;
+					}
+					return null;
+				},
+			},
+			preventDefault: vi.fn(() => {
+				event.defaultPrevented = true;
+			}),
+		};
+
+		dispatchDocument('click', event);
+		return event;
+	}
+
 	return {
 		windowRef,
 		documentRef,
@@ -169,6 +199,7 @@ function createMockBrowser(initialPath = '/') {
 		overlay,
 		historyCalls,
 		clickLink,
+		clickLogout,
 	};
 }
 
@@ -376,5 +407,75 @@ describe('SPA routing for A03/A04', () => {
 		browser.clickLink('/register');
 		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
 		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('logout button calls API and returns user to login flow', async () => {
+		const browser = createMockBrowser('/activity');
+		const fetchRef = vi.fn(async (url) => {
+			if (url === '/api/v1/users/me') {
+				return { ok: true, status: 200 };
+			}
+			if (url === '/api/v1/users/logout') {
+				return { ok: true, status: 200 };
+			}
+			return { ok: false, status: 404 };
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+
+		const event = browser.clickLogout();
+		await Promise.resolve();
+
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/logout', {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+		expect(app.getState().isAuthenticated).toBe(false);
+		expect(browser.windowRef.location.pathname).toBe('/login');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('logout is usable from every authenticated route', async () => {
+		const protectedRoutes = ['/', '/post/9', '/create-post', '/edit-post/3', '/activity'];
+
+		for (const path of protectedRoutes) {
+			const browser = createMockBrowser(path);
+			const fetchRef = vi.fn(async (url) => {
+				if (url === '/api/v1/users/me') {
+					return { ok: true, status: 200 };
+				}
+				if (url === '/api/v1/users/logout') {
+					return { ok: true, status: 200 };
+				}
+				return { ok: false, status: 404 };
+			});
+
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef,
+			});
+
+			await app.boot();
+			expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+
+			browser.clickLogout();
+			await Promise.resolve();
+
+			expect(browser.windowRef.location.pathname).toBe('/login');
+			expect(app.getState().isAuthenticated).toBe(false);
+		}
 	});
 });

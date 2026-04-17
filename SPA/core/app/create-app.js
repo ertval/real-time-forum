@@ -123,12 +123,38 @@ export function createApp(options = {}) {
 		renderRoute(access.match);
 	}
 
+	async function performLogout() {
+		if (typeof fetchRef === 'function') {
+			try {
+				await fetchRef('/api/v1/users/logout', {
+					method: 'POST',
+					credentials: 'include',
+					headers: {
+						Accept: 'application/json',
+					},
+				});
+			} catch {
+				// Continue local logout flow even on network failure.
+			}
+		}
+
+		state.isAuthenticated = false;
+		goTo('/login', true);
+	}
+
 	function onDocumentClick(event) {
 		if (event.defaultPrevented || event.button !== 0) {
 			return;
 		}
 
 		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+			return;
+		}
+
+		const logoutButton = event.target?.closest?.('[data-action="logout"]');
+		if (logoutButton) {
+			event.preventDefault();
+			void performLogout();
 			return;
 		}
 
