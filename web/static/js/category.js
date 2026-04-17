@@ -49,7 +49,9 @@ export async function initCategoryFilter(onChange) {
 	const categories = await loadCategories();
 
 	// clear (keep "All")
-	select.querySelectorAll('option:not(:first-child)').forEach((o) => o.remove());
+	select.querySelectorAll('option:not(:first-child)').forEach((o) => {
+		o.remove();
+	});
 
 	const nameToId = new Map();
 	const idToName = new Map();

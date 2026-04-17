@@ -172,9 +172,9 @@ function renderDropdown(notifications) {
 
 			await markAllAsRead();
 
-			document
-				.querySelectorAll('.notification-item.unread')
-				.forEach((el) => el.classList.remove('unread'));
+			document.querySelectorAll('.notification-item.unread').forEach((el) => {
+				el.classList.remove('unread');
+			});
 
 			updateBadge(0);
 		});

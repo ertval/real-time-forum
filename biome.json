@@ -12,6 +12,7 @@
 			"!cmd",
 			"!internal",
 			"!data",
+			"!web/errors",
 			"!forum-backend",
 			"!forum-frontend",
 			"!bun.lock",
@@ -42,21 +43,16 @@
 			},
 			"complexity": {
 				"recommended": true,
-				"noExcessiveCognitiveComplexity": "warn"
+				"noExcessiveCognitiveComplexity": "error"
 			},
 			"correctness": {
 				"recommended": true,
-				"noUnusedVariables": "warn"
+				"noUnusedVariables": "error"
 			},
 			"style": {
 				"recommended": true,
 				"useNamingConvention": "off",
-				"useFilenamingConvention": {
-					"level": "error",
-					"options": {
-						"filenameCases": ["camelCase"]
-					}
-				}
+				"useFilenamingConvention": "off"
 			},
 			"suspicious": {
 				"recommended": true,
