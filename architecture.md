@@ -16,11 +16,11 @@ web/
   templates/         → Legacy HTML templates
 SPA/                 → Single Page Application (Modern Vanilla JS ES2026+)
   index.html         → SPA Shell Entrypoint
-  main.js            → App Bootstrap
-  assets/            → Global CSS & Static Images
-  core/              → Router, API client, Global State
+  main.js            → Thin bootstrap + public exports for tests
+  assets/            → Global CSS entry + design tokens/base styles
+  core/              → App orchestration, router, shared utils
   components/        → Shared Reusable UI Components
-  features/          → Vertical Domain Slices (Auth, Feed, Chat, etc.)
+  features/          → Vertical Domain Slices (Auth, Feed, Post, Activity, Shell, Chat)
   tests/             → Unit and Integration Tests
 
 The frontend communicates with the backend via:
@@ -55,17 +55,18 @@ internal/
 Located under:
 
 SPA/
-├── assets/          → CSS & Global Assets
+├── assets/          → CSS entry point and global assets
 ├── components/      → Reusable UI Fragments
-├── core/            → Infrastructure (API, Router, State)
-├── features/        → Vertical Slices (Domain Logic & Views)
-└── main.js          → Entry Point
+├── core/            → App lifecycle, router, and utility modules
+├── features/        → Vertical slices with route/shell renderers
+└── main.js          → Entrypoint and compatibility exports
 
 Characteristics:
 - Pure Vanilla JavaScript (ES2026+)
 - No frontend framework (React, Vue, etc.)
 - Modular ES modules
-- Proxy-based Global State management
+- Feature slices are implemented for auth/feed/post/activity/shell routes
+- API/state/chat/profile areas are scaffolded for upcoming tickets
 - Client-side Routing
 - Vitest for testing suite (Unit, Integration, E2E)
 
@@ -201,7 +202,7 @@ internal/db → persistence layer\
 internal/handlers → HTTP logic\
 internal/middleware → request middleware\
 internal/router → routing configuration\
-internal/server → application bootstrap\
+cmd/backend and cmd/frontend → application bootstrap\
 internal/tests → API integration tests\
 web/ → frontend
 

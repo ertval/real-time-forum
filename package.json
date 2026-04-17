@@ -8,6 +8,8 @@
 		"dev": "make run-all",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write --unsafe .",
 		"check": "biome check .",
 		"fix": "biome check --write --unsafe .",
 		"format": "biome format --write .",
