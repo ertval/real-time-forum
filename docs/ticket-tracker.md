@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `4`
+- Done: `5`
 - Partially Implemented: `0`
-- Not Started: `33`
+- Not Started: `32`
 
 ---
 
@@ -75,7 +75,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
 | 7 | [ ] | **C11** | C | Registration API Contract | C10 | C08 |
-| 8 | [ ] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
+| 8 | [x] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
 | 9 | [ ] | **A05** | A | Authenticated-Only Forum Access | A03 | A06, B01, B04, B05, D04, C08 |
 | 10 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
 | 11 | [ ] | **A06** | A | Global Logout Across the Forum | A04, A05 | D05 |
