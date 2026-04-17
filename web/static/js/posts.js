@@ -100,9 +100,9 @@ export function renderPostCard(
 		ambientEl: postImageAmbient,
 	});
 
-	article
-		.querySelectorAll('.post-comments, textarea, form')
-		.forEach((el) => el.addEventListener('click', (e) => e.stopPropagation()));
+	article.querySelectorAll('.post-comments, textarea, form').forEach((el) => {
+		el.addEventListener('click', (e) => e.stopPropagation());
+	});
 
 	return article;
 }
@@ -132,7 +132,9 @@ export async function loadPostCommentsPreview(postId, article) {
 		if (comments.length === 0) {
 			list.innerHTML = `<p class="muted">No comments yet.</p>`;
 		} else {
-			comments.forEach((c) => list.appendChild(renderComment(c)));
+			comments.forEach((c) => {
+				list.appendChild(renderComment(c));
+			});
 		}
 
 		container.appendChild(list);
@@ -265,12 +267,12 @@ function maybeRenderCommentForm(container, postId) {
 		{ capture: true },
 	);
 
-	['click', 'mousedown', 'keydown', 'submit'].forEach((evt) =>
+	['click', 'mousedown', 'keydown', 'submit'].forEach((evt) => {
 		form.addEventListener(evt, (e) => {
 			e.stopPropagation();
 			if (evt === 'submit') e.preventDefault();
-		}),
-	);
+		});
+	});
 
 	form.addEventListener('submit', async () => {
 		if (isSubmitting) return;

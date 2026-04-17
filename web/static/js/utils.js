@@ -48,7 +48,9 @@ export function buildPostMultipartFormData({
 	const formData = new FormData();
 	formData.append('title', title);
 	formData.append('body', body);
-	categoryIds.forEach((id) => formData.append('category_ids', String(id)));
+	categoryIds.forEach((id) => {
+		formData.append('category_ids', String(id));
+	});
 
 	if (imageFile) {
 		formData.append('image', imageFile);

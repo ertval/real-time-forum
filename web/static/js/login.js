@@ -86,7 +86,11 @@ import { API_BASE } from './utils.js';
 		}
 
 		const payload = { password };
-		identifier.includes('@') ? (payload.email = identifier) : (payload.username = identifier);
+		if (identifier.includes('@')) {
+			payload.email = identifier;
+		} else {
+			payload.username = identifier;
+		}
 
 		try {
 			submitBtn.disabled = true;
