@@ -51,8 +51,12 @@ func TestSPARouting(t *testing.T) {
 	}{
 		{"Root", "/", http.StatusOK, indexContent},
 		{"Existing JS", "/main.js", http.StatusOK, jsContent},
-		{"Non-existent SPA route", "/login", http.StatusOK, indexContent},
-		{"Deep SPA route", "/posts/1/details", http.StatusOK, indexContent},
+		{"Login route", "/login", http.StatusOK, indexContent},
+		{"Register route", "/register", http.StatusOK, indexContent},
+		{"Post detail route", "/post/1", http.StatusOK, indexContent},
+		{"Create post route", "/create-post", http.StatusOK, indexContent},
+		{"Edit post route", "/edit-post/1", http.StatusOK, indexContent},
+		{"Activity route", "/activity", http.StatusOK, indexContent},
 		{"Favicon", "/favicon.ico", http.StatusOK, faviconContent},
 	}
 
