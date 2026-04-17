@@ -138,6 +138,29 @@ function renderAppNavigation() {
 	`;
 }
 
+function renderAuthenticatedShell(content) {
+	return `
+		<div class="app-shell" data-auth-shell>
+			<header class="app-shell__header" aria-label="Forum header">
+				<div class="app-shell__brand">Real-Time Forum</div>
+				${renderAppNavigation()}
+				<button class="app-shell__logout" type="button" data-action="logout">Logout</button>
+			</header>
+			<div class="app-shell__layout">
+				<section class="app-shell__outlet" aria-label="Page content">${content}</section>
+				<aside class="app-shell__chat" aria-label="Direct messages">
+					<section class="chat-panel" data-chat-roster>
+						<h2>Chat Roster</h2>
+					</section>
+					<section class="chat-panel" data-chat-active>
+						<h2>Active Chat</h2>
+					</section>
+				</aside>
+			</div>
+		</div>
+	`;
+}
+
 function renderTemplate(match) {
 	const { id, title } = match.route;
 
@@ -167,7 +190,6 @@ function renderTemplate(match) {
 			<section data-screen="post-detail" aria-labelledby="screen-post-title">
 				<h1 id="screen-post-title">Post Detail</h1>
 				<p data-post-id="${postID}">Viewing post ${postID}</p>
-				${renderAppNavigation()}
 			</section>
 		`;
 	}
@@ -178,7 +200,6 @@ function renderTemplate(match) {
 			<section data-screen="edit-post" aria-labelledby="screen-edit-post-title">
 				<h1 id="screen-edit-post-title">Edit Post</h1>
 				<p data-post-id="${postID}">Editing post ${postID}</p>
-				${renderAppNavigation()}
 			</section>
 		`;
 	}
@@ -188,7 +209,6 @@ function renderTemplate(match) {
 			<section data-screen="create-post" aria-labelledby="screen-create-post-title">
 				<h1 id="screen-create-post-title">Create Post</h1>
 				<p>Compose and publish a new post.</p>
-				${renderAppNavigation()}
 			</section>
 		`;
 	}
@@ -198,7 +218,6 @@ function renderTemplate(match) {
 			<section data-screen="activity" aria-labelledby="screen-activity-title">
 				<h1 id="screen-activity-title">Activity</h1>
 				<p>Review recent activity and updates.</p>
-				${renderAppNavigation()}
 			</section>
 		`;
 	}
@@ -207,7 +226,6 @@ function renderTemplate(match) {
 		<section data-screen="feed" aria-labelledby="screen-feed-title">
 			<h1 id="screen-feed-title">${escapeHTML(title)}</h1>
 			<p>Browse the latest discussions.</p>
-			${renderAppNavigation()}
 		</section>
 	`;
 }
@@ -286,7 +304,9 @@ export function createApp(options = {}) {
 			return;
 		}
 
-		mainContent.innerHTML = renderTemplate(match);
+		const routeMarkup = renderTemplate(match);
+		mainContent.innerHTML =
+			match.route.access === 'protected' ? renderAuthenticatedShell(routeMarkup) : routeMarkup;
 	}
 
 	function goTo(pathname, replace = false) {
