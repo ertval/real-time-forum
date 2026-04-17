@@ -58,10 +58,10 @@ func NewMux() *http.ServeMux {
 	/*-----------------------------
 	  SPA Catch-all
 	-----------------------------*/
-	// This handler serves files from /web/SPA/ if they exist, 
-	// otherwise it serves /web/SPA/index.html.
+	// This handler serves files from /SPA/ if they exist, 
+	// otherwise it serves /SPA/index.html.
 	// This enables SPA client-side routing.
-	spaFileServer := NewCustomFileServer(http.Dir("./web/SPA"), "./web/SPA/index.html")
+	spaFileServer := NewCustomFileServer(http.Dir("./SPA"), "./SPA/index.html")
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		setNoStoreHeaders(w)
