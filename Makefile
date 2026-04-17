@@ -67,10 +67,10 @@ lint:
 	@./node_modules/.bin/bun run lint
 
 test-backend:
-	@go test ./... -v
+	@go test ./...
 
 test-frontend:
-	@go test ./internal/tests/... -v
+	@go test ./internal/tests/...
 	@./node_modules/.bin/bun run policy
 
 policy:
