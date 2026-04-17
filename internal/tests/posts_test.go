@@ -41,7 +41,7 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 		t.Fatalf("seed post_categories: %v", err)
 	}
 
-	post := getPost(t, h, postID)
+	post := getPost(t, h, token, postID)
 
 	raw, ok := post["categories"]
 	if !ok || raw == nil {
@@ -61,11 +61,12 @@ func TestAPIPostGetReturnsCategories(t *testing.T) {
 func TestAPIPostGet_NotFound(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	// pick an id that won't exist in test DB
 	const missingID = 9999
 
-	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", missingID), nil)
+	w, body := doRequestWithToken(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", missingID), token, nil)
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d body=%s", w.Code, string(body))
@@ -92,6 +93,7 @@ func TestAPIPostGet_NotFound(t *testing.T) {
 func TestAPIPostGet_InvalidID_BadRequest(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	invalidPaths := []string{
 		"/api/v1/posts/abc",
@@ -101,7 +103,7 @@ func TestAPIPostGet_InvalidID_BadRequest(t *testing.T) {
 
 	for _, path := range invalidPaths {
 		t.Run(path, func(t *testing.T) {
-			w, body := doRequest(t, h, http.MethodGet, path, nil)
+			w, body := doRequestWithToken(t, h, http.MethodGet, path, token, nil)
 
 			if w.Code != http.StatusBadRequest {
 				t.Fatalf("expected 400, got %d body=%s", w.Code, string(body))
@@ -126,6 +128,7 @@ func TestAPIPostGet_InvalidID_BadRequest(t *testing.T) {
 func TestAPIPostGet_ReactionCounts(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	// Create a known post
 	res, err := db.Exec(`
@@ -164,7 +167,7 @@ func TestAPIPostGet_ReactionCounts(t *testing.T) {
 		t.Fatalf("seed dislike: %v", err)
 	}
 
-	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), nil)
+	w, body := doRequestWithToken(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), token, nil)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
 	}
@@ -202,12 +205,14 @@ func TestAPIPostGet_ReactionCounts(t *testing.T) {
 func TestAPIPostsFilterByCategory(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	w, body := doRequest(
+	w, body := doRequestWithToken(
 		t,
 		h,
 		http.MethodGet,
 		"/api/v1/posts?category_id=1",
+		token,
 		nil,
 	)
 
@@ -443,8 +448,9 @@ func TestAPIPostsDisliked_ReturnsDislikedPostsWithCorrectPaginationTotal(t *test
 func TestAPIPostsList(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=10", nil)
+	w, body := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=10", token, nil)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d, body=%s", w.Code, string(body))
 	}
@@ -469,11 +475,12 @@ func TestAPIPostsList(t *testing.T) {
 func TestAPIPostsList_Pagination(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	seedPosts(t, db, 1, 25) // enough to paginate
 
 	// page=1 per_page=10 => 10 items
-	w1, b1 := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=10", nil)
+	w1, b1 := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=10", token, nil)
 	if w1.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w1.Code, string(b1))
 	}
@@ -483,7 +490,7 @@ func TestAPIPostsList_Pagination(t *testing.T) {
 	}
 
 	// page=2 per_page=10 => 10 items, different ids from page 1
-	w2, b2 := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=2&per_page=10", nil)
+	w2, b2 := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=2&per_page=10", token, nil)
 	if w2.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w2.Code, string(b2))
 	}
@@ -508,17 +515,18 @@ func TestAPIPostsList_Pagination(t *testing.T) {
 func TestAPIPostsList_Defaulting(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	seedPosts(t, db, 1, 25)
 
 	// page=0 should behave like page=1
-	wBadPage, bBadPage := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=0&per_page=10", nil)
+	wBadPage, bBadPage := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=0&per_page=10", token, nil)
 	if wBadPage.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", wBadPage.Code, string(bBadPage))
 	}
 	badPagePosts := decodePostsList(t, bBadPage)
 
-	wPage1, bPage1 := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=10", nil)
+	wPage1, bPage1 := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=10", token, nil)
 	if wPage1.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", wPage1.Code, string(bPage1))
 	}
@@ -533,7 +541,7 @@ func TestAPIPostsList_Defaulting(t *testing.T) {
 	}
 
 	// per_page=0 should behave like per_page=20
-	wBadPer, bBadPer := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=0", nil)
+	wBadPer, bBadPer := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=0", token, nil)
 	if wBadPer.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", wBadPer.Code, string(bBadPer))
 	}
@@ -546,10 +554,11 @@ func TestAPIPostsList_Defaulting(t *testing.T) {
 func TestAPIPostsList_Bounds(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	seedPosts(t, db, 1, 110) // ensure there are more than 100 posts total
 
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=1000", nil)
+	w, body := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=1000", token, nil)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
 	}
@@ -563,6 +572,7 @@ func TestAPIPostsList_Bounds(t *testing.T) {
 func TestAPIPostsList_AttachesCategories(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	// Ensure categories exist
 	_, err := db.Exec(`
@@ -595,7 +605,7 @@ func TestAPIPostsList_AttachesCategories(t *testing.T) {
 		t.Fatalf("seed post_categories 102: %v", err)
 	}
 
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=50", nil)
+	w, body := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=50", token, nil)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
 	}
@@ -650,6 +660,7 @@ func TestAPIPostsList_AttachesCategories(t *testing.T) {
 func TestAPIPostsList_AttachesReactionsCounts(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	// Create a known post
 	res, err := db.Exec(`
@@ -690,7 +701,7 @@ func TestAPIPostsList_AttachesReactionsCounts(t *testing.T) {
 		t.Fatalf("seed dislike: %v", err)
 	}
 
-	w, body := doRequest(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=50", nil)
+	w, body := doRequestWithToken(t, h, http.MethodGet, "/api/v1/posts?page=1&per_page=50", token, nil)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
 	}

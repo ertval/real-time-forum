@@ -114,6 +114,17 @@ func doRequest(t *testing.T, h http.Handler, method, path string, body []byte) (
 	return w, respBody
 }
 
+func doRequestWithToken(t *testing.T, h http.Handler, method, path, token string, body []byte) (*httptest.ResponseRecorder, []byte) {
+	t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewReader(body))
+	req = req.WithContext(context.Background())
+	req.Header.Set("Cookie", "session_token="+token)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	respBody := w.Body.Bytes()
+	return w, respBody
+}
+
 // generic envelope used by API
 type apiError struct {
 	Code    string `json:"code"`
