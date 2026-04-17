@@ -1,3 +1,5 @@
+// SPA/features/auth/auth.views.js
+
 export function renderLoginView() {
 	return `
 		<div class="auth-page" data-screen="login">

@@ -1,3 +1,5 @@
+// SPA/core/router/render-template.js
+
 import { renderActivityView } from '../../features/activity/activity.views.js';
 import { renderLoginView, renderRegisterView } from '../../features/auth/auth.views.js';
 import { renderFeedView } from '../../features/feed/feed.views.js';

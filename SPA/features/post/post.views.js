@@ -1,3 +1,5 @@
+// SPA/features/post/post.views.js
+
 export function renderPostDetailView(postID) {
 	return `
 		<section data-screen="post-detail" aria-labelledby="screen-post-title">

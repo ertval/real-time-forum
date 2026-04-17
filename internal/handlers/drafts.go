@@ -375,14 +375,14 @@ func replacedOrRemovedImageURL(previous, next *string) (string, bool) {
 	if previous == nil {
 		return "", false
 	}
-	prev, ok := normalizeUploadedImageURL(*previous)
+	prev, ok := repository.NormalizeUploadedImageURL(*previous)
 	if !ok {
 		return "", false
 	}
 	if next == nil {
 		return prev, true
 	}
-	nextNorm, ok := normalizeUploadedImageURL(*next)
+	nextNorm, ok := repository.NormalizeUploadedImageURL(*next)
 	if !ok {
 		return prev, true
 	}
