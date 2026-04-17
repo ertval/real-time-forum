@@ -40,15 +40,17 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 - **Orchestrator Note**: Do not move to Phase 3 until both Implementation Agents report "Ready for Audit" with green tests.
 
 ### Phase 3: Independent Audit (Spawn Audit Agent)
-**Task**: `spawn subagent` for a cold-start audit. This agent MUST NOT be the same as the implementation agents.
-1. **Regression**: Run `make test` for the full tests suite.
-2. **Functional Audit**: Execute every check in `docs/audit.md` relevant to this ticket.
-3. **Verification**: Confirm the ticket's **Verification Gate** is fully satisfied.
-4. **Loop**: If the Audit Agent finds ANY defect, violation of `docs/audit.md`, or failing test:
-   - Identify the failure.
+**Task**: `spawn subagent` for a cold-start audit.This agent MUST NOT be the same as the implementation agents.
+1. **Scope**: The Audit Agent **MUST NOT** read `PLAN.md` or implementation logs. It must evaluate the work solely against the **Source of Truth** (`docs/audit.md`, `docs/requirements.md`, `docs/SDS.md`, and `docs/PRD.md`).
+2. **Quality Audit**: Review code logic, design patterns, and quality of implementation. Ensure it matches the high standards defined in `AGENTS.md`.
+3. **Compliance Audit**: Check for 100% compliance with the ticket requirements, correctness, and the verification gate.
+3. **Automated Testing**: Run **ONLY** `make test` (backend) and `bun run policy` (frontend/SPA) to validate the QA gate.
+4. **Verification**: Confirm the ticket's **Verification Gate** is fully satisfied based on the documentation.
+5. **Loop**: If the Audit Agent finds ANY defect, violation of requirements, or failing test:
+   - Identify the failure clearly referencing the authoritative documentation.
    - Send the failure back to the relevant Implementation Agent (Phase 2).
    - Restart the Audit once implementation is fixed.
-5. **Output**: A `VERIFICATION_MANIFEST.md` with proof of all passing checks.
+6. **Output**: A `VERIFICATION_MANIFEST.md` with proof of all passing checks and a summary of implementation quality.
 
 ### Phase 4: Closure (Spawn Documentation Agent)
 **Task**: `spawn subagent` to finalize the ticket.
