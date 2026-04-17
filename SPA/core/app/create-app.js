@@ -1,3 +1,5 @@
+// SPA/core/app/create-app.js
+
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
 import { matchRoute, normalizePathname } from '../router/routes.js';

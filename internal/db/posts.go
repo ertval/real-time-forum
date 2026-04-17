@@ -677,3 +677,43 @@ func insertPostCategoriesTx(ctx context.Context, tx *sql.Tx, postID int64, ids [
 
 	return nil
 }
+
+/*-----------------
+  IMAGE QUERIES
+-----------------*/
+
+func GetPostRelatedImageURLs(ctx context.Context, db *sql.DB, postID int64) ([]string, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT image_url
+		FROM posts
+		WHERE id = ? AND image_url IS NOT NULL
+		UNION
+		SELECT image_url
+		FROM comments
+		WHERE post_id = ? AND image_url IS NOT NULL
+	`, postID, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var urls []string
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		urls = append(urls, raw)
+	}
+	return urls, rows.Err()
+}
+
+func GetImageUsageCount(ctx context.Context, db *sql.DB, imageURL string) (int, error) {
+	var count int
+	err := db.QueryRowContext(ctx, `
+		SELECT
+			(SELECT COUNT(1) FROM posts WHERE image_url = ?) +
+			(SELECT COUNT(1) FROM comments WHERE image_url = ?)
+	`, imageURL, imageURL).Scan(&count)
+	return count, err
+}

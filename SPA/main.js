@@ -1,3 +1,5 @@
+// SPA/main.js
+
 import { createApp } from './core/app/create-app.js';
 import { matchRoute, normalizePathname } from './core/router/routes.js';
 

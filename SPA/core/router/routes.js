@@ -1,3 +1,5 @@
+// SPA/core/router/routes.js
+
 const ROUTE_DEFINITIONS = [
 	{ id: 'login', pattern: '/login', access: 'public-only', title: 'Login' },
 	{

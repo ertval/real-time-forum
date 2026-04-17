@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -286,4 +287,40 @@ func GetUserReactionForPost(ctx context.Context, db *sql.DB, userID, postID int6
 		return 0, nil
 	}
 	return val, err
+}
+
+/*-------------------------
+  IMAGE URL HELPERS
+-------------------------*/
+
+func NormalizeUploadedImageURL(raw string) (string, bool) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "", false
+	}
+
+	if cut := strings.IndexAny(value, "?#"); cut >= 0 {
+		value = value[:cut]
+	}
+
+	const prefix = "/static/uploads/"
+	if !strings.HasPrefix(value, prefix) {
+		return "", false
+	}
+
+	filename := strings.TrimPrefix(value, prefix)
+	if filename == "" {
+		return "", false
+	}
+
+	return prefix + filename, true
+}
+
+func GetUploadedImageDiskPath(imageURL string) (string, bool) {
+	normalizedURL, ok := NormalizeUploadedImageURL(imageURL)
+	if !ok {
+		return "", false
+	}
+	filename := strings.TrimPrefix(normalizedURL, "/static/uploads/")
+	return filepath.Join("web", "static", "uploads", filename), true
 }
