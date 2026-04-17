@@ -55,21 +55,30 @@ export function setupImagePicker({
 
 	const updateUI = () => {
 		const file = getFile();
+		updateClearButton(clearButton, file, currentPersistedUrl);
+		updateNameLabel(nameLabel, file, currentPersistedUrl, persistedLabel);
+		updatePreview(file);
+	};
 
-		if (clearButton) {
-			clearButton.hidden = !file && !currentPersistedUrl;
+	function updateClearButton(clearButtonEl, file, persistedUrl) {
+		if (!clearButtonEl) return;
+		clearButtonEl.hidden = !file && !persistedUrl;
+	}
+
+	function updateNameLabel(nameLabelEl, file, persistedUrl, label) {
+		if (!nameLabelEl) return;
+		if (file) {
+			nameLabelEl.textContent = `Selected: ${file.name}`;
+			return;
 		}
-
-		if (nameLabel) {
-			if (file) {
-				nameLabel.textContent = `Selected: ${file.name}`;
-			} else if (currentPersistedUrl && persistedLabel) {
-				nameLabel.textContent = persistedLabel;
-			} else {
-				nameLabel.textContent = '';
-			}
+		if (persistedUrl && label) {
+			nameLabelEl.textContent = label;
+			return;
 		}
+		nameLabelEl.textContent = '';
+	}
 
+	function updatePreview(file) {
 		if (!previewContainer || !previewImage) {
 			revokeObjectPreview();
 			return;
@@ -96,7 +105,7 @@ export function setupImagePicker({
 
 		previewImage.removeAttribute('src');
 		previewContainer.hidden = true;
-	};
+	}
 
 	const onInputChange = () => {
 		const file = getFile();

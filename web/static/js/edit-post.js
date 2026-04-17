@@ -45,6 +45,7 @@ function redirectTo(path) {
 	}, REDIRECT_DELAY_MS);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: page bootstrap intentionally performs the full edit form setup inline.
 document.addEventListener('DOMContentLoaded', async () => {
 	const form = document.getElementById('edit-post-form');
 	const titleInput = document.getElementById('title');
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	let isSubmitting = false;
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: edit submission needs to validate, patch, and redirect in one flow.
 	form.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		if (isSubmitting) return;

@@ -125,60 +125,65 @@ function renderDropdown(notifications) {
 		markAllBtn.style.display = 'none';
 	}
 
-	notifications.forEach((n) => {
+	notifications.forEach((notification) => {
 		const div = document.createElement('div');
 		div.className = 'notification-item';
 
-		if (!n.is_read) div.classList.add('unread');
+		if (!notification.is_read) div.classList.add('unread');
 
-		div.innerHTML = buildMessage(n);
-
-		div.addEventListener('click', async () => {
-			if (!n.is_read) {
-				await markOneAsRead(n.id);
-
-				div.classList.remove('unread');
-
-				const badge = document.getElementById('notification-badge');
-
-				if (badge && badge.textContent !== '') {
-					let count = Number(badge.textContent) || 0;
-					count = Math.max(count - 1, 0);
-					updateBadge(count);
-				}
-			}
-
-			if (n.post_id) {
-				if (n.type === 'comment') {
-					window.location.href = `/view-post/${n.post_id}?highlight=last`;
-					return;
-				}
-
-				if (n.comment_id) {
-					window.location.href = `/view-post/${n.post_id}?highlight=${n.comment_id}`;
-					return;
-				}
-
-				window.location.href = `/view-post/${n.post_id}`;
-			}
+		div.innerHTML = buildMessage(notification);
+		div.addEventListener('click', () => {
+			void handleNotificationClick(notification, div);
 		});
 
 		dropdown.appendChild(div);
 	});
 
 	if (markAllBtn) {
-		markAllBtn.addEventListener('click', async (e) => {
-			e.stopPropagation();
-
-			await markAllAsRead();
-
-			document.querySelectorAll('.notification-item.unread').forEach((el) => {
-				el.classList.remove('unread');
-			});
-
-			updateBadge(0);
+		markAllBtn.addEventListener('click', (e) => {
+			void handleMarkAllReadClick(e);
 		});
 	}
+}
+
+async function handleNotificationClick(notification, div) {
+	if (!notification.is_read) {
+		await markOneAsRead(notification.id);
+
+		div.classList.remove('unread');
+
+		const badge = document.getElementById('notification-badge');
+		if (badge && badge.textContent !== '') {
+			const count = Math.max((Number(badge.textContent) || 0) - 1, 0);
+			updateBadge(count);
+		}
+	}
+
+	if (!notification.post_id) return;
+
+	if (notification.type === 'comment') {
+		window.location.href = `/view-post/${notification.post_id}?highlight=last`;
+		return;
+	}
+
+	if (notification.comment_id) {
+		window.location.href = `/view-post/${notification.post_id}?highlight=${notification.comment_id}`;
+		return;
+	}
+
+	window.location.href = `/view-post/${notification.post_id}`;
+}
+
+async function handleMarkAllReadClick(e) {
+	e.stopPropagation();
+
+	await markAllAsRead();
+
+	document.querySelectorAll('.notification-item.unread').forEach((el) => {
+		el.classList.remove('unread');
+	});
+
+	updateBadge(0);
 }
 
 /* -------------------------

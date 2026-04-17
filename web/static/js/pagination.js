@@ -33,51 +33,49 @@ export function createPagination({ prevBtn, nextBtn, numbersEl, onPageChange, ma
 		numbersEl.appendChild(span);
 	}
 
-	function render() {
-		numbersEl.innerHTML = '';
+	function renderAllPages() {
+		for (let p = 1; p <= totalPages; p++) addPageButton(p);
+	}
 
-		// Prev/Next buttons state
-		prevBtn.disabled = currentPage <= 1;
-		nextBtn.disabled = currentPage >= totalPages;
-
-		// If few pages, show all
-		if (totalPages <= maxVisible) {
-			for (let p = 1; p <= totalPages; p++) addPageButton(p);
-			return;
-		}
-
-		// We want:
-		// 1 … [window] … totalPages
-		// window size ~ maxVisible (but we also show 1 and totalPages always)
-		const windowSize = Math.max(1, maxVisible - 2); // excluding first+last
+	function renderPagedWindow() {
+		const windowSize = Math.max(1, maxVisible - 2);
 		let start = currentPage - Math.floor(windowSize / 2);
 		let end = start + windowSize - 1;
 
-		// Clamp window into [2, totalPages-1]
 		if (start < 2) {
 			start = 2;
 			end = start + windowSize - 1;
 		}
+
 		if (end > totalPages - 1) {
 			end = totalPages - 1;
 			start = end - windowSize + 1;
 			if (start < 2) start = 2;
 		}
 
-		// First page
 		addPageButton(1);
 
-		// Left ellipsis (if gap)
 		if (start > 2) addEllipsis();
 
-		// Window pages
 		for (let p = start; p <= end; p++) addPageButton(p);
 
-		// Right ellipsis (if gap)
 		if (end < totalPages - 1) addEllipsis();
 
-		// Last page
 		addPageButton(totalPages);
+	}
+
+	function render() {
+		numbersEl.innerHTML = '';
+
+		prevBtn.disabled = currentPage <= 1;
+		nextBtn.disabled = currentPage >= totalPages;
+
+		if (totalPages <= maxVisible) {
+			renderAllPages();
+			return;
+		}
+
+		renderPagedWindow();
 	}
 
 	return {
