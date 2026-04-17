@@ -27,7 +27,6 @@ func NewRouter(database *sql.DB) http.Handler {
 	  MIDDLEWARE
 	------------*/
 	auth := middleware.Auth(database)
-	optionalAuth := middleware.OptionalAuth(database)
 
 	frontendOrigin := os.Getenv("FRONTEND_URL")
 	if frontendOrigin == "" {
@@ -45,13 +44,13 @@ func NewRouter(database *sql.DB) http.Handler {
 		),
 	)
 
-	/*---------------------
-	  CATEGORIES (PUBLIC)
-	---------------------*/
+	/*-----------------------
+	  CATEGORIES (AUTH ONLY)
+	-----------------------*/
 	mux.Handle(
 		apiPrefix+"/categories",
 		middleware.AllowMethods(
-			http.HandlerFunc(categories.HandleCategories),
+			auth(http.HandlerFunc(categories.HandleCategories)),
 			http.MethodGet,
 		),
 	)
@@ -59,7 +58,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.Handle(
 		apiPrefix+"/categories/",
 		middleware.AllowMethods(
-			http.HandlerFunc(categories.HandleCategory),
+			auth(http.HandlerFunc(categories.HandleCategory)),
 			http.MethodGet,
 		),
 	)
@@ -67,7 +66,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.Handle(
 		apiPrefix+"/categories/view",
 		middleware.AllowMethods(
-			http.HandlerFunc(categories.ListCategoriesWithPosts),
+			auth(http.HandlerFunc(categories.ListCategoriesWithPosts)),
 			http.MethodGet,
 		),
 	)
@@ -99,7 +98,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			optionalAuth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
+			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 		case http.MethodPost:
 			auth(http.HandlerFunc(posts.HandlePosts)).ServeHTTP(w, r)
 		default:
@@ -113,7 +112,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/posts/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			optionalAuth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
+			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
 		case http.MethodPost, http.MethodPatch, http.MethodDelete:
 			auth(http.HandlerFunc(posts.HandlePost)).ServeHTTP(w, r)
 		default:
@@ -243,7 +242,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux.HandleFunc(apiPrefix+"/comments/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			optionalAuth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
+			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
 		case http.MethodPost, http.MethodPatch, http.MethodDelete:
 			auth(http.HandlerFunc(posts.HandleComment)).ServeHTTP(w, r)
 		default:

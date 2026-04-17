@@ -46,7 +46,7 @@ func TestAPIPostDelete_Success(t *testing.T) {
 	}
 
 	// Post should be gone meaning GET should 404
-	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), nil)
+	w, body := doRequestWithToken(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), token, nil)
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 after delete, got %d body=%s", w.Code, string(body))
 	}
@@ -92,5 +92,5 @@ func TestAPIPostDelete_OnlyAuthorCanDelete(t *testing.T) {
 	}
 
 	// Post must still exist
-	_ = getPost(t, h, postID)
+	_ = getPost(t, h, tokenA, postID)
 }

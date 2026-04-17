@@ -21,7 +21,7 @@ func TestAPIPostsCreate_TextOnly_NoImageURL(t *testing.T) {
 		"category_ids": []int64{1},
 	})
 
-	post := getPost(t, h, postID)
+	post := getPost(t, h, token, postID)
 	if v, ok := post["image_url"]; ok && v != nil {
 		t.Fatalf("expected image_url to be nil/absent for text-only post, got %v", v)
 	}
@@ -80,7 +80,7 @@ func TestAPIPostsCreate_MultipartImageOnly_SupportedTypes(t *testing.T) {
 				t.Fatalf("missing id in create response: %v", post)
 			}
 			postID := int64(rawID.(float64))
-			got := getPost(t, h, postID)
+			got := getPost(t, h, token, postID)
 
 			if got["body"] != "" {
 				t.Fatalf("expected empty body for image-only post, got %v", got["body"])
@@ -238,7 +238,7 @@ func TestAPIPostsImageURLVisibleInPublicMyAndLikedLists(t *testing.T) {
 		return posts
 	}
 
-	homePosts := checkList("/api/v1/posts?page=1&per_page=50", false)
+	homePosts := checkList("/api/v1/posts?page=1&per_page=50", true)
 	imageHome, ok := findPostByID(homePosts, imageID)
 	if !ok {
 		t.Fatalf("image post %d not found in home list", imageID)
@@ -423,6 +423,7 @@ func TestAPICommentsCreate_MultipartImage_IncludedInCommentPayloads(t *testing.T
 	}
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/posts/%d/comments", postID), nil)
+	req.Header.Set("Cookie", "session_token="+token)
 	recList := httptest.NewRecorder()
 	h.ServeHTTP(recList, req)
 	if recList.Code != http.StatusOK {

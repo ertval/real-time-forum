@@ -21,7 +21,7 @@ func TestAPIPostsCreate(t *testing.T) {
 		"category_ids": []int64{1},
 	})
 
-	post := getPost(t, h, postID)
+	post := getPost(t, h, token, postID)
 
 	if post["title"] != "API Test Post" {
 		t.Fatalf("expected title %q, got %v", "API Test Post", post["title"])

@@ -35,7 +35,7 @@ func TestAPIPostUpdate_OnlyAuthorCanUpdate(t *testing.T) {
 	}
 
 	// Verify post did not change
-	post := getPost(t, h, postID)
+	post := getPost(t, h, tokenA, postID)
 	if post["title"] != "Author Title" {
 		t.Fatalf("expected title unchanged, got %v", post["title"])
 	}
@@ -97,7 +97,7 @@ func TestAPIPostUpdate_Content(t *testing.T) {
 				t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 			}
 
-			post := getPost(t, h, postID)
+			post := getPost(t, h, token, postID)
 			if post["title"] != tc.wantTitle {
 				t.Fatalf("expected title %q, got %v", tc.wantTitle, post["title"])
 			}
@@ -136,7 +136,7 @@ func TestAPIPostUpdate_Validation(t *testing.T) {
 			}
 
 			// Ensure unchanged for all invalid update attempts.
-			post := getPost(t, h, postID)
+			post := getPost(t, h, token, postID)
 			if post["title"] != "Valid Title" || post["body"] != "Valid Body" {
 				t.Fatalf("post should be unchanged, got %v", post)
 			}
@@ -191,7 +191,7 @@ func TestAPIPostUpdate_UpdatedAtIsSet(t *testing.T) {
 	})
 
 	// Fetch post before update
-	postBefore := getPost(t, h, postID)
+	postBefore := getPost(t, h, token, postID)
 
 	updatedAtBeforeAny, ok := postBefore["updated_at"]
 	if !ok {
@@ -214,7 +214,7 @@ func TestAPIPostUpdate_UpdatedAtIsSet(t *testing.T) {
 	}
 
 	// Fetch post after update
-	postAfter := getPost(t, h, postID)
+	postAfter := getPost(t, h, token, postID)
 
 	updatedAtAfterAny, ok := postAfter["updated_at"]
 	if !ok {
@@ -264,7 +264,7 @@ func TestAPIPostUpdate_MultipartImageAndCategories(t *testing.T) {
 		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
-	post := getPost(t, h, postID)
+	post := getPost(t, h, token, postID)
 	if got := post["title"]; got != "Updated title" {
 		t.Fatalf("expected updated title, got %v", got)
 	}
@@ -321,7 +321,7 @@ func TestAPIPostUpdate_RemoveImage(t *testing.T) {
 		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
-	post := getPost(t, h, postID)
+	post := getPost(t, h, token, postID)
 	if got := post["image_url"]; got != nil {
 		t.Fatalf("expected image_url to be nil after remove_image update, got %v", got)
 	}
@@ -381,7 +381,7 @@ func TestAPIPostUpdate_RemoveImageAndUploadRejected(t *testing.T) {
 		t.Fatalf("unexpected error message: %q", apiErr.Message)
 	}
 
-	post := getPost(t, h, postID)
+	post := getPost(t, h, token, postID)
 	if got := post["image_url"]; got != oldImageURL {
 		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
 	}
@@ -432,7 +432,7 @@ func TestAPIPostUpdate_RemoveImageAndImageURLRejected(t *testing.T) {
 		t.Fatalf("unexpected error message: %q", apiErr.Message)
 	}
 
-	post := getPost(t, h, postID)
+	post := getPost(t, h, token, postID)
 	if got := post["image_url"]; got != oldImageURL {
 		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
 	}

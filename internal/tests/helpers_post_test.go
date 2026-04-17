@@ -37,10 +37,16 @@ func patchPost(t *testing.T, h http.Handler, token string, postID int64, payload
 	return rec
 }
 
-func getPost(t *testing.T, h http.Handler, postID int64) map[string]any {
+func getPost(t *testing.T, h http.Handler, token string, postID int64) map[string]any {
 	t.Helper()
 
-	w, body := doRequest(t, h, http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/posts/%d", postID), nil)
+	req.Header.Set("Cookie", "session_token="+token)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	body := rec.Body.Bytes()
+
+	w := rec
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w.Code, string(body))
 	}
