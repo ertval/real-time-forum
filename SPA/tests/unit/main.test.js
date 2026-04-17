@@ -170,7 +170,7 @@ function createMockBrowser(initialPath = '/') {
 	};
 }
 
-describe('SPA routing for A03', () => {
+describe('SPA routing for A03/A04', () => {
 	test('normalizes and matches required routes', () => {
 		expect(normalizePathname('')).toBe('/');
 		expect(normalizePathname('/view-post/42')).toBe('/post/42');
@@ -266,5 +266,59 @@ describe('SPA routing for A03', () => {
 			await app.boot();
 			expect(browser.mainContent.innerHTML).toContain(testCase.expected);
 		}
+	});
+
+	test('authenticated routes render inside a shared shell with reserved chat regions', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).toContain('aria-label="Forum navigation"');
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-roster');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-active');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="feed"');
+	});
+
+	test('navigation and logout stay visible across protected route changes', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+		app.navigate('/create-post');
+		app.navigate('/activity');
+
+		expect(browser.mainContent.innerHTML).toContain('data-screen="activity"');
+		expect(browser.mainContent.innerHTML).toContain('aria-label="Forum navigation"');
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-roster');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-active');
+	});
+
+	test('public routes render outside authenticated shell', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+
+		browser.clickLink('/register');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
 	});
 });
