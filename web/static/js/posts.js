@@ -274,96 +274,154 @@ function maybeRenderCommentForm(container, postId) {
 		});
 	});
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: comment submission keeps validation, upload, and highlight logic together.
-	form.addEventListener('submit', async () => {
-		if (isSubmitting) return;
-		isSubmitting = true;
-		if (submitButton instanceof HTMLButtonElement) {
-			submitButton.disabled = true;
-		}
-
-		try {
-			const allowed = await Auth.requireOrPrompt();
-			if (!allowed) return;
-
-			const body = textarea.value.trim();
-			const imageFile = imagePicker?.getFile() || imageInput?.files?.[0] || null;
-			const hasImage = !!imageFile;
-
-			if (!body && !hasImage) {
-				uiNotify('Cannot submit an empty comment.', { type: 'warn' });
-				return;
-			}
-
-			const res = await fetch(
-				`${API_BASE}/posts/${postId}/comments`,
-				buildImageRequestOptions({
-					method: 'POST',
-					imageFile,
-					buildMultipartBody: (file) => {
-						const formData = new FormData();
-						formData.append('body', body);
-						formData.append('image', file);
-						return formData;
-					},
-					jsonBody: { body },
-					multipartHeaders: { Accept: 'application/json' },
-					jsonHeaders: { Accept: 'application/json' },
-				}),
-			);
-
-			if (!res.ok) {
-				const payload = await res.json().catch(() => null);
-				const message = payload?.error?.message || 'Failed to submit comment.';
-				uiNotify(message, {
-					type: res.status >= 500 ? 'danger' : 'warn',
-				});
-				return;
-			}
-
-			const payload = await res.json();
-			const newComment = payload.data ?? payload;
-
-			textarea.value = '';
-			if (imagePicker) {
-				imagePicker.clearSelectedFile();
-			} else if (imageInput) {
-				imageInput.value = '';
-			}
-
-			playUpload();
-
-			const list = container.querySelector('.comments-scroll');
-			list?.appendChild(renderComment(newComment));
-			list.scrollTop = list.scrollHeight;
-
-			/* highlight newly added comment */
-			const newEl = document.getElementById(`comment-${newComment.id}`);
-			if (newEl) {
-				newEl.classList.add('highlight-comment');
-
-				// fade-out starts after 1s
-				setTimeout(() => {
-					newEl.classList.add('fade-out');
-
-					// remove highlight classes once fade-out finishes (~1.2s)
-					setTimeout(() => {
-						newEl.classList.remove('highlight-comment', 'fade-out');
-					}, 1200);
-				}, 1000);
-			}
-		} catch (err) {
-			console.error('Failed to submit comment:', err);
-			uiNotify('Failed to submit comment.', { type: 'danger' });
-		} finally {
-			isSubmitting = false;
-			if (submitButton instanceof HTMLButtonElement) {
-				submitButton.disabled = false;
-			}
-		}
+	form.addEventListener('submit', (e) => {
+		e.preventDefault();
+		void handleCommentSubmit({
+			postId,
+			container,
+			textarea,
+			imagePicker,
+			imageInput,
+			submitButton,
+			state: {
+				get value() {
+					return isSubmitting;
+				},
+				set value(nextValue) {
+					isSubmitting = nextValue;
+				},
+			},
+		});
 	});
 
 	container.appendChild(form);
+}
+
+async function handleCommentSubmit({
+	postId,
+	container,
+	textarea,
+	imagePicker,
+	imageInput,
+	submitButton,
+	state,
+}) {
+	if (state.value) return;
+	state.value = true;
+	if (submitButton instanceof HTMLButtonElement) {
+		submitButton.disabled = true;
+	}
+
+	try {
+		const allowed = await Auth.requireOrPrompt();
+		if (!allowed) return;
+
+		const submission = getCommentSubmission(textarea, imagePicker, imageInput);
+		const error = getCommentSubmissionError(submission);
+		if (error) {
+			uiNotify(error, { type: 'warn' });
+			return;
+		}
+
+		const res = await submitComment(postId, submission.body, submission.imageFile);
+		if (!res.ok) {
+			await handleCommentSubmitFailure(res);
+			return;
+		}
+
+		const newComment = await parseCommentResponse(res);
+		clearCommentForm(textarea, imagePicker, imageInput);
+		playUpload();
+		appendSubmittedComment(container, newComment);
+	} catch (err) {
+		console.error('Failed to submit comment:', err);
+		uiNotify('Failed to submit comment.', { type: 'danger' });
+	} finally {
+		state.value = false;
+		if (submitButton instanceof HTMLButtonElement) {
+			submitButton.disabled = false;
+		}
+	}
+}
+
+function getCommentSubmission(textarea, imagePicker, imageInput) {
+	const body = textarea.value.trim();
+	const imageFile = imagePicker?.getFile() || imageInput?.files?.[0] || null;
+
+	return {
+		body,
+		imageFile,
+		hasImage: !!imageFile,
+	};
+}
+
+function getCommentSubmissionError({ body, hasImage }) {
+	if (!body && !hasImage) return 'Cannot submit an empty comment.';
+	return '';
+}
+
+async function submitComment(postId, body, imageFile) {
+	return fetch(
+		`${API_BASE}/posts/${postId}/comments`,
+		buildImageRequestOptions({
+			method: 'POST',
+			imageFile,
+			buildMultipartBody: (file) => {
+				const formData = new FormData();
+				formData.append('body', body);
+				formData.append('image', file);
+				return formData;
+			},
+			jsonBody: { body },
+			multipartHeaders: { Accept: 'application/json' },
+			jsonHeaders: { Accept: 'application/json' },
+		}),
+	);
+}
+
+async function handleCommentSubmitFailure(res) {
+	const payload = await res.json().catch(() => null);
+	const message = payload?.error?.message || 'Failed to submit comment.';
+	uiNotify(message, {
+		type: res.status >= 500 ? 'danger' : 'warn',
+	});
+}
+
+async function parseCommentResponse(res) {
+	const payload = await res.json();
+	return payload.data ?? payload;
+}
+
+function clearCommentForm(textarea, imagePicker, imageInput) {
+	textarea.value = '';
+	if (imagePicker) {
+		imagePicker.clearSelectedFile();
+	} else if (imageInput) {
+		imageInput.value = '';
+	}
+}
+
+function appendSubmittedComment(container, newComment) {
+	const list = container.querySelector('.comments-scroll');
+	if (list) {
+		list.appendChild(renderComment(newComment));
+		list.scrollTop = list.scrollHeight;
+	}
+
+	highlightSubmittedComment(newComment.id);
+}
+
+function highlightSubmittedComment(commentId) {
+	const newEl = document.getElementById(`comment-${commentId}`);
+	if (!newEl) return;
+
+	newEl.classList.add('highlight-comment');
+	setTimeout(() => {
+		newEl.classList.add('fade-out');
+		setTimeout(() => {
+			newEl.classList.remove('highlight-comment', 'fade-out');
+		}, 1200);
+	}, 1000);
 }
 
 /*--------------------
@@ -418,9 +476,7 @@ export function reactionTemplate(item, isComment = false) {
   `;
 }
 
-/*---------
-  HELPERS
----------*/
+/*--------- HELPERS ---------*/
 
 function extractArray(payload) {
 	if (Array.isArray(payload)) return payload;
@@ -536,24 +592,38 @@ function syncImageTransparencyPresentation({
 } = {}) {
 	if (!(imgEl instanceof HTMLImageElement)) return;
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: image transparency sync needs to coordinate multiple DOM branches.
-	const sync = async () => {
-		const src = imgEl.currentSrc || imgEl.src;
-		if (!src) return;
-		const hasTransparency = await isTransparentPng(imgEl, src);
-		if ((imgEl.currentSrc || imgEl.src) !== src) return;
-
-		imgEl.dataset.transparent = hasTransparency ? 'true' : 'false';
-		if (frameEl instanceof Element && checkerboardClass) {
-			frameEl.classList.toggle(checkerboardClass, hasTransparency);
-		}
-		if (ambientEl instanceof HTMLElement) {
-			ambientEl.style.backgroundImage = hasTransparency ? '' : `url("${src}")`;
-		}
+	const sync = () => {
+		void updateImageTransparencyPresentation({
+			imgEl,
+			frameEl,
+			checkerboardClass,
+			ambientEl,
+		});
 	};
 
 	sync();
 	imgEl.addEventListener('load', sync);
+}
+
+async function updateImageTransparencyPresentation({
+	imgEl,
+	frameEl = null,
+	checkerboardClass = '',
+	ambientEl = null,
+} = {}) {
+	const src = imgEl.currentSrc || imgEl.src;
+	if (!src) return;
+
+	const hasTransparency = await isTransparentPng(imgEl, src);
+	if ((imgEl.currentSrc || imgEl.src) !== src) return;
+
+	imgEl.dataset.transparent = hasTransparency ? 'true' : 'false';
+	if (frameEl instanceof Element && checkerboardClass) {
+		frameEl.classList.toggle(checkerboardClass, hasTransparency);
+	}
+	if (ambientEl instanceof HTMLElement) {
+		ambientEl.style.backgroundImage = hasTransparency ? '' : `url("${src}")`;
+	}
 }
 
 function isPngSource(src) {
