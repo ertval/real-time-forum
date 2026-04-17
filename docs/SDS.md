@@ -57,7 +57,10 @@ SPA/                 → Single Page Application Shell (Vanilla JS ES2026+)
   core/              → State, Router, and API Logic
   components/        → Shared UI Elements
   features/        → Domain Slices (each with its {feature}.views.js)
-  tests/           → Vitest Unit & Integration Tests
+  tests/           → Vitest shared test suite
+    unit/          → Isolated logic tests
+    integration/   → Feature and interaction tests
+    e2e/           → User journey tests
 data/                → SQLite database file
 docs/                → Project documentation (PRD, SDS, tickets)
 ```
@@ -431,7 +434,7 @@ On `dm.send`:
   - `SPA/main.js`: The main JavaScript bootstrap file.
 - Bun is the required runtime and package manager for frontend dev tools.
 - Biome handles all linting, formatting, and static testing checks.
-- Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests.
+- Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests, with all files residing in `SPA/tests/`.
 
 ## 7.1 SPA Routes
 
@@ -524,11 +527,11 @@ On application load:
 
 ### 10.2.1 Test Categories (Vitest framework)
 
-| Category | Description |
-| :--- | :--- |
-| **Unit** | Isolated component and helper logic tests. |
-| **Integration** | Feature-level interaction tests (e.g., Auth + Feed). |
-| **E2E** | Multi-step user journey verification. |
+| Category | Description | Location |
+| :--- | :--- | :--- |
+| **Unit** | Isolated component and helper logic tests. | `SPA/tests/unit/` |
+| **Integration** | Feature-level interaction tests (e.g., Auth + Feed). | `SPA/tests/integration/` |
+| **E2E** | Multi-step user journey verification. | `SPA/tests/e2e/` |
 
 ## 10.3 Regression Coverage
 

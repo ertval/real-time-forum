@@ -50,7 +50,7 @@ Blocks: A10, D09
 Work:
 - define and set up the new folder structure for the SPA in the `SPA/` directory
 - implement a file organization that follows modern, scalable 2026 patterns (e.g. Screaming Architecture or Vertical Sliced Architecture)
-- ensure the layout accommodates components, pages/features, core logic, router, and assets separately
+- ensure the layout accommodates components, pages/features, core logic, router, assets, and consolidated tests in `SPA/tests/` separately
 - write or update architecture documentation such as `docs/SDS.md` to reflect the new structure clearly
 - optimally point the Go server to the new SPA entry point without functionally breaking existing frontend behavior
 
