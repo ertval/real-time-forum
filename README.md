@@ -87,9 +87,18 @@ internal/
 web/
   static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
   templates/         → HTML templates (legacy)
-  SPA/               → Single Page Application entrypoint
-    index.html       → SPA shell
-    js/              → Modern frontend modules (core, components, features)
+  SPA/               → Single Page Application
+    index.html       → SPA Shell Entrypoint
+    css/             → Global styles & design tokens
+    js/              → Application Logic (Vanilla JS ES2026+)
+      core/          → Router, API client, Global State
+      components/    → Shared reusable UI elements
+      features/      → Vertical domain slices (Screaming Architecture)
+        auth/        → Login/Register logic and views
+        feed/        → Post listing and interactions
+        chat/        → Real-time messaging and roster
+        post/        → Post creation and detail view
+      utils/         → Shared helper functions
 data/                → SQLite database file
 docs/                → Project documentation (PRD, SDS, tickets)
 ```
