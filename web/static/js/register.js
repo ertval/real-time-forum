@@ -31,6 +31,22 @@ import { uiNotify } from './ui-messages.js';
 		}
 	}
 
+	function getRegistrationError(username, email, password, confirm) {
+		if (!username || !email || !password || !confirm) {
+			return 'All fields are required.';
+		}
+
+		if (password.length < 8) {
+			return 'Password must be at least 8 characters long.';
+		}
+
+		if (password !== confirm) {
+			return 'Passwords do not match.';
+		}
+
+		return '';
+	}
+
 	form.addEventListener('submit', async (e) => {
 		e.preventDefault();
 
@@ -39,18 +55,9 @@ import { uiNotify } from './ui-messages.js';
 		const password = passwordEl.value;
 		const confirm = confirmEl.value;
 
-		if (!username || !email || !password || !confirm) {
-			notify('All fields are required.', 'warn');
-			return;
-		}
-
-		if (password.length < 8) {
-			notify('Password must be at least 8 characters long.', 'warn');
-			return;
-		}
-
-		if (password !== confirm) {
-			notify('Passwords do not match.', 'warn');
+		const error = getRegistrationError(username, email, password, confirm);
+		if (error) {
+			notify(error, 'warn');
 			return;
 		}
 

@@ -186,7 +186,48 @@ function renderCommentsSection(section) {
 function mapActivityCommentPostToCard(comment) {
 	const post = comment?.post ?? {};
 	const categories = normalizePostCategories(post, comment);
-	const postReaction = Number(
+
+	return {
+		id: getPostID(comment, post),
+		author_id: getPostNumber(post.author_id),
+		author: getPostString(post.author),
+		title: getPostTitle(post),
+		body: getPostString(post.body),
+		image_url: getPostString(post.image_url),
+		created_at: getPostCreatedAt(post, comment),
+		categories,
+		likes: getPostNumber(post.likes ?? post.likes_count),
+		dislikes: getPostNumber(post.dislikes ?? post.dislikes_count),
+		my_reaction: getPostReaction(post, comment),
+	};
+}
+
+function getPostID(comment, post) {
+	return Number(comment?.post_id ?? post.id) || 0;
+}
+
+function getPostNumber(value) {
+	return Number(value) || 0;
+}
+
+function getPostString(value) {
+	return typeof value === 'string' ? value : '';
+}
+
+function getPostTitle(post) {
+	return typeof post.title === 'string' && post.title.trim() ? post.title : 'Untitled';
+}
+
+function getPostCreatedAt(post, comment) {
+	if (typeof post.created_at === 'string' && post.created_at.trim()) {
+		return post.created_at;
+	}
+
+	return comment?.created_at;
+}
+
+function getPostReaction(post, comment) {
+	const reaction = Number(
 		post?.my_reaction ??
 			post?.myReaction ??
 			comment?.post_my_reaction ??
@@ -194,25 +235,7 @@ function mapActivityCommentPostToCard(comment) {
 			0,
 	);
 
-	const postID = Number(comment?.post_id ?? post.id) || 0;
-	const createdAt =
-		typeof post.created_at === 'string' && post.created_at.trim()
-			? post.created_at
-			: comment?.created_at;
-
-	return {
-		id: postID,
-		author_id: Number(post.author_id) || 0,
-		author: typeof post.author === 'string' ? post.author : '',
-		title: typeof post.title === 'string' && post.title.trim() ? post.title : 'Untitled',
-		body: typeof post.body === 'string' ? post.body : '',
-		image_url: typeof post.image_url === 'string' ? post.image_url : '',
-		created_at: createdAt,
-		categories,
-		likes: Number(post.likes ?? post.likes_count) || 0,
-		dislikes: Number(post.dislikes ?? post.dislikes_count) || 0,
-		my_reaction: Number.isFinite(postReaction) ? postReaction : 0,
-	};
+	return Number.isFinite(reaction) ? reaction : 0;
 }
 
 function normalizePostCategories(post, comment) {

@@ -46,6 +46,7 @@ function scheduleDraftSave() {
 	draftTimer = setTimeout(saveDraft, 1000);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy autosave flow is intentionally centralized.
 async function saveDraft() {
 	if (!autosaveEnabled) return;
 	if (draftSaveInFlight) {
@@ -228,6 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	window.addEventListener('beforeunload', saveDraft);
 	window.addEventListener('pagehide', saveDraft);
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: submission flow intentionally handles draft and publish branches inline.
 	form.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		if (isSubmitting) return;

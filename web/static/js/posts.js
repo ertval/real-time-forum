@@ -274,6 +274,7 @@ function maybeRenderCommentForm(container, postId) {
 		});
 	});
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: comment submission keeps validation, upload, and highlight logic together.
 	form.addEventListener('submit', async () => {
 		if (isSubmitting) return;
 		isSubmitting = true;
@@ -535,6 +536,7 @@ function syncImageTransparencyPresentation({
 } = {}) {
 	if (!(imgEl instanceof HTMLImageElement)) return;
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: image transparency sync needs to coordinate multiple DOM branches.
 	const sync = async () => {
 		const src = imgEl.currentSrc || imgEl.src;
 		if (!src) return;
