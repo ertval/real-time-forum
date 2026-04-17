@@ -21,23 +21,31 @@ This is a **real-time forum** — a Go-based single-page application with authen
 
 ```
 cmd/
-  backend/       → backend server entrypoint (port 8080)
-  frontend/      → frontend server entrypoint (port 3000)
+  backend/           → backend server entrypoint (port 8080)
+  frontend/          → frontend server entrypoint (port 3000) — serves SPA + proxies API/WS
 internal/
-  auth/          → OAuth helpers (retained, not required for audit)
-  db/            → persistence layer (SQLite, repository functions)
-  env/           → environment configuration
-  handlers/      → HTTP handlers (REST API under /api/v1)
-  middleware/    → request middleware (auth, logging, CORS, recovery)
-  router/        → route registration
-  tests/         → backend integration tests
+  auth/              → OAuth helpers (retained, not required for audit)
+  db/                → persistence layer (SQLite, repository functions, schema)
+  env/               → environment configuration
+  handlers/          → HTTP handlers (REST API under /api/v1)
+  middleware/        → request middleware (auth, logging, CORS, recovery)
+  router/            → route registration
+  tests/             → backend integration tests
+SPA/                 → Single Page Application (Vanilla JS ES2026+)
+  index.html         → SPA Entrypoint
+  main.js            → Bootstrap Application Logic
+  assets/            → Global CSS & Static Images
+  core/              → State, Router, and API Logic
+  components/        → Shared UI Elements
+  features/          → Domain Slices (each with its {feature}.views.js)
+  tests/             → Vitest Unit & Integration Tests
 web/
-  static/        → CSS, JS, images, sounds, uploads
-  templates/     → HTML templates (being replaced by SPA shell)
-  errors/        → error page templates
-  startupcheck/  → startup validation
-data/            → SQLite database file location
-docs/            → project documentation
+  static/            → CSS, JS, images, sounds, uploads (legacy)
+  templates/         → HTML templates (legacy — replaced by SPA)
+  errors/            → error page templates
+  startupcheck/      → startup validation
+data/                → SQLite database file location
+docs/                → project documentation
 ```
 
 ### Topology
