@@ -78,7 +78,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 8 | [x] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
 | 9 | [x] | **A05** | A | Authenticated-Only Forum Access ([PR](pr-message/A05-Authenticated-Only-Forum-Access-pr.md)) | A03 | A06, B01, B04, B05, D04, C08 |
 | 10 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
-| 11 | [ ] | **A06** | A | Global Logout Across the Forum | A04, A05 | D05 |
+| 11 | [x] | **A06** | A | Global Logout Across the Forum ([PR](pr-message/A06-Global-Logout-Across-the-Forum-pr.md)) | A04, A05 | D05 |
 | 12 | [ ] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
 | 13 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
 | 14 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
