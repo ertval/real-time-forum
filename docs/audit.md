@@ -1,6 +1,6 @@
 #### Functional
 
-###### Has the requirement for the allowed packages been respected? (Check the [allowed packages](../README.md))
+###### Has the requirement for the allowed packages been respected? (Check the [allowed packages](requirements.md))
 
 ##### In order to use the new and upgraded forum, users will have to register and login.
 
