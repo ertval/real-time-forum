@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `5`
+- Done: `6`
 - Partially Implemented: `0`
-- Not Started: `32`
+- Not Started: `31`
 
 ---
 
@@ -76,7 +76,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 |---|--------|--------|-------|-------------|------------|--------|
 | 7 | [ ] | **C11** | C | Registration API Contract | C10 | C08 |
 | 8 | [x] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
-| 9 | [ ] | **A05** | A | Authenticated-Only Forum Access | A03 | A06, B01, B04, B05, D04, C08 |
+| 9 | [x] | **A05** | A | Authenticated-Only Forum Access ([PR](pr-message/A05-Authenticated-Only-Forum-Access-pr.md)) | A03 | A06, B01, B04, B05, D04, C08 |
 | 10 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
 | 11 | [ ] | **A06** | A | Global Logout Across the Forum | A04, A05 | D05 |
 | 12 | [ ] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
