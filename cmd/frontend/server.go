@@ -8,12 +8,14 @@ import (
 type CustomFileServer struct {
 	handler  http.Handler
 	notFound string
+	fs       http.FileSystem
 }
 
 func NewCustomFileServer(fs http.FileSystem, notFoundPage string) http.Handler {
 	return &CustomFileServer{
 		handler:  http.FileServer(fs),
 		notFound: notFoundPage,
+		fs:       fs,
 	}
 }
 
@@ -21,9 +23,8 @@ func (c *CustomFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// For SPA, we want to serve index.html for any path that doesn't 
 	// correspond to an actual file (like /login, /activity, etc.)
 	
-	// Check if the path exists in the SPA directory
-	fs := http.Dir("./SPA")
-	f, err := fs.Open(r.URL.Path)
+	// Check if the path exists in the configured SPA filesystem.
+	f, err := c.fs.Open(r.URL.Path)
 	if err == nil {
 		defer f.Close()
 		stat, err := f.Stat()

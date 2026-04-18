@@ -1,90 +1,664 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-test.describe('Ticket-Based E2E Verification', () => {
-  
-  test('A10: Single SPA Shell Entry - Direct access to sub-routes', async ({ page }) => {
-    // Accessing a sub-route directly should load the SPA and render the correct screen
-    page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
-    page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
-    await page.goto('/login');
-    try {
-        await expect(page.locator('[data-screen="login"]')).toBeVisible({ timeout: 5000 });
-    } catch (e) {
-        console.log('Page content:', await page.content());
-        throw e;
-    }
-    
-    await page.goto('/register');
-    await expect(page.locator('[data-screen="register"]')).toBeVisible({ timeout: 10000 });
-  });
+const PASSWORD = 'password123';
+const BOX_TOLERANCE = 8;
 
-  test('A05: Auth Gating - Unauthenticated users redirected to login', async ({ page }) => {
-    // Accessing protected routes should redirect to login
-    const protectedRoutes = ['/activity', '/create-post'];
-    for (const route of protectedRoutes) {
-      await page.goto(route);
-      // Wait for the redirect to happen
-      await page.waitForURL(/\/login/, { timeout: 10000 });
-      await expect(page).toHaveURL(/\/login/);
-    }
-  });
+function createCredentials(prefix) {
+	const suffix = `${Date.now().toString(36)}${Math.floor(Math.random() * 1296)
+		.toString(36)
+		.padStart(2, '0')}`;
+	const maxPrefixLength = Math.max(3, 30 - suffix.length - 1);
+	const username = `${prefix.slice(0, maxPrefixLength)}_${suffix}`;
+	return {
+		username,
+		email: `${username}@example.com`,
+		password: PASSWORD,
+	};
+}
 
-  test('A03: Client Routing - Navigation without full reload', async ({ page }) => {
-    await page.goto('/login');
-    
-    // Clicking a link should change the URL and content without page reload
-    // We can check if the window object persists, but usually checking the speed and data-screen is enough
-    await page.click('a[href="/register"]');
-    await expect(page).toHaveURL(/\/register/);
-    await expect(page.locator('[data-screen="register"]')).toBeVisible();
-    
-    await page.goBack();
-    await expect(page).toHaveURL(/\/login/);
-    await expect(page.locator('[data-screen="login"]')).toBeVisible();
-  });
+function pathOf(url) {
+	return new URL(url).pathname;
+}
 
-  test('A04 & A06: Full Auth Journey - Registration, Login, Shell Persistence, and Logout', async ({ page }) => {
-    const timestamp = Date.now();
-    const username = `user_${timestamp}`;
-    const email = `${username}@example.com`;
+async function expectPathname(page, expectedPath) {
+	await expect.poll(() => pathOf(page.url())).toBe(expectedPath);
+}
 
-    // 1. Registration
-    await page.goto('/register');
-    await page.fill('input[name="username"]', username);
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', 'password123');
-    await page.fill('input[name="age"]', '25');
-    await page.selectOption('select[name="gender"]', 'male');
-    await page.fill('input[name="first_name"]', 'Test');
-    await page.fill('input[name="last_name"]', 'User');
-    await page.click('button[type="submit"]');
+async function ensureLoggedOut(page) {
+	await page.request.post('/api/v1/users/logout', {
+		failOnStatusCode: false,
+	});
+	await page.context().clearCookies();
+}
 
-    // Should redirect to login after registration or home if auto-logged in
-    // Real forum usually requires login after registration per SDS
-    await expect(page).toHaveURL(/\/(login)?$/);
+async function registerUser(page, credentials) {
+	const response = await page.request.post('/api/v1/users/register', {
+		data: {
+			username: credentials.username,
+			email: credentials.email,
+			password: credentials.password,
+		},
+		failOnStatusCode: false,
+	});
 
-    // 2. Login
-    if (page.url().includes('login')) {
-        await page.fill('input[name="username"]', username);
-        await page.fill('input[name="password"]', 'password123');
-        await page.click('button[type="submit"]');
-    }
+	expect(response.status()).toBe(201);
+	return response;
+}
 
-    // 3. Verify Authenticated Shell (A04)
-    await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('[data-auth-shell]')).toBeVisible();
-    await expect(page.locator('[data-action="logout"]')).toBeVisible();
-    await expect(page.locator('[aria-label="Forum navigation"]')).toBeVisible();
-    await expect(page.locator('[data-chat-roster]')).toBeVisible();
+async function loginUser(page, credentials) {
+	const response = await page.request.post('/api/v1/users/login', {
+		data: {
+			username: credentials.username,
+			password: credentials.password,
+		},
+		failOnStatusCode: false,
+	});
 
-    // 4. Persistence across navigation (A04)
-    await page.click('a[href="/activity"]');
-    await expect(page.locator('[data-screen="activity"]')).toBeVisible();
-    await expect(page.locator('[data-auth-shell]')).toBeVisible(); // Shell should still be there
+	expect(response.status()).toBe(200);
+	return response;
+}
 
-    // 5. Logout (A06)
-    await page.click('[data-action="logout"]');
-    await expect(page).toHaveURL(/\/login/);
-    await expect(page.locator('[data-auth-shell]')).not.toBeVisible();
-  });
+function startDiagnostics(page) {
+	const diagnostics = {
+		console: [],
+		pageErrors: [],
+		requestFailures: [],
+	};
+
+	page.on('console', (message) => {
+		if (message.type() === 'error' || message.type() === 'warning') {
+			diagnostics.console.push({
+				type: message.type(),
+				text: message.text(),
+			});
+		}
+	});
+
+	page.on('pageerror', (error) => {
+		diagnostics.pageErrors.push(String(error));
+	});
+
+	page.on('requestfailed', (request) => {
+		diagnostics.requestFailures.push({
+			url: request.url(),
+			method: request.method(),
+			errorText: request.failure()?.errorText ?? 'unknown',
+		});
+	});
+
+	return diagnostics;
+}
+
+async function attachDiagnostics(page, testInfo, label, diagnostics) {
+	await testInfo.attach(`${label}-diagnostics.json`, {
+		body: Buffer.from(
+			JSON.stringify(
+				{
+					url: page.url(),
+					diagnostics,
+				},
+				null,
+				2,
+			),
+		),
+		contentType: 'application/json',
+	});
+
+	await testInfo.attach(`${label}-dom.html`, {
+		body: Buffer.from(await page.content()),
+		contentType: 'text/html',
+	});
+
+	await testInfo.attach(`${label}-screenshot.png`, {
+		body: await page.screenshot({ fullPage: true }),
+		contentType: 'image/png',
+	});
+}
+
+async function runWithDiagnostics(page, testInfo, label, callback) {
+	const diagnostics = startDiagnostics(page);
+	try {
+		await callback(diagnostics);
+	} catch (error) {
+		await attachDiagnostics(page, testInfo, label, diagnostics);
+		throw error;
+	}
+}
+
+function expectStableBox(box, baseline, tolerance = BOX_TOLERANCE) {
+	expect(Math.abs(box.x - baseline.x)).toBeLessThanOrEqual(tolerance);
+	expect(Math.abs(box.y - baseline.y)).toBeLessThanOrEqual(tolerance);
+	expect(Math.abs(box.width - baseline.width)).toBeLessThanOrEqual(tolerance);
+	expect(Math.abs(box.height - baseline.height)).toBeLessThanOrEqual(tolerance);
+}
+
+test.describe('Ticket Manual E2E Verification', () => {
+	test.describe('A02', () => {
+		test('A02-01: root access serves application shell', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a02-root-access', async () => {
+				await ensureLoggedOut(page);
+
+				const response = await page.goto('/');
+				expect(response).not.toBeNull();
+				expect(response?.status()).toBe(200);
+				expect(response?.headers()['content-type'] ?? '').toContain('text/html');
+
+				await expect(page.locator('#app')).toBeVisible();
+				await expect(page.locator('#main-content')).toBeVisible();
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+				await expect(page).toHaveURL(/\/login$/);
+			});
+		});
+
+		test('A02-02: /spa/ serves SPA shell entry document', async ({ browser }, testInfo) => {
+			const context = await browser.newContext({ javaScriptEnabled: false });
+			const page = await context.newPage();
+			const diagnostics = startDiagnostics(page);
+
+			try {
+				const response = await page.goto('http://localhost:3000/spa/');
+				expect(response).not.toBeNull();
+				expect(response?.status()).toBe(200);
+				expect(response?.headers()['content-type'] ?? '').toContain('text/html');
+
+				await expect(page).toHaveURL(/\/spa\/?$/);
+				await expect(page).toHaveTitle(/Real-Time Forum/i);
+				await expect(page.locator('#app')).toBeVisible();
+				await expect(page.locator('#main-content')).toBeVisible();
+				await expect(page.locator('script[type="module"][src="/main.js"]')).toHaveCount(1);
+			} catch (error) {
+				await attachDiagnostics(page, testInfo, 'a02-spa-path', diagnostics);
+				throw error;
+			} finally {
+				await context.close();
+			}
+		});
+
+		test('A02-03: legacy /static assets remain accessible', async ({ request }) => {
+			const assets = [
+				{ path: '/static/css/base.css', expectedType: /text\/css/i, textLike: true },
+				{
+					path: '/static/js/auth.js',
+					expectedType: /(javascript|ecmascript)/i,
+					textLike: true,
+				},
+				{ path: '/static/img/forum-logo.png', expectedType: /image\//i, textLike: false },
+			];
+
+			for (const asset of assets) {
+				const response = await request.get(asset.path, { failOnStatusCode: false });
+				const contentType = response.headers()['content-type'] ?? '';
+
+				expect(response.status(), `status for ${asset.path}`).toBe(200);
+				expect(contentType, `content-type for ${asset.path}`).toMatch(asset.expectedType);
+				expect(contentType, `fallback check for ${asset.path}`).not.toContain('text/html');
+
+				if (asset.textLike) {
+					const body = await response.text();
+					expect(body.length).toBeGreaterThan(0);
+					expect(body).not.toContain('<!DOCTYPE html>');
+				} else {
+					const body = await response.body();
+					expect(body.length).toBeGreaterThan(0);
+				}
+			}
+		});
+	});
+
+	test.describe('A03', () => {
+		test('A03-01: internal route changes occur without full reload', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a03-no-reload', async () => {
+				await ensureLoggedOut(page);
+
+				let loadEvents = 0;
+				page.on('load', () => {
+					loadEvents += 1;
+				});
+
+				await page.goto('/login');
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+
+				const baseline = await page.evaluate(() => {
+					const sentinel = Math.random().toString(36).slice(2);
+					window.__a03Sentinel = sentinel;
+					document.documentElement.setAttribute('data-a03-sentinel', sentinel);
+					return {
+						sentinel,
+						navCount: performance.getEntriesByType('navigation').length,
+					};
+				});
+				const loadEventsAfterInitialNavigation = loadEvents;
+
+				await page.locator('a[data-link][href="/register"]').click();
+				await expect(page).toHaveURL(/\/register$/);
+				await expect(page.locator('[data-screen="register"]')).toBeVisible();
+
+				const afterRegisterNavigation = await page.evaluate(() => ({
+					sentinel: window.__a03Sentinel,
+					domSentinel: document.documentElement.getAttribute('data-a03-sentinel'),
+					navCount: performance.getEntriesByType('navigation').length,
+				}));
+
+				expect(afterRegisterNavigation.sentinel).toBe(baseline.sentinel);
+				expect(afterRegisterNavigation.domSentinel).toBe(baseline.sentinel);
+				expect(afterRegisterNavigation.navCount).toBe(baseline.navCount);
+				expect(loadEvents).toBe(loadEventsAfterInitialNavigation);
+
+				await page.locator('a[data-link][href="/login"]').click();
+				await expect(page).toHaveURL(/\/login$/);
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+
+				const afterLoginNavigation = await page.evaluate(() => ({
+					sentinel: window.__a03Sentinel,
+					navCount: performance.getEntriesByType('navigation').length,
+				}));
+
+				expect(afterLoginNavigation.sentinel).toBe(baseline.sentinel);
+				expect(afterLoginNavigation.navCount).toBe(baseline.navCount);
+				expect(loadEvents).toBe(loadEventsAfterInitialNavigation);
+			});
+		});
+
+		test('A03-02: browser back and forward work for supported routes', async ({
+			page,
+		}, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a03-history', async () => {
+				await ensureLoggedOut(page);
+				await page.goto('/login');
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+
+				await page.locator('a[data-link][href="/register"]').click();
+				await expect(page).toHaveURL(/\/register$/);
+				await expect(page.locator('[data-screen="register"]')).toBeVisible();
+
+				await page.goBack();
+				await expect(page).toHaveURL(/\/login$/);
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+
+				await page.goForward();
+				await expect(page).toHaveURL(/\/register$/);
+				await expect(page.locator('[data-screen="register"]')).toBeVisible();
+			});
+		});
+
+		test('A03-03: pasted deep links resolve to expected screens', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a03-deeplink', async () => {
+				await ensureLoggedOut(page);
+
+				const unauthCases = [
+					{ path: '/login', expectedPath: '/login', screen: 'login' },
+					{ path: '/register', expectedPath: '/register', screen: 'register' },
+					{ path: '/post/7', expectedPath: '/login', screen: 'login' },
+					{ path: '/view-post/7', expectedPath: '/login', screen: 'login' },
+				];
+
+				for (const testCase of unauthCases) {
+					await page.goto(testCase.path);
+					await expectPathname(page, testCase.expectedPath);
+					await expect(page.locator(`[data-screen="${testCase.screen}"]`)).toBeVisible();
+				}
+
+				const credentials = createCredentials('a03_deep');
+				await registerUser(page, credentials);
+
+				const authCases = [
+					{ path: '/', expectedPath: '/', screen: 'feed' },
+					{ path: '/activity', expectedPath: '/activity', screen: 'activity' },
+					{ path: '/create-post', expectedPath: '/create-post', screen: 'create-post' },
+					{
+						path: '/edit-post/7',
+						expectedPath: '/edit-post/7',
+						screen: 'edit-post',
+						postID: '7',
+					},
+					{ path: '/post/7', expectedPath: '/post/7', screen: 'post-detail', postID: '7' },
+					{
+						path: '/view-post/7',
+						expectedPath: '/post/7',
+						screen: 'post-detail',
+						postID: '7',
+					},
+				];
+
+				for (const testCase of authCases) {
+					await page.goto(testCase.path);
+					await expectPathname(page, testCase.expectedPath);
+					await expect(page.locator(`[data-screen="${testCase.screen}"]`)).toBeVisible();
+
+					if (testCase.postID) {
+						await expect(page.locator(`[data-post-id="${testCase.postID}"]`)).toBeVisible();
+					}
+				}
+			});
+		});
+	});
+
+	test.describe('A04', () => {
+		test('A04-01: authenticated routes render inside shared shell', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a04-shared-shell', async () => {
+				const credentials = createCredentials('a04_shell');
+				await registerUser(page, credentials);
+
+				const routes = [
+					{ path: '/', screen: 'feed' },
+					{ path: '/post/9', screen: 'post-detail' },
+					{ path: '/create-post', screen: 'create-post' },
+					{ path: '/edit-post/3', screen: 'edit-post' },
+					{ path: '/activity', screen: 'activity' },
+				];
+
+				for (const route of routes) {
+					await page.goto(route.path);
+					expect(pathOf(page.url())).toBe(route.path);
+					await expect(page.locator('[data-auth-shell]')).toBeVisible();
+					await expect(page.locator('[data-action="logout"]')).toBeVisible();
+					await expect(page.locator('[aria-label="Forum navigation"]')).toBeVisible();
+					await expect(page.locator('[data-chat-roster]')).toBeVisible();
+					await expect(page.locator(`[data-screen="${route.screen}"]`)).toBeVisible();
+				}
+			});
+		});
+
+		test('A04-02: navigation and logout remain visible during route changes', async ({
+			page,
+		}, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a04-nav-logout-persistence', async () => {
+				const credentials = createCredentials('a04_nav');
+				await registerUser(page, credentials);
+
+				await page.goto('/');
+				await expect(page.locator('[data-auth-shell]')).toBeVisible();
+				await expect(page.locator('[aria-label="Forum navigation"]')).toBeVisible();
+				await expect(page.locator('[data-action="logout"]')).toBeVisible();
+
+				const transitions = [
+					{ href: '/activity', expectedPath: '/activity', screen: 'activity' },
+					{ href: '/create-post', expectedPath: '/create-post', screen: 'create-post' },
+					{ href: '/', expectedPath: '/', screen: 'feed' },
+				];
+
+				for (const step of transitions) {
+					await page.locator(`[aria-label="Forum navigation"] a[href="${step.href}"]`).click();
+					expect(pathOf(page.url())).toBe(step.expectedPath);
+					await expect(page.locator(`[data-screen="${step.screen}"]`)).toBeVisible();
+					await expect(page.locator('[aria-label="Forum navigation"]')).toBeVisible();
+					await expect(page.locator('[data-action="logout"]')).toBeVisible();
+				}
+			});
+		});
+
+		test('A04-03: chat layout keeps stable roster and active regions', async ({
+			page,
+		}, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a04-chat-layout-stability', async () => {
+				const credentials = createCredentials('a04_chat');
+				await registerUser(page, credentials);
+
+				await page.goto('/');
+
+				const roster = page.locator('[data-chat-roster]');
+				const activeChat = page.locator('[data-chat-active]');
+				const outlet = page.locator('.app-shell__outlet');
+
+				await expect(roster).toBeVisible();
+				await expect(activeChat).toBeVisible();
+				await expect(outlet).toBeVisible();
+
+				const baselineRosterBox = await roster.boundingBox();
+				const baselineActiveBox = await activeChat.boundingBox();
+				const outletBox = await outlet.boundingBox();
+
+				expect(baselineRosterBox).not.toBeNull();
+				expect(baselineActiveBox).not.toBeNull();
+				expect(outletBox).not.toBeNull();
+
+				const baselineRoster = baselineRosterBox;
+				const baselineActive = baselineActiveBox;
+				const currentOutlet = outletBox;
+
+				expect(baselineRoster.width).toBeGreaterThan(180);
+				expect(baselineActive.width).toBeGreaterThan(180);
+				expect(baselineRoster.x).toBeGreaterThan(currentOutlet.x);
+				expect(baselineActive.y).toBeGreaterThan(baselineRoster.y);
+
+				for (const path of ['/activity', '/create-post', '/']) {
+					await page.goto(path);
+					await expect(page.locator('[data-chat-roster]')).toBeVisible();
+					await expect(page.locator('[data-chat-active]')).toBeVisible();
+
+					const currentRosterBox = await roster.boundingBox();
+					const currentActiveBox = await activeChat.boundingBox();
+
+					expect(currentRosterBox).not.toBeNull();
+					expect(currentActiveBox).not.toBeNull();
+
+					expectStableBox(currentRosterBox, baselineRoster);
+					expectStableBox(currentActiveBox, baselineActive);
+				}
+			});
+		});
+	});
+
+	test.describe('A05', () => {
+		test('A05-01: unauthenticated protected-route entry resolves to login flow', async ({
+			page,
+		}, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a05-unauth-routes', async () => {
+				await ensureLoggedOut(page);
+
+				const protectedRoutes = ['/', '/activity', '/create-post', '/post/7', '/edit-post/7'];
+				for (const route of protectedRoutes) {
+					await page.goto(route);
+					await expect(page.locator('[data-screen="login"]')).toBeVisible();
+					await expectPathname(page, '/login');
+					await expect(page.locator('[data-auth-shell]')).toHaveCount(0);
+				}
+			});
+		});
+
+		test('A05-02: authenticated entry from public-only routes resolves to forum shell', async ({
+			page,
+		}, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a05-auth-from-public-only', async () => {
+				const credentials = createCredentials('a05_public');
+				await registerUser(page, credentials);
+
+				for (const route of ['/login', '/register']) {
+					await page.goto(route);
+					await expect(page.locator('[data-auth-shell]')).toBeVisible();
+					await expect(page.locator('[data-screen="feed"]')).toBeVisible();
+					await expectPathname(page, '/');
+				}
+			});
+		});
+
+		test('A05-03: forum endpoints are guarded by authenticated session checks', async ({
+			page,
+		}) => {
+			await ensureLoggedOut(page);
+
+			const protectedEndpoints = [
+				'/api/v1/users/me',
+				'/api/v1/categories',
+				'/api/v1/posts?page=1&per_page=5',
+				'/api/v1/users/activity',
+			];
+
+			for (const endpoint of protectedEndpoints) {
+				const response = await page.request.get(endpoint, { failOnStatusCode: false });
+				expect(response.status(), `expected 401 for ${endpoint}`).toBe(401);
+			}
+
+			const credentials = createCredentials('a05_guard');
+			await registerUser(page, credentials);
+
+			for (const endpoint of protectedEndpoints) {
+				const response = await page.request.get(endpoint, { failOnStatusCode: false });
+				expect(response.status(), `expected successful auth access for ${endpoint}`).toBe(200);
+			}
+
+			await page.request.post('/api/v1/users/logout', { failOnStatusCode: false });
+			const meAfterLogout = await page.request.get('/api/v1/users/me', { failOnStatusCode: false });
+			expect(meAfterLogout.status()).toBe(401);
+		});
+	});
+
+	test.describe('A06', () => {
+		test('A06-01: logout control is visible and usable on each protected route', async ({
+			page,
+		}, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a06-logout-visibility', async () => {
+				const credentials = createCredentials('a06_visible');
+				await registerUser(page, credentials);
+
+				const protectedRoutes = [
+					{ path: '/', screen: 'feed' },
+					{ path: '/post/9', screen: 'post-detail' },
+					{ path: '/create-post', screen: 'create-post' },
+					{ path: '/edit-post/3', screen: 'edit-post' },
+					{ path: '/activity', screen: 'activity' },
+				];
+
+				for (const route of protectedRoutes) {
+					await page.goto(route.path);
+					await expect(page.locator(`[data-screen="${route.screen}"]`)).toBeVisible();
+					await expect(page.locator('[data-auth-shell]')).toBeVisible();
+					await expect(page.locator('[data-action="logout"]')).toBeVisible();
+					await expect(page.locator('[data-action="logout"]')).toBeEnabled();
+				}
+			});
+		});
+
+		test('A06-02: logout from protected routes redirects to /login', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a06-logout-redirect', async () => {
+				const credentials = createCredentials('a06_redirect');
+				await registerUser(page, credentials);
+
+				const protectedRoutes = ['/', '/activity', '/create-post'];
+				for (let index = 0; index < protectedRoutes.length; index += 1) {
+					if (index > 0) {
+						await loginUser(page, credentials);
+					}
+
+					const route = protectedRoutes[index];
+					await page.goto(route);
+					await expect(page.locator('[data-action="logout"]')).toBeVisible();
+
+					const logoutResponsePromise = page.waitForResponse((response) => {
+						return (
+							pathOf(response.url()) === '/api/v1/users/logout' &&
+							response.request().method() === 'POST'
+						);
+					});
+
+					await page.click('[data-action="logout"]');
+					const logoutResponse = await logoutResponsePromise;
+
+					expect(logoutResponse.status()).toBe(200);
+					await expect(page).toHaveURL(/\/login$/);
+					await expect(page.locator('[data-screen="login"]')).toBeVisible();
+					await expect(page.locator('[data-auth-shell]')).toHaveCount(0);
+				}
+			});
+		});
+
+		test('A06-03: post-logout protected content is not rendered', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a06-post-logout-guard', async () => {
+				const credentials = createCredentials('a06_guard');
+				await registerUser(page, credentials);
+
+				await page.goto('/activity');
+				await expect(page.locator('[data-screen="activity"]')).toBeVisible();
+
+				await page.click('[data-action="logout"]');
+				await expect(page).toHaveURL(/\/login$/);
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+				await expect(page.locator('[data-auth-shell]')).toHaveCount(0);
+
+				for (const route of ['/', '/activity', '/create-post', '/post/7']) {
+					await page.goto(route);
+					await expectPathname(page, '/login');
+					await expect(page.locator('[data-screen="login"]')).toBeVisible();
+					await expect(page.locator('[data-auth-shell]')).toHaveCount(0);
+				}
+			});
+		});
+	});
+
+	test.describe('A10', () => {
+		test('A10-01: visiting / loads SPA shell', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a10-root-shell', async () => {
+				await ensureLoggedOut(page);
+				const response = await page.goto('/');
+
+				expect(response).not.toBeNull();
+				expect(response?.status()).toBe(200);
+				expect(response?.headers()['content-type'] ?? '').toContain('text/html');
+
+				await expect(page).toHaveTitle('Real-Time Forum');
+				await expect(page.locator('#app')).toBeVisible();
+				await expect(page.locator('#main-content')).toBeVisible();
+				await expect(page.locator('script[type="module"][src="/main.js"]')).toHaveCount(1);
+				await expect(
+					page.locator('link[rel="stylesheet"][href="/assets/css/main.css"]'),
+				).toHaveCount(1);
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+			});
+		});
+
+		test('A10-02: direct /login loads SPA shell without 404', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a10-direct-login', async () => {
+				await ensureLoggedOut(page);
+				const response = await page.goto('/login');
+
+				expect(response).not.toBeNull();
+				expect(response?.status()).toBe(200);
+				expect(response?.status()).not.toBe(404);
+				expect(response?.headers()['content-type'] ?? '').toContain('text/html');
+
+				await expect(page).toHaveURL(/\/login$/);
+				await expect(page).toHaveTitle('Real-Time Forum');
+				await expect(page.locator('#app')).toBeVisible();
+				await expect(page.locator('#main-content')).toBeVisible();
+				await expect(page.locator('[data-screen="login"]')).toBeVisible();
+
+				const pageMarkup = await page.content();
+				expect(pageMarkup.toLowerCase()).not.toContain('404 page not found');
+			});
+		});
+
+		test('A10-03: static assets main.js and main.css are served correctly', async ({ request }) => {
+			const jsResponse = await request.get('/main.js', { failOnStatusCode: false });
+			expect(jsResponse.status()).toBe(200);
+			expect(jsResponse.headers()['content-type'] ?? '').toMatch(/(javascript|ecmascript)/i);
+			const jsBody = await jsResponse.text();
+			expect(jsBody).toContain('createApp');
+			expect(jsBody).not.toContain('<!DOCTYPE html>');
+
+			const cssResponse = await request.get('/assets/css/main.css', {
+				failOnStatusCode: false,
+			});
+			expect(cssResponse.status()).toBe(200);
+			expect(cssResponse.headers()['content-type'] ?? '').toMatch(/text\/css/i);
+			const cssBody = await cssResponse.text();
+			expect(cssBody).toContain('@import');
+			expect(cssBody).not.toContain('<!DOCTYPE html>');
+		});
+
+		test('A10-04: /api proxy behavior remains intact', async ({ request }) => {
+			const healthResponse = await request.get('/api/v1/health', { failOnStatusCode: false });
+			expect(healthResponse.status()).toBe(200);
+			expect(healthResponse.headers()['content-type'] ?? '').toContain('application/json');
+
+			const healthBody = await healthResponse.json();
+			expect(healthBody?.data?.status).toBe('ok');
+
+			const badRequestResponse = await request.get('/api/v1/health?error=400', {
+				failOnStatusCode: false,
+			});
+			expect(badRequestResponse.status()).toBe(400);
+			const badRequestBody = await badRequestResponse.json();
+			expect(badRequestBody?.error?.code).toBe('BAD_REQUEST');
+		});
+	});
 });

@@ -32,3 +32,11 @@ cmd/frontend/.env
 
 # Node modules
 node_modules/
+
+#playwright test artifacts
+playwright-report/
+playwright-screenshots/
+playwright-traces/
+
+#test results
+test-results/
