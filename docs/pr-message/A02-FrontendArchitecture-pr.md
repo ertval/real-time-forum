@@ -33,9 +33,7 @@ This PR fully satisfies the verification gate for ticket **A02**:
 - [x] **Build**: `make build-all` — Both frontend and backend binaries built successfully.
 
 ### Manual E2E Verification
-- [x] **Root Access**: Verified `http://localhost:3000/` still serves the legacy home page.
-- [x] **SPA Access**: Verified `http://localhost:3000/spa/` successfully serves the new SPA shell (`index.html`).
-- [x] **Static Assets**: Confirmed `/static/` files are still accessible by legacy templates.
+- [x] **Root Access**: Verified `http://localhost:3000/` still serves the SPA home page.
 
 ## Key Files Impacted
 - `docs/SDS.md`

@@ -30,7 +30,7 @@ build-frontend:
 	@go build -o $(FRONTEND_BIN) $(FRONTEND_PKG)
 	@echo "✅ Frontend build complete"
 
-build-all: build-backend build-frontend
+build: build-backend build-frontend
 
 run-backend: build-backend
 	@echo "🚀 Starting backend server..."
@@ -40,7 +40,7 @@ run-frontend: build-frontend
 	@echo "🚀 Starting frontend server on http://localhost:3000 ..."
 	@./$(FRONTEND_BIN)
 
-run-all: build-all
+run: build
 	@echo "🔥 Starting backend & frontend..."
 	@./$(BACKEND_BIN) &
 	@./$(FRONTEND_BIN)
