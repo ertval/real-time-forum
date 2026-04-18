@@ -81,15 +81,31 @@ make deps
 
 # 2. Launch both servers (Backend & Frontend)
 make run-all
+
+# 3. Verify Infrastructure (Sanity Checks)
+make verify-infra
 ```
 🔗 **Access the Forum**: [http://localhost:3000](http://localhost:3000)
 
 ### 🧪 Quality Control
 ```bash
-make test          # Run the full suite (Go + Vitest)
+make test          # Run the full suite (Go + Vitest + Playwright)
+make test-e2e      # Run only Playwright E2E tests
 make lint          # Execute Biome static analysis
 make lint:fix      # Fix Biome static analysis
 make format        # Standardize code formatting
+
+### 🧪 Testing Tiers
+
+The project follows a rigorous three-tier validation strategy:
+
+| Tier | Purpose | Tools |
+|:--- |:--- |:--- |
+| **Unit** | Isolated component & helper logic | Vitest (JSDOM/Node) |
+| **Integration** | Feature interactions & API contracts | Go `httptest` + Vitest |
+| **E2E** | Full multi-step user journeys | Playwright (Headless Chrome) |
+
+**Note**: Playwright browsers are automatically installed during `make deps`. If you encounter issues, run `bun x playwright install chromium`.
 ```
 
 ---

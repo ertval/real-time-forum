@@ -531,7 +531,17 @@ On application load:
 | :--- | :--- | :--- |
 | **Unit** | Isolated component and helper logic tests. | `SPA/tests/unit/` |
 | **Integration** | Feature-level interaction tests (e.g., Auth + Feed). | `SPA/tests/integration/` |
-| **E2E** | Multi-step user journey verification. | `SPA/tests/e2e/` |
+| **E2E** | Multi-step user journey verification using Playwright. | `SPA/tests/e2e/` |
+
+### 10.2.2 E2E Automation (Playwright)
+
+E2E tests use Playwright to verify the full stack (Frontend + Backend) in a real headless browser:
+- Direct navigation and SPA routing fallback.
+- Auth gating and redirection flows.
+- Multi-step user journeys (Login -> Post -> Logout).
+- Infrastructure sanity checks (Process management, Proxying).
+
+Run with `make test-e2e`.
 
 ## 10.3 Regression Coverage
 

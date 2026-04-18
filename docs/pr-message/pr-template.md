@@ -32,10 +32,10 @@ This PR fully satisfies the verification gate for ticket **[Ticket ID]**:
 - [ ] [Each additional verification step run by QA, with the exact command or action recorded]
 - [ ] [Each regression check run by QA, with the exact command or action recorded]
 
-### Manual E2E Verification
-- [ ] [Verification Step 1]: [e.g., Verified real-time message delivery between two browser sessions]
-- [ ] [Verification Step 2]: [e.g., Confirmed that comments are no longer rendered in the main feed]
-- [ ] [Audit Check]: [e.g., Verified that all registration fields match those defined in requirements.md]
+### Automated Behavioral Verification (E2E)
+- [ ] [Verification Step 1]: [e.g., Verified real-time message delivery via Playwright tests]
+- [ ] [Verification Step 2]: [e.g., Confirmed auth-gating redirects via Playwright tests]
+- [ ] [Infrastructure Check]: [e.g., Verified process management via `make verify-infra`]
 
 ## Key Files Impacted
 - `[path/to/file1]`
