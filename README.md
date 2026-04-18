@@ -80,7 +80,7 @@ A powerhouse, production-grade **Real-Time Single-Page Application (SPA)**. Buil
 make deps
 
 # 2. Launch both servers (Backend & Frontend)
-make run-all
+make run
 
 # 3. Verify Infrastructure (Sanity Checks)
 make verify-infra
@@ -92,8 +92,8 @@ make verify-infra
 make test          # Run the full suite (Go + Vitest + Playwright)
 make test-e2e      # Run only Playwright E2E tests
 make lint          # Execute Biome static analysis
-make lint:fix      # Fix Biome static analysis
-make format        # Standardize code formatting
+make format        # Standardize code formatting (Backend + Frontend)
+make format-frontend # Fix Biome static analysis issues
 
 ### 🧪 Testing Tiers
 

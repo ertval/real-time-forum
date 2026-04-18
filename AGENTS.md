@@ -172,12 +172,12 @@ See `docs/SDS.md` section 5.5 for full event schemas.
 
 ```bash
 make deps          # install all deps & playwright browsers
-make build-all     # build both servers
-make run-all       # start backend (8080) + frontend (3000)
+make build         # build both servers
+make run           # start backend (8080) + frontend (3000)
 make test          # run all tests (Go, Vitest, Playwright)
 make test-e2e      # run only playwright tests
 make verify-infra  # run infrastructure sanity checks
-make stop-all      # kill both servers
+make stop          # kill both servers
 ```
 
 Individual targets: `build-backend`, `build-frontend`, `run-backend`, `run-frontend`.
