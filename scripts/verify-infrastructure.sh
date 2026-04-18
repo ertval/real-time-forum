@@ -13,13 +13,13 @@ make deps
 echo "✅ Bootstrap successful."
 
 # 2. Verify build
-echo "🏗️ Verifying build (make build-all)..."
-make build-all
+echo "🏗️ Verifying build (make build)..."
+make build
 echo "✅ Build successful."
 
 # 3. Verify process management
-echo "🚀 Verifying process management (run-all -> stop-all)..."
-make run-all &
+echo "🚀 Verifying process management (run -> stop)..."
+make run &
 RUN_PID=$!
 
 # Wait for servers to start
@@ -30,7 +30,7 @@ while ! curl -s http://localhost:3000 > /dev/null; do
     TIMER=$((TIMER + 1))
     if [ $TIMER -ge $MAX_WAIT ]; then
         echo "❌ Timeout waiting for frontend server"
-        make stop-all
+        make stop
         exit 1
     fi
 done
@@ -40,21 +40,21 @@ echo "🌐 Frontend server is UP."
 # Check backend through proxy
 if ! curl -s http://localhost:3000/api/v1/users/me > /dev/null; then
     echo "❌ API Proxy check failed"
-    make stop-all
+    make stop
     exit 1
 fi
 echo "🔗 API Proxy is working."
 
-# Test stop-all
+# Test stop
 echo "⏹️ Stopping servers..."
 set +e
-make stop-all
+make stop
 kill $RUN_PID 2>/dev/null || true
 set -e
 sleep 5
 
 if curl -s http://localhost:3000 > /dev/null || curl -s http://localhost:8080 > /dev/null; then
-    echo "❌ some servers are still alive after make stop-all"
+    echo "❌ some servers are still alive after make stop"
     exit 1
 fi
 echo "✅ Process management successful."

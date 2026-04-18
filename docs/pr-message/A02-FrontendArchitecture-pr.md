@@ -30,7 +30,7 @@ This PR fully satisfies the verification gate for ticket **A02**:
 ### Automated Test Suite
 - [x] **Backend (Go)**: `make test-backend` — All 439 tests passed (cached/integration).
 - [x] **Frontend (SPA Structure)**: `make lint` — Biome check passed (52 files).
-- [x] **Build**: `make build-all` — Both frontend and backend binaries built successfully.
+- [x] **Build**: `make build` — Both frontend and backend binaries built successfully.
 
 ### Manual E2E Verification
 - [x] **Root Access**: Verified `http://localhost:3000/` still serves the SPA home page.

@@ -59,7 +59,7 @@ stop-frontend:
 	@pkill -f "frontend" 2>/dev/null || true
 	@pkill -f "$(FRONTEND_PKG)" 2>/dev/null || true
 
-stop-all: stop-backend stop-frontend
+stop: stop-backend stop-frontend
 
 # -----------------------------------------------------
 # 🧪 Code Quality

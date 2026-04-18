@@ -5,7 +5,7 @@
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
-		"dev": "make run-all",
+		"dev": "make run",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"lint": "biome check .",

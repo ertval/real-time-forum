@@ -1,42 +1,79 @@
-# .gitignore
-# Go build artifacts
+# --- Build Artifacts ---
+# Go
 bin/
-*.exe
-*.out
-*.log
-
-# IDE / Editor settings
-.vscode/
-.idea/
-
-# System files
-.DS_Store
-
-# SQLite local data
-data/*.db
-data/*.db-wal
-data/*.db-shm
-
-# Build binaries
 forum-backend
 forum-frontend
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+debug
+debug.test
 
-# Uploaded files
-web/static/uploads/
+# Node / JS / Bun
+node_modules/
+dist/
+build/
+.cache/
+.vitest.cache/
+.biome_cache/
 
-# Environment variables (never commit secrets)
+# --- Testing & Coverage ---
+coverage/
+*.lcov
+test-results/
+playwright-report/
+playwright-screenshots/
+playwright-traces/
+.nyc_output/
+
+# --- Logs ---
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# --- Environment & Secrets ---
 .env
+.env.local
+.env.*.local
 *.env
 cmd/backend/.env
 cmd/frontend/.env
 
-# Node modules
-node_modules/
+# --- Database (SQLite) ---
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+!data/.gitkeep
 
-#playwright test artifacts
-playwright-report/
-playwright-screenshots/
-playwright-traces/
+# --- OS Specific ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
-#test results
-test-results/
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+.factorypath
+
+# --- Project Specific ---
+web/static/uploads/
