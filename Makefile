@@ -32,27 +32,31 @@ build-frontend:
 
 build-all: build-backend build-frontend
 
-run-backend:
+run-backend: build-backend
 	@echo "🚀 Starting backend server..."
-	@go run $(BACKEND_PKG)
+	@./$(BACKEND_BIN)
 
-run-frontend:
+run-frontend: build-frontend
 	@echo "🚀 Starting frontend server on http://localhost:3000 ..."
-	@go run $(FRONTEND_PKG)
+	@./$(FRONTEND_BIN)
 
-run-all:
+run-all: build-all
 	@echo "🔥 Starting backend & frontend..."
-	@go run $(BACKEND_PKG) &
-	@go run $(FRONTEND_PKG)
+	@./$(BACKEND_BIN) &
+	@./$(FRONTEND_BIN)
 
 # -----------------------------------------------------
 # 🛑 Stop Local Processes
 # -----------------------------------------------------
 
 stop-backend:
+	@pkill -x $(BACKEND_BIN) 2>/dev/null || true
+	@pkill -f "backend" 2>/dev/null || true
 	@pkill -f "$(BACKEND_PKG)" 2>/dev/null || true
 
 stop-frontend:
+	@pkill -x $(FRONTEND_BIN) 2>/dev/null || true
+	@pkill -f "frontend" 2>/dev/null || true
 	@pkill -f "$(FRONTEND_PKG)" 2>/dev/null || true
 
 stop-all: stop-backend stop-frontend
@@ -61,7 +65,10 @@ stop-all: stop-backend stop-frontend
 # 🧪 Code Quality
 # -----------------------------------------------------
 
-test: test-backend test-frontend
+test: test-backend test-frontend test-e2e
+
+verify-infra:
+	@./scripts/verify-infrastructure.sh
 
 lint:
 	@./node_modules/.bin/bun run lint
@@ -70,7 +77,10 @@ test-backend:
 	@go test ./...
 
 test-frontend:
-	@./node_modules/.bin/bun run policy
+	@bun run policy
+
+test-e2e:
+	@bun x playwright test
 
 format: format-backend format-frontend
 
@@ -91,7 +101,8 @@ deps-backend:
 	@go mod tidy
 
 deps-frontend:
-	@command -v bun >/dev/null 2>&1 && bun install || (npm install && ./node_modules/.bin/bun install)
+	@command -v bun >/dev/null 2>&1 && bun install || (npm install && bun install)
+	@bun x playwright install chromium
 
 # -----------------------------------------------------
 # 🐳 Docker (Backend Only – Production)

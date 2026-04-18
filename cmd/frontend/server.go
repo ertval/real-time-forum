@@ -18,16 +18,26 @@ func NewCustomFileServer(fs http.FileSystem, notFoundPage string) http.Handler {
 }
 
 func (c *CustomFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Try serving the file
-	rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-	c.handler.ServeHTTP(rec, r)
-
-	// If file not found, serve the SPA shell instead
-	if rec.status == http.StatusNotFound {
-		// Reset the header (though hard to do in Go without buffering)
-		// Better approach: serve the file directly if it exists, otherwise serve fallback.
-		http.ServeFile(w, r, c.notFound)
+	// For SPA, we want to serve index.html for any path that doesn't 
+	// correspond to an actual file (like /login, /activity, etc.)
+	
+	// Check if the path exists in the SPA directory
+	fs := http.Dir("./SPA")
+	f, err := fs.Open(r.URL.Path)
+	if err == nil {
+		defer f.Close()
+		stat, err := f.Stat()
+		if err == nil && !stat.IsDir() {
+			// File exists and is not a directory, serve it normally
+			c.handler.ServeHTTP(w, r)
+			return
+		}
 	}
+
+	// Otherwise, serve the SPA shell
+	// Ensure we set the correct content type for the shell
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	http.ServeFile(w, r, c.notFound)
 }
 
 type statusRecorder struct {
