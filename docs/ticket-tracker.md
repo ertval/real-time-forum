@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `6`
+- Done: `7`
 - Partially Implemented: `0`
-- Not Started: `31`
+- Not Started: `30`
 
 ---
 
