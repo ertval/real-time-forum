@@ -20,9 +20,9 @@ func NewCustomFileServer(fs http.FileSystem, notFoundPage string) http.Handler {
 }
 
 func (c *CustomFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// For SPA, we want to serve index.html for any path that doesn't 
+	// For SPA, we want to serve index.html for any path that doesn't
 	// correspond to an actual file (like /login, /activity, etc.)
-	
+
 	// Check if the path exists in the configured SPA filesystem.
 	f, err := c.fs.Open(r.URL.Path)
 	if err == nil {
@@ -48,8 +48,8 @@ type statusRecorder struct {
 
 func (r *statusRecorder) WriteHeader(code int) {
 	r.status = code
-	// Don't call underlying WriteHeader yet! 
-	// This is slightly dangerous if someone else calls Write() 
+	// Don't call underlying WriteHeader yet!
+	// This is slightly dangerous if someone else calls Write()
 	// because then Go will implicitly WriteHeader(200).
 	if code != http.StatusNotFound {
 		r.ResponseWriter.WriteHeader(code)
