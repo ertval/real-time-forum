@@ -97,8 +97,12 @@ export function matchRoute(pathname) {
 		}
 
 		const params = {};
-		for (let i = 0; i < route.paramKeys.length; i += 1) {
-			params[route.paramKeys[i]] = decodeURIComponent(result[i + 1]);
+		try {
+			for (let i = 0; i < route.paramKeys.length; i += 1) {
+				params[route.paramKeys[i]] = decodeURIComponent(result[i + 1]);
+			}
+		} catch {
+			continue;
 		}
 
 		return { route, params, path: targetPath };
