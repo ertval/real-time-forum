@@ -144,6 +144,15 @@ export function createApp(options = {}) {
 		goTo(href, false);
 	}
 
+	function onDocumentSubmit(event) {
+		const form = event.target?.closest?.('form');
+		if (!form) {
+			return;
+		}
+
+		event.preventDefault();
+	}
+
 	function onPopState() {
 		handleLocationChange();
 	}
@@ -158,12 +167,14 @@ export function createApp(options = {}) {
 
 	function start() {
 		documentRef.addEventListener('click', onDocumentClick);
+		documentRef.addEventListener('submit', onDocumentSubmit);
 		windowRef.addEventListener('popstate', onPopState);
 		return boot();
 	}
 
 	function stop() {
 		documentRef.removeEventListener('click', onDocumentClick);
+		documentRef.removeEventListener('submit', onDocumentSubmit);
 		windowRef.removeEventListener('popstate', onPopState);
 	}
 
