@@ -169,6 +169,24 @@ function createMockBrowser(initialPath = '/') {
 		overlay,
 		historyCalls,
 		clickLink,
+		submitForm: (formId) => {
+			const form = {
+				id: formId,
+				getAttribute: (name) => (name === 'id' ? formId : null),
+				closest: (selector) => (selector === 'form' ? form : null),
+			};
+			const event = {
+				type: 'submit',
+				target: form,
+				preventDefault: vi.fn(),
+				defaultPrevented: false,
+			};
+			const handlers = documentListeners.get('submit') ?? [];
+			for (const handler of handlers) {
+				handler(event);
+			}
+			return event;
+		},
 	};
 }
 
@@ -182,6 +200,9 @@ describe('SPA routing for A03/A04', () => {
 		expect(matchRoute('/post/7')?.params.id).toBe('7');
 		expect(matchRoute('/edit-post/15')?.params.id).toBe('15');
 		expect(matchRoute('/does-not-exist')).toBeNull();
+
+		// Regression: A03 Malformed URI should not crash
+		expect(matchRoute('/post/%E0%A4%A')).toBeNull();
 	});
 
 	test('boot applies auth guard and redirects protected deep links', async () => {
@@ -376,5 +397,33 @@ describe('SPA routing for A03/A04', () => {
 		browser.clickLink('/register');
 		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
 		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('form submission should be intercepted and prevented', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('login-form');
+		expect(event.preventDefault).toHaveBeenCalled();
+	});
+
+	test('non-critical forms should not be intercepted by default', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('search-form');
+		expect(event.preventDefault).not.toHaveBeenCalled();
 	});
 });
