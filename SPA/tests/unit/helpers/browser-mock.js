@@ -192,6 +192,24 @@ export function createMockBrowser(initialPath = '/') {
 		return event;
 	}
 
+	function submitForm(formId) {
+		const form = {
+			id: formId,
+			getAttribute: (name) => (name === 'id' ? formId : null),
+			closest: (selector) => (selector === 'form' ? form : null),
+		};
+		const event = {
+			type: 'submit',
+			target: form,
+			preventDefault: vi.fn(() => {
+				event.defaultPrevented = true;
+			}),
+			defaultPrevented: false,
+		};
+		dispatchDocument('submit', event);
+		return event;
+	}
+
 	return {
 		windowRef,
 		documentRef,
@@ -200,5 +218,6 @@ export function createMockBrowser(initialPath = '/') {
 		historyCalls,
 		clickLink,
 		clickLogout,
+		submitForm,
 	};
 }
