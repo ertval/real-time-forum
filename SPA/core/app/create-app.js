@@ -4,6 +4,10 @@ import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
 import { matchRoute, normalizePathname } from '../router/routes.js';
 
+const AUTH_SHELL_SELECTOR = '[data-auth-shell]';
+const AUTH_OUTLET_SELECTOR = '.app-shell__outlet';
+const AUTH_OUTLET_OPENING_TAG = '<main class="app-shell__outlet" aria-label="Page content">';
+
 function hideLoadingOverlay(documentRef, setTimeoutRef) {
 	const overlay = documentRef.getElementById('loading-overlay');
 	if (!overlay) {
@@ -53,6 +57,21 @@ function enforceRouteAccess(match, isAuthenticated) {
 	return { redirectTo: null, match };
 }
 
+function replaceProtectedOutletMarkup(shellMarkup, outletMarkup) {
+	const outletStartMarkerIndex = shellMarkup.indexOf(AUTH_OUTLET_OPENING_TAG);
+	if (outletStartMarkerIndex === -1) {
+		return null;
+	}
+
+	const outletContentStart = outletStartMarkerIndex + AUTH_OUTLET_OPENING_TAG.length;
+	const outletEndMarkerIndex = shellMarkup.indexOf('</main>', outletContentStart);
+	if (outletEndMarkerIndex === -1) {
+		return null;
+	}
+
+	return `${shellMarkup.slice(0, outletContentStart)}${outletMarkup}${shellMarkup.slice(outletEndMarkerIndex)}`;
+}
+
 export function createApp(options = {}) {
 	const windowRef = options.windowRef ?? (typeof window !== 'undefined' ? window : null);
 	const documentRef = options.documentRef ?? (typeof document !== 'undefined' ? document : null);
@@ -71,7 +90,52 @@ export function createApp(options = {}) {
 	const state = {
 		isAuthenticated: false,
 		activePath: normalizePathname(windowRef.location.pathname || '/'),
+		authShellRoot: null,
+		authShellOutlet: null,
 	};
+
+	function cacheAuthShellNodes() {
+		if (typeof mainContent.querySelector !== 'function') {
+			state.authShellRoot = null;
+			state.authShellOutlet = null;
+			return;
+		}
+
+		state.authShellRoot = mainContent.querySelector(AUTH_SHELL_SELECTOR);
+		state.authShellOutlet = state.authShellRoot?.querySelector?.(AUTH_OUTLET_SELECTOR) ?? null;
+	}
+
+	function renderProtectedRoute(routeMarkup) {
+		if (typeof mainContent.querySelector === 'function') {
+			if (!state.authShellRoot || !state.authShellOutlet) {
+				cacheAuthShellNodes();
+			}
+
+			if (!state.authShellRoot || !state.authShellOutlet) {
+				mainContent.innerHTML = renderAuthenticatedShell(routeMarkup);
+				cacheAuthShellNodes();
+				return;
+			}
+
+			state.authShellOutlet.innerHTML = routeMarkup;
+			return;
+		}
+
+		const currentMarkup = typeof mainContent.innerHTML === 'string' ? mainContent.innerHTML : '';
+		if (!currentMarkup.includes('data-auth-shell')) {
+			mainContent.innerHTML = renderAuthenticatedShell(routeMarkup);
+			return;
+		}
+
+		const updatedMarkup = replaceProtectedOutletMarkup(currentMarkup, routeMarkup);
+		mainContent.innerHTML = updatedMarkup ?? renderAuthenticatedShell(routeMarkup);
+	}
+
+	function renderPublicRoute(routeMarkup) {
+		state.authShellRoot = null;
+		state.authShellOutlet = null;
+		mainContent.innerHTML = routeMarkup;
+	}
 
 	function renderRoute(match) {
 		if (!mainContent) {
@@ -79,8 +143,13 @@ export function createApp(options = {}) {
 		}
 
 		const routeMarkup = renderTemplate(match);
-		mainContent.innerHTML =
-			match.route.access === 'protected' ? renderAuthenticatedShell(routeMarkup) : routeMarkup;
+
+		if (match.route.access === 'protected') {
+			renderProtectedRoute(routeMarkup);
+			return;
+		}
+
+		renderPublicRoute(routeMarkup);
 	}
 
 	function goTo(pathname, replace = false) {
