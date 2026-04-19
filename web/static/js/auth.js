@@ -1,7 +1,7 @@
 // web/static/js/auth.js
 
-import { openAuthModal } from "./auth-modal.js";
-import { API_BASE } from "./utils.js";
+import { openAuthModal } from './auth-modal.js';
+import { API_BASE } from './utils.js';
 
 export const Auth = {
 	checked: false,
@@ -22,8 +22,8 @@ export const Auth = {
 
 			try {
 				const res = await fetch(`${API_BASE}/users/me`, {
-					credentials: "include",
-					headers: { Accept: "application/json" },
+					credentials: 'include',
+					headers: { Accept: 'application/json' },
 				});
 
 				if (res.status === 401) {
@@ -78,6 +78,6 @@ Auth.requireOrPrompt = async function () {
 
 	if (this.isAuthenticated) return true;
 
-	openAuthModal("/login");
+	openAuthModal('/login');
 	return false;
 };

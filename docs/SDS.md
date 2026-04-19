@@ -35,7 +35,38 @@ The current implementation is not yet suitable for the target state because:
 
 ## 3. Target Architecture
 
-## 3.1 High-Level Design
+## 3.1 Project Structure
+
+```
+cmd/
+  backend/           → Backend API server (port 8080)
+  frontend/          → Frontend server (port 3000) — serves SPA + proxies API/WS
+internal/
+  db/                → Persistence layer (SQLite, repository functions, schema)
+  handlers/          → HTTP handlers (REST API under /api/v1)
+  middleware/        → Request middleware (auth, logging, CORS, recovery)
+  router/            → Route registration
+  tests/             → Backend integration tests
+web/
+  static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
+  templates/         → HTML templates (legacy)
+  SPA/               → Single Page Application Shell (Vanilla JS ES2026+)
+    index.html       → SPA Entrypoint
+    main.js          → Bootstrap Application Logic
+    assets/          → Global CSS & Static Images
+    core/            → State, Router, and API Logic
+    components/      → Shared UI Elements
+    features/        → Domain Slices (Auth, Feed, Chat, etc.)
+    tests/           → Vitest Unit & Integration Tests
+data/                → SQLite database file
+docs/                → Project documentation (PRD, SDS, tickets)
+```
+
+The project uses a **split-server** topology:
+- **Frontend server** (`:3000`): serves the single HTML shell, static assets, and proxies `/api/` and `/ws` to the backend.
+- **Backend server** (`:8080`): owns business logic, persistence, REST APIs, and WebSocket endpoint.
+
+## 3.2 High-Level Design
 
 - Frontend server responsibilities:
   - serve one HTML app shell
@@ -47,7 +78,7 @@ The current implementation is not yet suitable for the target state because:
   - serve authenticated REST APIs
   - expose a WebSocket endpoint for presence and direct messages
 
-## 3.2 Frontend Runtime Model
+## 3.3 Frontend Runtime Model
 
 - The frontend uses one root HTML document.
 - The frontend owns route changes in JavaScript.
@@ -57,7 +88,7 @@ The current implementation is not yet suitable for the target state because:
   - route outlet for page content
   - persistent direct-message roster and active-chat area
 
-## 3.3 Backend Runtime Model
+## 3.4 Backend Runtime Model
 
 - REST remains the transport for standard CRUD flows.
 - WebSocket is added only for presence and private messaging in this phase.
@@ -387,17 +418,17 @@ On `dm.send`:
 ## 7.0 Tooling & Practices (ES2026+)
 
 - The frontend must be implemented in modern vanilla JS (ES2026+) using optimal best practice patterns.
-- **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `web/SPA/`. The structure is organized as follows:
-  - `web/SPA/components/`: Shared, reusable UI components (e.g., buttons, modals, cards).
-  - `web/SPA/features/`: Vertical slices for major application domains (e.g., `auth/`, `feed/`, `chat/`, `post/`, `profile/`). Each slice contains its own logic, components, and tests.
-  - `web/SPA/core/`: Application-wide infrastructure:
+- **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `SPA/`. The structure is organized as follows:
+  - `SPA/components/`: Shared, reusable UI components (e.g., buttons, modals, cards).
+  - `SPA/features/`: Vertical slices for major application domains (e.g., `auth/`, `feed/`, `chat/`, `post/`, `profile/`). Each slice contains its own logic, components, and tests.
+  - `SPA/core/`: Application-wide infrastructure:
     - `api/`: API clients and service definitions.
     - `router/`: Client-side routing logic.
     - `state/`: Global state management using Proxy-based reactivity.
     - `utils/`: Shared helper functions.
-  - `web/SPA/assets/`: Static assets such as global CSS, images, and sounds.
-  - `web/SPA/index.html`: The single entry point for the application.
-  - `web/SPA/main.js`: The main JavaScript bootstrap file.
+  - `SPA/assets/`: Static assets such as global CSS, images, and sounds.
+  - `SPA/index.html`: The single entry point for the application.
+  - `SPA/main.js`: The main JavaScript bootstrap file.
 - Bun is the required runtime and package manager for frontend dev tools.
 - Biome handles all linting, formatting, and static testing checks.
 - Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests.

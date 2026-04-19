@@ -5,11 +5,11 @@ import "forum/web/startupcheck"
 
 func StartupCheckConfig() startupcheck.Config {
 	return startupcheck.Config{
-		WebRoot: "web",
+		WebRoot: ".",
 
 		CriticalHTML: []string{
 			"SPA/index.html",
-			"errors/error.html",
+			"web/errors/error.html",
 		},
 
 		JSDirs: []string{
@@ -18,7 +18,7 @@ func StartupCheckConfig() startupcheck.Config {
 
 		CriticalCSS: []string{
 			"SPA/assets/css/main.css",
-			"errors/common.css",
+			"web/errors/common.css",
 		},
 
 		MinJSFiles:   1, // main.js

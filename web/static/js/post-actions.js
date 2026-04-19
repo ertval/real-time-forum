@@ -1,14 +1,11 @@
 // web/static/js/post-actions.js
 
 export function statusToggleButton(postId, currentStatus) {
-	const normalized = currentStatus === "draft" ? "draft" : "published";
+	const normalized = currentStatus === 'draft' ? 'draft' : 'published';
 
-	const iconSrc =
-		normalized === "draft"
-			? "/static/img/publish.png"
-			: "/static/img/draft.png";
+	const iconSrc = normalized === 'draft' ? '/static/img/publish.png' : '/static/img/draft.png';
 
-	const label = normalized === "draft" ? "Publish post" : "Move to draft";
+	const label = normalized === 'draft' ? 'Publish post' : 'Move to draft';
 
 	return `
     <button 

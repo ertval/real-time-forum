@@ -1,11 +1,11 @@
 // web/static/js/post-form.js
-import { API_BASE } from "./utils.js";
+import { API_BASE } from './utils.js';
 
 export async function loadCategories() {
 	try {
 		const res = await fetch(`${API_BASE}/categories`, {
-			credentials: "include",
-			headers: { Accept: "application/json" },
+			credentials: 'include',
+			headers: { Accept: 'application/json' },
 		});
 		if (!res.ok) return [];
 		const payload = await res.json().catch(() => null);
@@ -19,17 +19,17 @@ export async function loadCategories() {
 export async function renderCategoryCheckboxes(host) {
 	if (!(host instanceof HTMLElement)) return;
 	const categories = await loadCategories();
-	host.innerHTML = "";
+	host.innerHTML = '';
 
 	categories.forEach((category) => {
-		const label = document.createElement("label");
-		label.className = "category-checkbox";
+		const label = document.createElement('label');
+		label.className = 'category-checkbox';
 
-		const input = document.createElement("input");
-		input.type = "checkbox";
+		const input = document.createElement('input');
+		input.type = 'checkbox';
 		input.value = String(category.id);
 
-		const text = document.createElement("span");
+		const text = document.createElement('span');
 		text.textContent = category.name;
 
 		label.appendChild(input);
@@ -40,9 +40,9 @@ export async function renderCategoryCheckboxes(host) {
 
 export function getSelectedCategoryIds(host) {
 	if (!(host instanceof HTMLElement)) return [];
-	return Array.from(
-		host.querySelectorAll("input[type='checkbox']:checked"),
-	).map((el) => Number(el.value));
+	return Array.from(host.querySelectorAll("input[type='checkbox']:checked")).map((el) =>
+		Number(el.value),
+	);
 }
 
 export function setSelectedCategoryIds(host, ids = []) {

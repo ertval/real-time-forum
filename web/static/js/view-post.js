@@ -1,17 +1,17 @@
 // /web/static/js/view-post.js
 
-import { loadPostCommentsPreview, renderPostCard } from "./posts.js";
+import { loadPostCommentsPreview, renderPostCard } from './posts.js';
 
-import { initReactions } from "./reactions.js";
-import { uiNotify } from "./ui-messages.js";
-import { API_BASE } from "./utils.js";
+import { initReactions } from './reactions.js';
+import { uiNotify } from './ui-messages.js';
+import { API_BASE } from './utils.js';
 
 /*---------
   HELPERS
 ---------*/
 
 function getPostIdFromURL() {
-	const parts = window.location.pathname.split("/");
+	const parts = window.location.pathname.split('/');
 	const id = Number(parts[parts.length - 1]);
 	return Number.isFinite(id) && id > 0 ? id : null;
 }
@@ -27,12 +27,12 @@ async function highlightComment(commentId) {
 	for (let i = 0; i < 20; i++) {
 		const el = document.getElementById(`comment-${numericId}`);
 		if (el) {
-			el.scrollIntoView({ behavior: "smooth", block: "center" });
-			el.classList.add("highlight-comment");
+			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			el.classList.add('highlight-comment');
 
 			// Auto-hide highlight after 2.5 seconds
 			setTimeout(() => {
-				el.classList.add("fade-out");
+				el.classList.add('fade-out');
 			}, 2500);
 
 			return;
@@ -45,14 +45,14 @@ async function highlightComment(commentId) {
   INIT
 ------*/
 
-document.addEventListener("DOMContentLoaded", async () => {
-	const container = document.getElementById("post-output");
+document.addEventListener('DOMContentLoaded', async () => {
+	const container = document.getElementById('post-output');
 	if (!container) return;
 
 	const postId = getPostIdFromURL();
 	if (!postId) {
 		container.innerHTML = `<p class="muted">Invalid post ID.</p>`;
-		uiNotify("Invalid post ID.", { type: "danger" });
+		uiNotify('Invalid post ID.', { type: 'danger' });
 		return;
 	}
 
@@ -75,8 +75,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadAndRenderPost(postId, container) {
 	try {
 		const res = await fetch(`${API_BASE}/posts/${postId}`, {
-			credentials: "include",
-			headers: { Accept: "application/json" },
+			credentials: 'include',
+			headers: { Accept: 'application/json' },
 		});
 
 		if (!res.ok) {
@@ -88,7 +88,7 @@ async function loadAndRenderPost(postId, container) {
 
 		const article = renderPostCard(post, { clickable: false });
 
-		container.innerHTML = "";
+		container.innerHTML = '';
 		container.appendChild(article);
 
 		// Load comments into DOM
@@ -98,23 +98,20 @@ async function loadAndRenderPost(postId, container) {
       HIGHLIGHT COMMENT (WITH RETRIES + "last" support)
     ---------------------------------------------------- */
 		const params = new URLSearchParams(window.location.search);
-		const highlight = params.get("highlight");
+		const highlight = params.get('highlight');
 
 		if (highlight) {
-			if (highlight === "last") {
+			if (highlight === 'last') {
 				// Highlight newest comment
 				for (let i = 0; i < 20; i++) {
-					const all = document.querySelectorAll(".comment");
+					const all = document.querySelectorAll('.comment');
 					if (all.length > 0) {
 						const last = all[all.length - 1];
-						last.scrollIntoView({ behavior: "smooth", block: "center" });
-						last.classList.add("highlight-comment");
+						last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						last.classList.add('highlight-comment');
 
-						setTimeout(() => last.classList.add("fade-out"), 1000);
-						setTimeout(
-							() => last.classList.remove("highlight-comment", "fade-out"),
-							2200,
-						);
+						setTimeout(() => last.classList.add('fade-out'), 1000);
+						setTimeout(() => last.classList.remove('highlight-comment', 'fade-out'), 2200);
 						break;
 					}
 					await new Promise((r) => setTimeout(r, 50));
@@ -126,13 +123,11 @@ async function loadAndRenderPost(postId, container) {
 		}
 
 		const categoryId =
-			Array.isArray(post.categories) && post.categories.length > 0
-				? post.categories[0].id
-				: null;
+			Array.isArray(post.categories) && post.categories.length > 0 ? post.categories[0].id : null;
 
 		return { categoryId };
 	} catch (err) {
-		console.error("Failed to load post:", err);
+		console.error('Failed to load post:', err);
 		container.innerHTML = `<p class="muted">Failed to load post.</p>`;
 		return null;
 	}
@@ -143,8 +138,8 @@ async function loadAndRenderPost(postId, container) {
 -------------------------------------*/
 
 async function initPostNavigation(postId, categoryId) {
-	const prevBtn = document.getElementById("post-prev");
-	const nextBtn = document.getElementById("post-next");
+	const prevBtn = document.getElementById('post-prev');
+	const nextBtn = document.getElementById('post-next');
 
 	if (!prevBtn || !nextBtn) return;
 
@@ -152,10 +147,9 @@ async function initPostNavigation(postId, categoryId) {
 	nextBtn.hidden = true;
 
 	try {
-		const res = await fetch(
-			`${API_BASE}/posts/${postId}/nav?category_id=${categoryId}`,
-			{ credentials: "include" },
-		);
+		const res = await fetch(`${API_BASE}/posts/${postId}/nav?category_id=${categoryId}`, {
+			credentials: 'include',
+		});
 
 		if (!res.ok) return;
 
@@ -171,13 +165,13 @@ async function initPostNavigation(postId, categoryId) {
 			nextBtn.onclick = () => (window.location.href = `/view-post/${next_id}`);
 		}
 
-		document.addEventListener("keydown", (e) => {
-			if (["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
+		document.addEventListener('keydown', (e) => {
+			if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
-			if (e.key === "ArrowLeft" && !prevBtn.hidden) prevBtn.click();
-			if (e.key === "ArrowRight" && !nextBtn.hidden) nextBtn.click();
+			if (e.key === 'ArrowLeft' && !prevBtn.hidden) prevBtn.click();
+			if (e.key === 'ArrowRight' && !nextBtn.hidden) nextBtn.click();
 		});
 	} catch (err) {
-		console.error("Failed to load post navigation:", err);
+		console.error('Failed to load post navigation:', err);
 	}
 }

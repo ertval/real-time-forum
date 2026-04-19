@@ -22,9 +22,14 @@ This PR fully satisfies the verification gate for ticket **[Ticket ID]**:
 ## Testing & Validation Verified
 
 ### Automated Test Suite
-- [ ] **Backend (Go)**: `make test` — [Result/Output Summary]
-- [ ] **Frontend (Vitest)**: `bun test` — [Result/Output Summary]
-- [ ] **Linting (Biome)**: `bun x biome check .` — [Result/Output Summary]
+- [ ] `make test` — [Result/Output Summary]
+- [ ] `bun run policy` — [Result/Output Summary]
+- [ ] `bun x biome check .` — [Result/Output Summary]
+- [ ] [Additional command]: [Result/Output Summary]
+
+### QA Checklist
+- [ ] [Each additional verification step run by QA, with the exact command or action recorded]
+- [ ] [Each regression check run by QA, with the exact command or action recorded]
 
 ### Manual E2E Verification
 - [ ] [Verification Step 1]: [e.g., Verified real-time message delivery between two browser sessions]

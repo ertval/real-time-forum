@@ -17,8 +17,7 @@ func TestSPARouting(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create real structure expected by NewMux
-	spaDir := filepath.Join(tmpDir, "web/SPA")
+	spaDir := filepath.Join(tmpDir, "SPA")
 	staticDir := filepath.Join(tmpDir, "web/static")
 	errorDir := filepath.Join(tmpDir, "web/errors")
 	os.MkdirAll(spaDir, 0755)

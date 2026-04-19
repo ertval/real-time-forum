@@ -11,18 +11,29 @@ real-time notifications, and the My Activity dashboard.
 The project follows a clean, layered Go architecture with strict
 separation between persistence, HTTP logic, middleware, and frontend.
 
-Structure:
-
-cmd/\
-internal/\
 web/
+  static/            → Legacy and shared static assets
+  templates/         → Legacy HTML templates
+SPA/                 → Single Page Application (Modern Vanilla JS ES2026+)
+  index.html         → SPA Shell Entrypoint
+  main.js            → App Bootstrap
+  assets/            → Global CSS & Static Images
+  core/              → Router, API client, Global State
+  components/        → Shared Reusable UI Components
+  features/          → Vertical Domain Slices (Auth, Feed, Chat, etc.)
+  tests/             → Unit and Integration Tests
 
-Frontend communicates with backend via:
+The frontend communicates with the backend via:
 
-/api/v1/\*
+/api/v1/*        → REST APIs (CRUD, Auth)
+/ws              → WebSockets (Presence, Private Messaging)
 
-Architecture style: - Layered architecture - Clear separation of
-concerns - Stateless HTTP handlers - Context-aware database operations
+Architecture style:
+- Layered backend (db, handlers, middleware)
+- Single Page Application (SPA) shell
+- Screaming Architecture for frontend features
+- Event-driven real-time interactions via WebSockets
+- Clean separation of concerns
 
 ------------------------------------------------------------------------
 
@@ -30,118 +41,33 @@ concerns - Stateless HTTP handlers - Context-aware database operations
 
 Built with Go standard library + SQLite.
 
-internal/\
-├── db\
-├── handlers\
-├── middleware\
-├── router\
-├── server\
-└── tests
+internal/
+├── db/              → Persistence (SQLite, SQL queries)
+├── handlers/        → HTTP Request Handlers
+├── middleware/      → Request Middleware (Auth, CORS, Logging)
+├── router/          → Route Registration
+└── tests/           → Backend Integration Tests
 
 ------------------------------------------------------------------------
 
-## 2.1 internal/db --- Persistence Layer
-
-Responsibilities: - SQL queries - Transactions - Context-aware
-execution - Schema ownership - Reaction aggregation - Draft
-persistence - Notification storage
-
-Key modules: - users.go - sessions.go - posts.go - drafts.go -
-comments.go - categories.go - reactions.go - notifications.go -
-errors.go - db.go
-
-Rules: - No HTTP imports - No JSON encoding - No request parsing - No
-business logic leakage
-
-------------------------------------------------------------------------
-
-## 2.2 internal/handlers --- HTTP Layer
-
-Responsibilities: - Request validation - JSON parsing - Status code
-handling - Response formatting - OAuth callback handling
-
-Key handlers: - users.go - posts.go - drafts.go - comments.go -
-categories.go - notifications.go - health.go
-
-Patterns: - HandlePosts → collection - HandlePost → single resource -
-Structured request DTOs - Consistent error response schema
-
-------------------------------------------------------------------------
-
-## 2.3 Middleware
-
-Request Flow:
-
-Request\
-→ Logger\
-→ Recoverer\
-→ CORS\
-→ OptionalAuth\
-→ Auth (when required)\
-→ Handler
-
-Files: - auth.go - middleware.go
-
-Authentication middleware: - Validates session cookie - Injects userID
-into context - Supports optional auth for public endpoints
-
-------------------------------------------------------------------------
-
-## 2.4 Router
-
--   Uses http.ServeMux
--   Explicit route definitions
--   Middleware applied per-route
--   API versioning (/api/v1)
-
-Examples:
-
-GET /api/v1/posts\
-POST /api/v1/posts (auth)\
-POST /api/v1/drafts (auth)\
-GET /api/v1/users/me (auth)\
-GET /api/v1/notifications (auth)\
-PATCH /api/v1/notifications/read-all (auth)
-
-------------------------------------------------------------------------
-
-## 2.5 Server
-
--   Initializes SQLite database
--   Loads schema
--   Builds router
--   Applies middleware stack
--   Starts HTTP server
-
-No business logic inside server package.
-
-------------------------------------------------------------------------
-
-## 3. Frontend Architecture
+## 3. Frontend Architecture (SPA)
 
 Located under:
 
-web/\
-├── static/js\
-├── static/css\
-└── templates
+SPA/
+├── assets/          → CSS & Global Assets
+├── components/      → Reusable UI Fragments
+├── core/            → Infrastructure (API, Router, State)
+├── features/        → Vertical Slices (Domain Logic & Views)
+└── main.js          → Entry Point
 
-Frontend logic modules:
-
--   auth.js
--   header-loader.js
--   view-post.js
--   home.js
--   create-post.js
--   drafts.js
--   reactions.js
--   notifications.js
--   ui-messages.js
--   image-picker.js
-
-Characteristics: - Pure Vanilla JavaScript - No frontend framework -
-Modular ES modules - Event delegation for dynamic DOM - API-driven UI
-state
+Characteristics:
+- Pure Vanilla JavaScript (ES2026+)
+- No frontend framework (React, Vue, etc.)
+- Modular ES modules
+- Proxy-based Global State management
+- Client-side Routing
+- Vitest for testing suite (Unit, Integration, E2E)
 
 ------------------------------------------------------------------------
 
