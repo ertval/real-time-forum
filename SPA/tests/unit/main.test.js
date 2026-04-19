@@ -1,10 +1,71 @@
 import { describe, expect, test, vi } from 'vitest';
 import { createApp, matchRoute, normalizePathname } from '../../main.js';
 
+const AUTH_OUTLET_OPENING_TAG = '<main class="app-shell__outlet" aria-label="Page content">';
+
+function extractOutletMarkup(shellMarkup) {
+	const outletStartMarkerIndex = shellMarkup.indexOf(AUTH_OUTLET_OPENING_TAG);
+	if (outletStartMarkerIndex === -1) {
+		return '';
+	}
+
+	const outletContentStart = outletStartMarkerIndex + AUTH_OUTLET_OPENING_TAG.length;
+	const outletEndMarkerIndex = shellMarkup.indexOf('</main>', outletContentStart);
+	if (outletEndMarkerIndex === -1) {
+		return '';
+	}
+
+	return shellMarkup.slice(outletContentStart, outletEndMarkerIndex);
+}
+
+function replaceOutletMarkup(shellMarkup, outletMarkup) {
+	const outletStartMarkerIndex = shellMarkup.indexOf(AUTH_OUTLET_OPENING_TAG);
+	if (outletStartMarkerIndex === -1) {
+		return null;
+	}
+
+	const outletContentStart = outletStartMarkerIndex + AUTH_OUTLET_OPENING_TAG.length;
+	const outletEndMarkerIndex = shellMarkup.indexOf('</main>', outletContentStart);
+	if (outletEndMarkerIndex === -1) {
+		return null;
+	}
+
+	return `${shellMarkup.slice(0, outletContentStart)}${outletMarkup}${shellMarkup.slice(outletEndMarkerIndex)}`;
+}
+
+function createMockNode(initialMarkup = '', onUpdate = null) {
+	let markup = initialMarkup;
+
+	return {
+		get innerHTML() {
+			return markup;
+		},
+		set innerHTML(value) {
+			markup = value;
+			if (typeof onUpdate === 'function') {
+				onUpdate(value);
+			}
+		},
+		querySelector() {
+			return null;
+		},
+	};
+}
+
 function createMockBrowser(initialPath = '/') {
 	const documentListeners = new Map();
 	const windowListeners = new Map();
 	const historyCalls = [];
+	const shellNodes = {
+		root: null,
+		header: null,
+		logout: null,
+		chat: null,
+		roster: null,
+		active: null,
+		outlet: null,
+	};
+	let authShellHydrationCount = 0;
 
 	const overlay = {
 		style: { opacity: '1' },
@@ -14,7 +75,77 @@ function createMockBrowser(initialPath = '/') {
 		},
 	};
 
-	const mainContent = { innerHTML: '' };
+	let mainContent = null;
+
+	const clearShellNodes = () => {
+		shellNodes.root = null;
+		shellNodes.header = null;
+		shellNodes.logout = null;
+		shellNodes.chat = null;
+		shellNodes.roster = null;
+		shellNodes.active = null;
+		shellNodes.outlet = null;
+	};
+
+	const hydrateShellNodes = (shellMarkup) => {
+		authShellHydrationCount += 1;
+		const header = createMockNode();
+		const logout = createMockNode();
+		const chat = createMockNode();
+		const roster = createMockNode();
+		const active = createMockNode();
+		const outlet = createMockNode(extractOutletMarkup(shellMarkup), (nextMarkup) => {
+			const updatedMarkup = replaceOutletMarkup(mainContent._innerHTML, nextMarkup);
+			if (typeof updatedMarkup === 'string') {
+				mainContent._innerHTML = updatedMarkup;
+			}
+		});
+
+		const root = createMockNode();
+		const selectorMap = {
+			'.app-shell__header': header,
+			'[data-action="logout"]': logout,
+			'.app-shell__chat': chat,
+			'[data-chat-roster]': roster,
+			'[data-chat-active]': active,
+			'.app-shell__outlet': outlet,
+		};
+
+		root.querySelector = (selector) => {
+			return selectorMap[selector] ?? null;
+		};
+
+		shellNodes.root = root;
+		shellNodes.header = header;
+		shellNodes.logout = logout;
+		shellNodes.chat = chat;
+		shellNodes.roster = roster;
+		shellNodes.active = active;
+		shellNodes.outlet = outlet;
+	};
+
+	mainContent = {
+		_innerHTML: '',
+		get innerHTML() {
+			return this._innerHTML;
+		},
+		set innerHTML(value) {
+			this._innerHTML = value;
+			if (typeof value === 'string' && value.includes('data-auth-shell')) {
+				hydrateShellNodes(value);
+				return;
+			}
+
+			clearShellNodes();
+		},
+		querySelector(selector) {
+			if (selector === '[data-auth-shell]') {
+				return shellNodes.root;
+			}
+
+			return null;
+		},
+	};
 
 	const setPath = (path) => {
 		location.pathname = path;
@@ -166,6 +297,7 @@ function createMockBrowser(initialPath = '/') {
 		mainContent,
 		overlay,
 		historyCalls,
+		getAuthShellHydrationCount: () => authShellHydrationCount,
 		clickLink,
 		submitForm: (formId) => {
 			const form = {
@@ -307,7 +439,7 @@ describe('SPA routing for A03/A04', () => {
 		expect(browser.mainContent.innerHTML).toContain('data-screen="feed"');
 	});
 
-	test('navigation and logout stay visible across protected route changes', async () => {
+	test('protected navigation keeps the same authenticated shell and outlet instance', async () => {
 		const browser = createMockBrowser('/');
 		const app = createApp({
 			windowRef: browser.windowRef,
@@ -316,8 +448,39 @@ describe('SPA routing for A03/A04', () => {
 		});
 
 		await app.boot();
+
+		const shellBefore = browser.mainContent.querySelector('[data-auth-shell]');
+		const headerBefore = shellBefore?.querySelector('.app-shell__header');
+		const logoutBefore = shellBefore?.querySelector('[data-action="logout"]');
+		const chatBefore = shellBefore?.querySelector('.app-shell__chat');
+		const rosterBefore = shellBefore?.querySelector('[data-chat-roster]');
+		const activeBefore = shellBefore?.querySelector('[data-chat-active]');
+		const outletBefore = shellBefore?.querySelector('.app-shell__outlet');
+		const shellHydrationCountAfterBoot = browser.getAuthShellHydrationCount();
+
+		expect(shellBefore).not.toBeNull();
+		expect(outletBefore).not.toBeNull();
+		expect(shellHydrationCountAfterBoot).toBe(1);
+		expect(outletBefore?.innerHTML).toContain('data-screen="feed"');
+
 		app.navigate('/create-post');
+		expect(browser.getAuthShellHydrationCount()).toBe(shellHydrationCountAfterBoot);
+		expect(outletBefore?.innerHTML).toContain('data-screen="create-post"');
+
 		app.navigate('/activity');
+		expect(browser.getAuthShellHydrationCount()).toBe(shellHydrationCountAfterBoot);
+		expect(outletBefore?.innerHTML).toContain('data-screen="activity"');
+
+		const shellAfter = browser.mainContent.querySelector('[data-auth-shell]');
+		expect(shellAfter).not.toBeNull();
+
+		expect(shellAfter).toBe(shellBefore);
+		expect(shellAfter?.querySelector('.app-shell__header')).toBe(headerBefore);
+		expect(shellAfter?.querySelector('[data-action="logout"]')).toBe(logoutBefore);
+		expect(shellAfter?.querySelector('.app-shell__chat')).toBe(chatBefore);
+		expect(shellAfter?.querySelector('[data-chat-roster]')).toBe(rosterBefore);
+		expect(shellAfter?.querySelector('[data-chat-active]')).toBe(activeBefore);
+		expect(shellAfter?.querySelector('.app-shell__outlet')).toBe(outletBefore);
 
 		expect(browser.mainContent.innerHTML).toContain('data-screen="activity"');
 		expect(browser.mainContent.innerHTML).toContain('aria-label="Forum navigation"');
