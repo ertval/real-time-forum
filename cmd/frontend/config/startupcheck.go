@@ -20,7 +20,7 @@ func StartupCheckConfig() startupcheck.Config {
 			"SPA/assets/css/main.css",
 		},
 
-		MinJSFiles:   1,
+		MinJSFiles:   1, // main.js
 		ExactJSFiles: 0,
 	}
 }

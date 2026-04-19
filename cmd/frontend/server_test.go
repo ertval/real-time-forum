@@ -5,12 +5,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestSPARouting(t *testing.T) {
-	// Setup test directories
-	tmpDir, err := os.MkdirTemp("", "spa-test")
+	// Setup test directories and files in a temporary workspace
+	tmpDir, err := os.MkdirTemp("", "frontend-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,8 +19,10 @@ func TestSPARouting(t *testing.T) {
 
 	spaDir := filepath.Join(tmpDir, "SPA")
 	staticDir := filepath.Join(tmpDir, "web/static")
+	errorDir := filepath.Join(tmpDir, "web/errors")
 	os.MkdirAll(spaDir, 0755)
 	os.MkdirAll(staticDir, 0755)
+	os.MkdirAll(errorDir, 0755)
 
 	indexContent := "<html>SPA Shell</html>"
 	os.WriteFile(filepath.Join(spaDir, "index.html"), []byte(indexContent), 0644)
@@ -28,48 +31,103 @@ func TestSPARouting(t *testing.T) {
 	faviconContent := "fake-favicon"
 	os.WriteFile(filepath.Join(staticDir, "favicon.ico"), []byte(faviconContent), 0644)
 
-	// Override paths for testing (if possible, but let's just use the real structure)
-	// For this test, I'll use a mocked mux that points to the temp dir.
+	// Mock backend for proxy testing
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer backend.Close()
 
-	mux := http.NewServeMux()
+	// Redirect NewMux to use our mock backend
+	oldBackendURL := backendBaseURL
+	backendBaseURL = backend.URL
+	defer func() { backendBaseURL = oldBackendURL }()
 
-	// Static
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
-	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(staticDir, "favicon.ico"))
-	})
+	// Change working directory so NewMux can find ./web/... and ./SPA
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(oldWD)
 
-	// SPA Fallback
-	spaFileServer := NewCustomFileServer(http.Dir(spaDir), filepath.Join(spaDir, "index.html"))
-	mux.Handle("/", spaFileServer)
+	// Now use the real Mux!
+	mux := NewMux()
 
 	tests := []struct {
-		name           string
-		path           string
-		expectedStatus int
-		expectedBody   string
+		name                string
+		path                string
+		accept              string
+		expectedStatus      int
+		expectedContentType string
+		expectedBody        string
 	}{
-		{"Root", "/", http.StatusOK, indexContent},
-		{"Existing JS", "/main.js", http.StatusOK, jsContent},
-		{"Login route", "/login", http.StatusOK, indexContent},
-		{"Register route", "/register", http.StatusOK, indexContent},
-		{"Post detail route", "/post/1", http.StatusOK, indexContent},
-		{"Create post route", "/create-post", http.StatusOK, indexContent},
-		{"Edit post route", "/edit-post/1", http.StatusOK, indexContent},
-		{"Activity route", "/activity", http.StatusOK, indexContent},
-		{"Favicon", "/favicon.ico", http.StatusOK, faviconContent},
+		{
+			name:                "Root",
+			path:                "/",
+			expectedStatus:      http.StatusOK,
+			expectedContentType: "text/html; charset=utf-8",
+			expectedBody:        indexContent,
+		},
+		{
+			name:                "Existing JS",
+			path:                "/main.js",
+			expectedStatus:      http.StatusOK,
+			expectedContentType: "text/javascript; charset=utf-8",
+			expectedBody:        jsContent,
+		},
+		{
+			name:                "SPA Deep Link",
+			path:                "/login",
+			expectedStatus:      http.StatusOK,
+			expectedContentType: "text/html; charset=utf-8",
+			expectedBody:        indexContent,
+		},
+		{
+			name:                "SPA Deep Link with HTML accept",
+			path:                "/posts/123",
+			accept:              "text/html,application/xhtml+xml",
+			expectedStatus:      http.StatusOK,
+			expectedContentType: "text/html; charset=utf-8",
+			expectedBody:        indexContent,
+		},
+		{
+			name:                "API Proxy (Proxy gate check)",
+			path:                "/api/v1/posts",
+			expectedStatus:      http.StatusOK,
+			expectedContentType: "application/json",
+			expectedBody:        `{"status":"ok"}`,
+		},
+		{
+			name:                "Favicon",
+			path:                "/favicon.ico",
+			expectedStatus:      http.StatusOK,
+			expectedContentType: "icon",
+			expectedBody:        faviconContent,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", tt.path, nil)
+			if tt.accept != "" {
+				req.Header.Set("Accept", tt.accept)
+			}
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)
 
 			if rr.Code != tt.expectedStatus {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
 			}
-			if rr.Body.String() != tt.expectedBody {
+
+			actualCT := rr.Header().Get("Content-Type")
+			if tt.expectedContentType != "" && !strings.Contains(actualCT, tt.expectedContentType) {
+				t.Errorf("expected Content-Type to contain %q, got %q", tt.expectedContentType, actualCT)
+			}
+
+			if tt.expectedBody != "" && rr.Body.String() != tt.expectedBody {
 				t.Errorf("expected body %q, got %q", tt.expectedBody, rr.Body.String())
 			}
 		})

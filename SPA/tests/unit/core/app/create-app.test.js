@@ -268,4 +268,32 @@ describe('SPA Application Engine', () => {
 			expect(app.getState().isAuthenticated).toBe(false);
 		}
 	});
+
+	test('form submission should be intercepted and prevented', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('login-form');
+		expect(event.preventDefault).toHaveBeenCalled();
+	});
+
+	test('non-critical forms should not be intercepted by default', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('search-form');
+		expect(event.preventDefault).not.toHaveBeenCalled();
+	});
 });
