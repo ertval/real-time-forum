@@ -78,9 +78,27 @@ export function createApp(options = {}) {
 			return;
 		}
 
+		const isProtected = match.route.access === 'protected';
 		const routeMarkup = renderTemplate(match);
-		mainContent.innerHTML =
-			match.route.access === 'protected' ? renderAuthenticatedShell(routeMarkup) : routeMarkup;
+
+		if (isProtected) {
+			// Persistent Shell logic: only render shell if not already present
+			const existingShell = mainContent.querySelector('[data-auth-shell]');
+			if (existingShell) {
+				const outlet = existingShell.querySelector('.app-shell__outlet');
+				if (outlet) {
+					outlet.innerHTML = routeMarkup;
+				} else {
+					// Fallback if DOM structure is compromised
+					mainContent.innerHTML = renderAuthenticatedShell(routeMarkup);
+				}
+			} else {
+				mainContent.innerHTML = renderAuthenticatedShell(routeMarkup);
+			}
+		} else {
+			// Public routes: always full render
+			mainContent.innerHTML = routeMarkup;
+		}
 	}
 
 	function goTo(pathname, replace = false) {
@@ -142,6 +160,38 @@ export function createApp(options = {}) {
 		goTo('/login', true);
 	}
 
+	async function handleAuthForm(form) {
+		const formData = new FormData(form);
+		const data = Object.fromEntries(formData.entries());
+
+		// Basic data normalization for age
+		if (data.age) {
+			data.age = Number.parseInt(data.age, 10);
+		}
+
+		const endpoint = form.id === 'login-form' ? '/api/v1/users/login' : '/api/v1/users/register';
+
+		try {
+			const response = await fetchRef(endpoint, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(data),
+				credentials: 'include',
+			});
+
+			if (response.ok) {
+				state.isAuthenticated = true;
+				goTo('/');
+			} else {
+				const error = await response.json();
+				alert(error.error?.message || 'Authentication failed');
+			}
+		} catch (err) {
+			console.error('Auth error:', err);
+			alert('A connection error occurred. Please try again.');
+		}
+	}
+
 	function onDocumentClick(event) {
 		if (event.defaultPrevented || event.button !== 0) {
 			return;
@@ -182,6 +232,7 @@ export function createApp(options = {}) {
 		const criticalForms = ['login-form', 'register-form'];
 		if (criticalForms.includes(form.id)) {
 			event.preventDefault();
+			void handleAuthForm(form);
 		}
 	}
 
