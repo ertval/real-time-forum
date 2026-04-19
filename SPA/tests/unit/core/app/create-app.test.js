@@ -1,0 +1,437 @@
+// SPA/tests/unit/core/app/create-app.test.js
+
+import { describe, expect, test, vi } from 'vitest';
+import { createApp } from '../../../../core/app/create-app.js';
+import { matchRoute, normalizePathname } from '../../../../core/router/routes.js';
+import { createMockBrowser } from '../../helpers/browser-mock.js';
+
+describe('SPA routing for A03/A04', () => {
+	test('normalizes and matches required routes', () => {
+		expect(normalizePathname('')).toBe('/');
+		expect(normalizePathname('/view-post/42')).toBe('/post/42');
+		expect(normalizePathname('/activity/')).toBe('/activity');
+
+		expect(matchRoute('/')?.route.id).toBe('feed');
+		expect(matchRoute('/post/7')?.params.id).toBe('7');
+		expect(matchRoute('/edit-post/15')?.params.id).toBe('15');
+		expect(matchRoute('/does-not-exist')).toBeNull();
+
+		// Regression: A03 Malformed URI should not crash
+		expect(matchRoute('/post/%E0%A4%A')).toBeNull();
+	});
+});
+
+describe('SPA Application Engine', () => {
+	test('boot applies auth guard and redirects protected deep links', async () => {
+		const browser = createMockBrowser('/activity');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			setTimeoutRef: (fn) => {
+				fn();
+				return 1;
+			},
+		});
+
+		await app.boot();
+
+		expect(browser.windowRef.location.pathname).toBe('/login');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		expect(browser.overlay.style.opacity).toBe('0');
+		expect(browser.overlay.removed).toBe(true);
+	});
+
+	test('boot checks session via GET /api/v1/users/me with cookie credentials', async () => {
+		const browser = createMockBrowser('/login');
+		const fetchRef = vi.fn(async () => ({ ok: false, status: 401 }));
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		expect(fetchRef).toHaveBeenCalledTimes(1);
+		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/me', {
+			method: 'GET',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+	});
+
+	test('unauthenticated boot blocks every protected route and redirects to login', async () => {
+		const protectedRoutes = ['/', '/post/9', '/create-post', '/edit-post/3', '/activity'];
+
+		for (const path of protectedRoutes) {
+			const browser = createMockBrowser(path);
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			});
+
+			await app.boot();
+
+			expect(browser.windowRef.location.pathname).toBe('/login');
+			expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		}
+	});
+
+	test('authenticated boot redirects public-only entry states into forum shell', async () => {
+		const browser = createMockBrowser('/register');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		expect(browser.windowRef.location.pathname).toBe('/');
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="feed"');
+	});
+
+	test('internal link navigation updates route without reload', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+		const clickEvent = browser.clickLink('/register');
+
+		expect(clickEvent.preventDefault).toHaveBeenCalledTimes(1);
+		expect(browser.windowRef.location.pathname).toBe('/register');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
+		expect(browser.windowRef.location.assign).not.toHaveBeenCalled();
+		expect(
+			browser.historyCalls.some((call) => call.type === 'push' && call.path === '/register'),
+		).toBe(true);
+	});
+
+	test('browser back and forward render supported routes', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+		app.navigate('/create-post');
+		app.navigate('/post/42');
+
+		expect(browser.mainContent.innerHTML).toContain('data-screen="post-detail"');
+
+		browser.windowRef.history.back();
+		expect(browser.mainContent.innerHTML).toContain('data-screen="create-post"');
+
+		browser.windowRef.history.back();
+		expect(browser.mainContent.innerHTML).toContain('data-screen="feed"');
+
+		browser.windowRef.history.forward();
+		expect(browser.mainContent.innerHTML).toContain('data-screen="create-post"');
+	});
+
+	test('deep-link boot renders expected authenticated routes', async () => {
+		const cases = [
+			{ path: '/', expected: 'data-screen="feed"' },
+			{ path: '/post/9', expected: 'data-screen="post-detail"' },
+			{ path: '/create-post', expected: 'data-screen="create-post"' },
+			{ path: '/edit-post/3', expected: 'data-screen="edit-post"' },
+			{ path: '/activity', expected: 'data-screen="activity"' },
+		];
+
+		for (const testCase of cases) {
+			const browser = createMockBrowser(testCase.path);
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			});
+
+			await app.boot();
+			expect(browser.mainContent.innerHTML).toContain(testCase.expected);
+		}
+	});
+
+	test('authenticated routes render inside a shared shell with reserved chat regions', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).toContain('aria-label="Forum navigation"');
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-roster');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-active');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="feed"');
+	});
+
+	test('navigation and logout stay visible across protected route changes', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+		app.navigate('/create-post');
+		app.navigate('/activity');
+
+		expect(browser.mainContent.innerHTML).toContain('data-screen="activity"');
+		expect(browser.mainContent.innerHTML).toContain('aria-label="Forum navigation"');
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-roster');
+		expect(browser.mainContent.innerHTML).toContain('data-chat-active');
+	});
+
+	test('public routes render outside authenticated shell', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+
+		browser.clickLink('/register');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('logout button calls API and returns user to login flow', async () => {
+		const browser = createMockBrowser('/activity');
+		const fetchRef = vi.fn(async (url) => {
+			if (url === '/api/v1/users/me') {
+				return { ok: true, status: 200 };
+			}
+			if (url === '/api/v1/users/logout') {
+				return { ok: true, status: 200 };
+			}
+			return { ok: false, status: 404 };
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+
+		const event = browser.clickLogout();
+		await Promise.resolve();
+
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/logout', {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+		expect(app.getState().isAuthenticated).toBe(false);
+		expect(browser.windowRef.location.pathname).toBe('/login');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('logout does not force local logout when backend returns non-OK response', async () => {
+		const browser = createMockBrowser('/activity');
+		let resolveLogoutRequest;
+		const logoutRequest = new Promise((resolve) => {
+			resolveLogoutRequest = resolve;
+		});
+
+		const fetchRef = vi.fn((url) => {
+			if (url === '/api/v1/users/me') {
+				return Promise.resolve({ ok: true, status: 200 });
+			}
+			if (url === '/api/v1/users/logout') {
+				return logoutRequest;
+			}
+			return Promise.resolve({ ok: false, status: 404 });
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		const event = browser.clickLogout();
+
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/logout', {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+
+		resolveLogoutRequest({ ok: false, status: 500 });
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(app.getState().isAuthenticated).toBe(true);
+		expect(browser.windowRef.location.pathname).toBe('/activity');
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).not.toContain('data-screen="login"');
+	});
+
+	test('logout does not force local logout when request rejects', async () => {
+		const browser = createMockBrowser('/activity');
+		let rejectLogoutRequest;
+		const logoutRequest = new Promise((_, reject) => {
+			rejectLogoutRequest = reject;
+		});
+
+		const fetchRef = vi.fn((url) => {
+			if (url === '/api/v1/users/me') {
+				return Promise.resolve({ ok: true, status: 200 });
+			}
+			if (url === '/api/v1/users/logout') {
+				return logoutRequest;
+			}
+			return Promise.resolve({ ok: false, status: 404 });
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		const event = browser.clickLogout();
+
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/logout', {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+
+		rejectLogoutRequest(new TypeError('Network failure'));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(app.getState().isAuthenticated).toBe(true);
+		expect(browser.windowRef.location.pathname).toBe('/activity');
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).not.toContain('data-screen="login"');
+	});
+
+	test('logout still finalizes locally when backend reports session is already invalid', async () => {
+		const browser = createMockBrowser('/activity');
+		const fetchRef = vi.fn(async (url) => {
+			if (url === '/api/v1/users/me') {
+				return { ok: true, status: 200 };
+			}
+			if (url === '/api/v1/users/logout') {
+				return { ok: false, status: 401 };
+			}
+			return { ok: false, status: 404 };
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		browser.clickLogout();
+		await Promise.resolve();
+
+		expect(app.getState().isAuthenticated).toBe(false);
+		expect(browser.windowRef.location.pathname).toBe('/login');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('logout is usable from every authenticated route', async () => {
+		const protectedRoutes = ['/', '/post/9', '/create-post', '/edit-post/3', '/activity'];
+
+		for (const path of protectedRoutes) {
+			const browser = createMockBrowser(path);
+			const fetchRef = vi.fn(async (url) => {
+				if (url === '/api/v1/users/me') {
+					return { ok: true, status: 200 };
+				}
+				if (url === '/api/v1/users/logout') {
+					return { ok: true, status: 200 };
+				}
+				return { ok: false, status: 404 };
+			});
+
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef,
+			});
+
+			await app.boot();
+			expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+
+			browser.clickLogout();
+			await Promise.resolve();
+
+			expect(browser.windowRef.location.pathname).toBe('/login');
+			expect(app.getState().isAuthenticated).toBe(false);
+		}
+	});
+
+	test('form submission should be intercepted and prevented', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('login-form');
+		expect(event.preventDefault).toHaveBeenCalled();
+	});
+
+	test('non-critical forms should not be intercepted by default', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('search-form');
+		expect(event.preventDefault).not.toHaveBeenCalled();
+	});
+});
