@@ -2,7 +2,24 @@
 
 import { describe, expect, test, vi } from 'vitest';
 import { createApp } from '../../../../core/app/create-app.js';
+import { matchRoute, normalizePathname } from '../../../../core/router/routes.js';
 import { createMockBrowser } from '../../helpers/browser-mock.js';
+
+describe('SPA routing for A03/A04', () => {
+	test('normalizes and matches required routes', () => {
+		expect(normalizePathname('')).toBe('/');
+		expect(normalizePathname('/view-post/42')).toBe('/post/42');
+		expect(normalizePathname('/activity/')).toBe('/activity');
+
+		expect(matchRoute('/')?.route.id).toBe('feed');
+		expect(matchRoute('/post/7')?.params.id).toBe('7');
+		expect(matchRoute('/edit-post/15')?.params.id).toBe('15');
+		expect(matchRoute('/does-not-exist')).toBeNull();
+
+		// Regression: A03 Malformed URI should not crash
+		expect(matchRoute('/post/%E0%A4%A')).toBeNull();
+	});
+});
 
 describe('SPA Application Engine', () => {
 	test('boot applies auth guard and redirects protected deep links', async () => {
@@ -231,6 +248,127 @@ describe('SPA Application Engine', () => {
 				Accept: 'application/json',
 			},
 		});
+		expect(app.getState().isAuthenticated).toBe(false);
+		expect(browser.windowRef.location.pathname).toBe('/login');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');
+		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('logout does not force local logout when backend returns non-OK response', async () => {
+		const browser = createMockBrowser('/activity');
+		let resolveLogoutRequest;
+		const logoutRequest = new Promise((resolve) => {
+			resolveLogoutRequest = resolve;
+		});
+
+		const fetchRef = vi.fn((url) => {
+			if (url === '/api/v1/users/me') {
+				return Promise.resolve({ ok: true, status: 200 });
+			}
+			if (url === '/api/v1/users/logout') {
+				return logoutRequest;
+			}
+			return Promise.resolve({ ok: false, status: 404 });
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		const event = browser.clickLogout();
+
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/logout', {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+
+		resolveLogoutRequest({ ok: false, status: 500 });
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(app.getState().isAuthenticated).toBe(true);
+		expect(browser.windowRef.location.pathname).toBe('/activity');
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).not.toContain('data-screen="login"');
+	});
+
+	test('logout does not force local logout when request rejects', async () => {
+		const browser = createMockBrowser('/activity');
+		let rejectLogoutRequest;
+		const logoutRequest = new Promise((_, reject) => {
+			rejectLogoutRequest = reject;
+		});
+
+		const fetchRef = vi.fn((url) => {
+			if (url === '/api/v1/users/me') {
+				return Promise.resolve({ ok: true, status: 200 });
+			}
+			if (url === '/api/v1/users/logout') {
+				return logoutRequest;
+			}
+			return Promise.resolve({ ok: false, status: 404 });
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		const event = browser.clickLogout();
+
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/logout', {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+
+		rejectLogoutRequest(new TypeError('Network failure'));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(app.getState().isAuthenticated).toBe(true);
+		expect(browser.windowRef.location.pathname).toBe('/activity');
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).not.toContain('data-screen="login"');
+	});
+
+	test('logout still finalizes locally when backend reports session is already invalid', async () => {
+		const browser = createMockBrowser('/activity');
+		const fetchRef = vi.fn(async (url) => {
+			if (url === '/api/v1/users/me') {
+				return { ok: true, status: 200 };
+			}
+			if (url === '/api/v1/users/logout') {
+				return { ok: false, status: 401 };
+			}
+			return { ok: false, status: 404 };
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		browser.clickLogout();
+		await Promise.resolve();
+
 		expect(app.getState().isAuthenticated).toBe(false);
 		expect(browser.windowRef.location.pathname).toBe('/login');
 		expect(browser.mainContent.innerHTML).toContain('data-screen="login"');

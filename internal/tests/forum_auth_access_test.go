@@ -29,6 +29,7 @@ func TestForumContentEndpoints_RequireAuth(t *testing.T) {
 		"/api/v1/categories/view",
 		"/api/v1/posts?page=1&per_page=10",
 		"/api/v1/posts/1",
+		"/api/v1/posts/1/comments",
 		"/api/v1/comments/1",
 		"/api/v1/users/activity",
 	}
@@ -56,6 +57,7 @@ func TestForumContentEndpoints_AccessWithAuth(t *testing.T) {
 		"/api/v1/categories/view",
 		"/api/v1/posts?page=1&per_page=10",
 		"/api/v1/posts/1",
+		"/api/v1/posts/1/comments",
 		"/api/v1/comments/1",
 		"/api/v1/users/activity",
 	}
@@ -65,6 +67,30 @@ func TestForumContentEndpoints_AccessWithAuth(t *testing.T) {
 			rec, _ := doRequestWithToken(t, h, http.MethodGet, path, token, nil)
 			if rec.Code != http.StatusOK {
 				t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestChatRoutes_GuestCannotSuccessfullyAccess_CurrentStage(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	tests := []struct {
+		path string
+		want int
+	}{
+		// Chat routes are not wired in this stage yet, but guests still must not get successful access.
+		{path: "/api/v1/chats", want: http.StatusNotFound},
+		{path: "/api/v1/chats/1/messages", want: http.StatusNotFound},
+		{path: "/ws", want: http.StatusNotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			rec, _ := doRequest(t, h, http.MethodGet, tt.path, nil)
+			if rec.Code != tt.want {
+				t.Fatalf("expected %d, got %d body=%s", tt.want, rec.Code, rec.Body.String())
 			}
 		})
 	}
