@@ -12,7 +12,7 @@ export function renderLoginView() {
 						<p class="auth-subtitle">Sign in to access your dashboard and continue participating in the community.</p>
 					</div>
 
-					<form class="auth-form" id="login-form">
+					<form class="auth-form" id="login-form" method="POST">
 						<div class="form-group">
 							<label class="form-label" for="login-identifier">Username or Email</label>
 							<div class="input-wrapper">
@@ -92,7 +92,7 @@ export function renderRegisterView() {
 						<p class="auth-subtitle">Join our community and start sharing your thoughts today.</p>
 					</div>
 
-					<form class="auth-form" id="register-form">
+					<form class="auth-form" id="register-form" method="POST">
 						<div class="auth-grid-2">
 							<div class="form-group">
 								<label class="form-label" for="reg-first-name">First Name</label>

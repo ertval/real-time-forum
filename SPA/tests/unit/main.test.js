@@ -167,6 +167,24 @@ function createMockBrowser(initialPath = '/') {
 		overlay,
 		historyCalls,
 		clickLink,
+		submitForm: (formId) => {
+			const form = {
+				id: formId,
+				getAttribute: (name) => (name === 'id' ? formId : null),
+				closest: (selector) => (selector === 'form' ? form : null),
+			};
+			const event = {
+				type: 'submit',
+				target: form,
+				preventDefault: vi.fn(),
+				defaultPrevented: false,
+			};
+			const handlers = documentListeners.get('submit') ?? [];
+			for (const handler of handlers) {
+				handler(event);
+			}
+			return event;
+		},
 	};
 }
 
@@ -323,5 +341,19 @@ describe('SPA routing for A03/A04', () => {
 		browser.clickLink('/register');
 		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
 		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+	});
+
+	test('form submission should be intercepted and prevented', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('login-form');
+		expect(event.preventDefault).toHaveBeenCalled();
 	});
 });
