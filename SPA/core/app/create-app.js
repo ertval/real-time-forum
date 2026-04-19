@@ -150,7 +150,11 @@ export function createApp(options = {}) {
 			return;
 		}
 
-		event.preventDefault();
+		// Only intercept critical authentication forms to prevent URL exposure
+		const criticalForms = ['login-form', 'register-form'];
+		if (criticalForms.includes(form.id)) {
+			event.preventDefault();
+		}
 	}
 
 	function onPopState() {

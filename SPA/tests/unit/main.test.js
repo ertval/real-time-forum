@@ -356,4 +356,18 @@ describe('SPA routing for A03/A04', () => {
 		const event = browser.submitForm('login-form');
 		expect(event.preventDefault).toHaveBeenCalled();
 	});
+
+	test('non-critical forms should not be intercepted by default', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('search-form');
+		expect(event.preventDefault).not.toHaveBeenCalled();
+	});
 });
