@@ -23,12 +23,12 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 
 ### Phase 1: Planning (Spawn Research Agent)
 **Task**: `spawn subagent` to analyze the codebase and define the technical contract.
-1. **Output**: A `PLAN.md` in `.agents/scratch/` containing:
+1. **Output**: A `PLAN-{TicketID}.md` in `.agents/scratch/` containing:
    - Specific files to modify.
    - API/WS contracts (JSON shapes).
    - DB Schema migrations.
    - A pass/fail checklist derived from the ticket's **Verification Gate**.
-2. **Loop**: If `PLAN.md` is ambiguous or missing requirements, command the Research Agent to refine it.
+2. **Loop**: If `PLAN-{TicketID}.md` is ambiguous or missing requirements, command the Research Agent to refine it.
 
 ### Phase 2: Parallel Execution (Spawn Implementation Agents)
 **Task**: `spawn subagent` for Backend and `spawn subagent` for Frontend in parallel.
@@ -43,7 +43,7 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 ### Phase 3: Independent Audit (Spawn Audit Agent)
 **Task**: `spawn subagent` for a cold-start audit. This agent MUST NOT be the same as the implementation agents.
 1. **Scope**: The Audit Agent **MUST NOT** read `PLAN.md` or implementation logs. It must evaluate the work solely against the **Source of Truth** (`docs/audit.md`, `docs/requirements.md`, `docs/SDS.md`, and `docs/PRD.md`).
-2. **Quality Audit**: Review code logic, design patterns, and quality of implementation. Ensure it matches the high standards defined in `AGENTS.md`.
+2. **Quality Audit**: Review code logic, design patterns, and quality of implementation. Check for Dead Code, Unused Variables, etc, Best Practices. Ensure it matches the high standards defined in `AGENTS.md`.
 3. **Compliance Audit**: Check for 100% compliance with the ticket requirements, correctness, and the verification gate.
 4. **Automated Testing**: Run **ONLY** `make test` (backend) and `bun run policy` (frontend/SPA) to validate the QA gate.
 5. **Verification**: Confirm the ticket's **Verification Gate** is fully satisfied based on the documentation.

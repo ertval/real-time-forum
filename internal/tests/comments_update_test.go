@@ -32,10 +32,11 @@ func patchCommentJSON(
 	return rec
 }
 
-func getCommentByID(t *testing.T, h http.Handler, commentID int64) map[string]any {
+func getCommentByID(t *testing.T, h http.Handler, token string, commentID int64) map[string]any {
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/comments/%d", commentID), nil)
+	req.Header.Set("Cookie", "session_token="+token)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -107,7 +108,7 @@ func TestAPICommentUpdate_MultipartReplaceImage(t *testing.T) {
 	}
 	t.Cleanup(func() { cleanupUploadedFromImageURL(t, newImageURL) })
 
-	fetched := getCommentByID(t, h, commentID)
+	fetched := getCommentByID(t, h, token, commentID)
 	if got := fetched["image_url"]; got != newImageURL {
 		t.Fatalf("expected fetched image_url %q, got %v", newImageURL, got)
 	}
@@ -159,7 +160,7 @@ func TestAPICommentUpdate_RemoveImage(t *testing.T) {
 		t.Fatalf("expected nil image_url after remove_image patch, got %v", got)
 	}
 
-	fetched := getCommentByID(t, h, commentID)
+	fetched := getCommentByID(t, h, token, commentID)
 	if got := fetched["image_url"]; got != nil {
 		t.Fatalf("expected nil image_url in fetched comment after remove, got %v", got)
 	}
@@ -211,7 +212,7 @@ func TestAPICommentUpdate_RemoveImageFromImageOnlyCommentRequiresBody(t *testing
 		t.Fatalf("expected body required message, got %q", apiErr.Message)
 	}
 
-	fetched := getCommentByID(t, h, commentID)
+	fetched := getCommentByID(t, h, token, commentID)
 	if got := fetched["image_url"]; got == nil {
 		t.Fatalf("expected image_url to remain after failed patch, got nil")
 	}
@@ -275,7 +276,7 @@ func TestAPICommentUpdate_RemoveImageAndUploadRejected(t *testing.T) {
 		t.Fatalf("unexpected error message: %q", apiErr.Message)
 	}
 
-	fetched := getCommentByID(t, h, commentID)
+	fetched := getCommentByID(t, h, token, commentID)
 	if got := fetched["image_url"]; got != oldImageURL {
 		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
 	}
@@ -326,7 +327,7 @@ func TestAPICommentUpdate_RemoveImageAndImageURLRejected(t *testing.T) {
 		t.Fatalf("unexpected error message: %q", apiErr.Message)
 	}
 
-	fetched := getCommentByID(t, h, commentID)
+	fetched := getCommentByID(t, h, token, commentID)
 	if got := fetched["image_url"]; got != oldImageURL {
 		t.Fatalf("expected original image_url to remain %q, got %v", oldImageURL, got)
 	}

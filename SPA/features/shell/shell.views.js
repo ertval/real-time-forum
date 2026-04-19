@@ -1,3 +1,5 @@
+// SPA/features/shell/shell.views.js
+
 function renderAppNavigation() {
 	return `
 		<nav aria-label="Forum navigation">
