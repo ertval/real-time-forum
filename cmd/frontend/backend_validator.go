@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const backendBaseURL = "http://localhost:8080"
+var backendBaseURL = "http://localhost:8080"
 
 type PostStatusChecker interface {
 	GetPostStatus(ctx context.Context, postID int64, cookieHeader string) (int, error)
