@@ -21,23 +21,34 @@ This is a **real-time forum** — a Go-based single-page application with authen
 
 ```
 cmd/
-  backend/       → backend server entrypoint (port 8080)
-  frontend/      → frontend server entrypoint (port 3000)
+  backend/           → backend server entrypoint (port 8080)
+  frontend/          → frontend server entrypoint (port 3000) — serves SPA + proxies API/WS
 internal/
-  auth/          → OAuth helpers (retained, not required for audit)
-  db/            → persistence layer (SQLite, repository functions)
-  env/           → environment configuration
-  handlers/      → HTTP handlers (REST API under /api/v1)
-  middleware/    → request middleware (auth, logging, CORS, recovery)
-  router/        → route registration
-  tests/         → backend integration tests
+  auth/              → OAuth helpers (retained, not required for audit)
+  db/                → persistence layer (SQLite, repository functions, schema)
+  env/               → environment configuration
+  handlers/          → HTTP handlers (REST API under /api/v1)
+  middleware/        → request middleware (auth, logging, CORS, recovery)
+  router/            → route registration
+  tests/             → backend integration tests
+SPA/                 → Single Page Application (Vanilla JS ES2026+)
+  index.html         → SPA Entrypoint
+  main.js            → Bootstrap Application Logic
+  assets/            → Global CSS & Static Images
+  core/              → State, Router, and API Logic
+  components/        → Shared UI Elements
+  features/          → Domain Slices (each with its {feature}.views.js)
+  tests/              → Vitest-powered shared test suite
+    unit/            → Isolated logic and component tests
+    integration/     → Multi-component or API-coupled tests
+    e2e/             → Full flow regression tests (user journeys)
 web/
-  static/        → CSS, JS, images, sounds, uploads
-  templates/     → HTML templates (being replaced by SPA shell)
-  errors/        → error page templates
-  startupcheck/  → startup validation
-data/            → SQLite database file location
-docs/            → project documentation
+  static/            → CSS, JS, images, sounds, uploads (legacy)
+  templates/         → HTML templates (legacy — replaced by SPA)
+  errors/            → error page templates
+  startupcheck/      → startup validation
+data/                → SQLite database file location
+docs/                → project documentation
 ```
 
 ### Topology
@@ -102,15 +113,15 @@ The project follows a tiered testing strategy to ensure reliability across the s
 
 | Tier | Goal | Tools | Locations |
 | :--- | :--- | :--- | :--- |
-| **Unit** | Test individual functions/logic in isolation. | Go `testing`, Vitest | `.../*.go`, `.../*.test.js` |
-| **Integration** | Test component interactions, database cycles, and API contracts. | Go `httptest`, Vitest | `internal/tests/`, `SPA/features/*/tests/` |
-| **E2E** | Test full user journeys in a browser-like environment. | Vitest | `SPA/e2e/` (planned) |
+| **Unit** | Test individual functions/logic in isolation. | Go `testing`, Vitest | `.../*.go`, `SPA/tests/unit/` |
+| **Integration** | Test component interactions, database cycles, and API contracts. | Go `httptest`, Vitest | `internal/tests/`, `SPA/tests/integration/` |
+| **E2E** | Test full user journeys in a browser-like environment. | Vitest | `SPA/tests/e2e/` |
 
 ### JavaScript Frontend
 
 - **Vanilla JS** — Modern vanilla JS ES2026+ using optimal best practice patterns. ES modules, no frontend framework.
 - **Development Tooling** — Use Bun for runtime and package management. Use Biome for fast, precise linting and static analysis. Use Vitest for all unit, integration, and end-to-end (E2E) testing workflows.
-- **Folder Structure** — Located in `SPA/`. The architecture should follow Clean Vertical Slices or Screaming Architecture (e.g., grouping by feature: `features/auth`, `features/feed`, `core/api`, `core/router`, `components/shared`). Avoid scattering files by generic type without domain context.
+- **Folder Structure** — Located in `SPA/`. The architecture follows Clean Vertical Slices / Screaming Architecture (e.g., grouping by feature: `features/auth/auth.views.js`, `features/feed/feed.views.js`, `core/api`, `core/router`, `components/shared`). All testing logic is consolidated under `SPA/tests/`, subdivided into `unit/`, `integration/`, and `e2e/` folders. Avoid scattering files by generic type without domain context. Use `{feature}.views.js` for view logic within slices.
 - **Event delegation** for dynamic DOM elements.
 - **API-driven** — UI state comes from REST calls and WebSocket events.
 - **Frontend Design** — Always use the `frontend-design` skill when implementing or modifying frontend components, layouts, or styles to ensure premium aesthetics and state-of-the-art UI/UX.

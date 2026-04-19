@@ -15,7 +15,7 @@ Track A owns the platform and auth foundation for the real-time forum:
 This is the main upstream track. The other tracks should assume Track A is the first shared dependency to land.
 
 ## Source Mapping
-- A01 -> RTF-00, A02 -> RTF-01, A03 -> RTF-03, A04 -> RTF-04, A05 -> RTF-08, A06 -> RTF-09, A07 -> RTF-33 (bonus)
+- A01 -> RTF-00, A02 -> RTF-01, A10 -> RTF-01, A03 -> RTF-03, A04 -> RTF-04, A05 -> RTF-08, A06 -> RTF-09, A07 -> RTF-33 (bonus)
 
 ## Suggested Execution Order
 1. A01, A02, A03 | 2. A04, A05 | 3. A06 | 4. A07 (bonus)
@@ -50,7 +50,7 @@ Blocks: A10, D09
 Work:
 - define and set up the new folder structure for the SPA in the `SPA/` directory
 - implement a file organization that follows modern, scalable 2026 patterns (e.g. Screaming Architecture or Vertical Sliced Architecture)
-- ensure the layout accommodates components, pages/features, core logic, router, and assets separately
+- ensure the layout accommodates components, pages/features, core logic, router, assets, and consolidated tests in `SPA/tests/` separately
 - write or update architecture documentation such as `docs/SDS.md` to reflect the new structure clearly
 - optimally point the Go server to the new SPA entry point without functionally breaking existing frontend behavior
 
@@ -77,7 +77,7 @@ Verification Gate:
 
 ### A03 - SPA Boot and Client Routing
 Source: RTF-03 | Phase: P0
-Depends on: A02
+Depends on: A10
 Blocks: A04, D10, A05, B01, B05
 
 Work:

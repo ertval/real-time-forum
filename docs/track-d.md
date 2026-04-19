@@ -140,7 +140,7 @@ Work:
 - execute the final acceptance checklist against the PRD and SDS
 - verify retained legacy features still function
 - record any remaining gaps as follow-up work instead of hidden work
-- confirm Vitest covers unit, integration, and E2E tests properly
+- confirm Vitest covers unit, integration, and E2E tests properly in `SPA/tests/` folder hierarchy
 
 Verification Gate:
 - the build satisfies the documented product success criteria
