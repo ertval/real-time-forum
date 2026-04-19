@@ -2,7 +2,24 @@
 
 import { describe, expect, test, vi } from 'vitest';
 import { createApp } from '../../../../core/app/create-app.js';
+import { matchRoute, normalizePathname } from '../../../../core/router/routes.js';
 import { createMockBrowser } from '../../helpers/browser-mock.js';
+
+describe('SPA routing for A03/A04', () => {
+	test('normalizes and matches required routes', () => {
+		expect(normalizePathname('')).toBe('/');
+		expect(normalizePathname('/view-post/42')).toBe('/post/42');
+		expect(normalizePathname('/activity/')).toBe('/activity');
+
+		expect(matchRoute('/')?.route.id).toBe('feed');
+		expect(matchRoute('/post/7')?.params.id).toBe('7');
+		expect(matchRoute('/edit-post/15')?.params.id).toBe('15');
+		expect(matchRoute('/does-not-exist')).toBeNull();
+
+		// Regression: A03 Malformed URI should not crash
+		expect(matchRoute('/post/%E0%A4%A')).toBeNull();
+	});
+});
 
 describe('SPA Application Engine', () => {
 	test('boot applies auth guard and redirects protected deep links', async () => {
@@ -267,5 +284,33 @@ describe('SPA Application Engine', () => {
 			expect(browser.windowRef.location.pathname).toBe('/login');
 			expect(app.getState().isAuthenticated).toBe(false);
 		}
+	});
+
+	test('form submission should be intercepted and prevented', async () => {
+		const browser = createMockBrowser('/login');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('login-form');
+		expect(event.preventDefault).toHaveBeenCalled();
+	});
+
+	test('non-critical forms should not be intercepted by default', async () => {
+		const browser = createMockBrowser('/');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('search-form');
+		expect(event.preventDefault).not.toHaveBeenCalled();
 	});
 });
