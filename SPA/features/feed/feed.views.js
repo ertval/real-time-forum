@@ -1,3 +1,5 @@
+// SPA/features/feed/feed.views.js
+
 export function renderFeedView(title) {
 	return `
 		<section data-screen="feed" aria-labelledby="screen-feed-title">

@@ -260,9 +260,10 @@ func TestAPICommentsReaction_RequiresAuth(t *testing.T) {
 func TestAPIPostsReaction_MethodNotAllowed(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := registerAndLogin(t, h)
 
-	doRequestExpectStatus(t, h, http.MethodGet, "/api/v1/posts/1/like", "", http.StatusMethodNotAllowed)
-	doRequestExpectStatus(t, h, http.MethodGet, "/api/v1/posts/1/dislike", "", http.StatusMethodNotAllowed)
+	doRequestExpectStatus(t, h, http.MethodGet, "/api/v1/posts/1/like", token, http.StatusMethodNotAllowed)
+	doRequestExpectStatus(t, h, http.MethodGet, "/api/v1/posts/1/dislike", token, http.StatusMethodNotAllowed)
 }
 
 func TestAPICommentsReaction_MethodNotAllowed(t *testing.T) {
@@ -272,8 +273,8 @@ func TestAPICommentsReaction_MethodNotAllowed(t *testing.T) {
 	token := registerAndLogin(t, h)
 	commentID := createComment(t, h, token, 1, "method check comment")
 
-	doRequestExpectStatus(t, h, http.MethodGet, fmt.Sprintf("/api/v1/comments/%d/like", commentID), "", http.StatusMethodNotAllowed)
-	doRequestExpectStatus(t, h, http.MethodGet, fmt.Sprintf("/api/v1/comments/%d/dislike", commentID), "", http.StatusMethodNotAllowed)
+	doRequestExpectStatus(t, h, http.MethodGet, fmt.Sprintf("/api/v1/comments/%d/like", commentID), token, http.StatusMethodNotAllowed)
+	doRequestExpectStatus(t, h, http.MethodGet, fmt.Sprintf("/api/v1/comments/%d/dislike", commentID), token, http.StatusMethodNotAllowed)
 }
 
 /*--------

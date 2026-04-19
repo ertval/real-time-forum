@@ -1,4 +1,108 @@
-# A04 Implementation Plan: Persistent App Shell Layout
+# A05 Plan - Authenticated-Only Forum Access
+
+## Scope
+
+Ticket: A05 (Track A)
+
+Goal: Enforce authenticated-only access for forum content while preserving SPA boot behavior based on `GET /api/v1/users/me`.
+
+Source references:
+- `docs/track-a.md` (A05 verification gate)
+- `docs/requirements.md` (login required to use forum)
+- `docs/audit.md` (register/login required)
+- `docs/SDS.md` (all optional-auth forum endpoints become authenticated)
+- `docs/PRD.md` (all forum content requires authenticated session)
+
+## Findings (Current State)
+
+- SPA route gating is already implemented:
+  - `SPA/core/router/routes.js` marks forum routes as `protected`.
+  - `SPA/core/app/create-app.js` checks `GET /api/v1/users/me` at boot and redirects unauthenticated users to `/login`.
+- Backend still exposes some forum reads to guests:
+  - `internal/router/router.go` uses public handlers for categories endpoints.
+  - `internal/router/router.go` uses `optionalAuth` for `GET /api/v1/posts`, `GET /api/v1/posts/{id}`, and `GET /api/v1/comments/{id}`.
+
+## Files To Modify
+
+1. `internal/router/router.go`
+- Protect these with `auth(...)` middleware:
+  - `GET /api/v1/categories`
+  - `GET /api/v1/categories/`
+  - `GET /api/v1/categories/view`
+  - `GET /api/v1/posts`
+  - `GET /api/v1/posts/{id}`
+  - `GET /api/v1/comments/{id}`
+
+2. `internal/tests/...` (exact files selected during implementation)
+- Add/adjust integration tests to assert:
+  - unauthenticated requests to forum content endpoints return `401`
+  - authenticated requests still return `200` for the same endpoints
+
+3. `SPA/tests/...` (only if needed)
+- Confirm/extend existing boot and protected-route tests if coverage gaps appear.
+
+## API/Behavior Contract (A05)
+
+### Bootstrap auth check
+
+- Endpoint: `GET /api/v1/users/me`
+- Purpose: determine authenticated vs unauthenticated app boot behavior
+- Expected semantics:
+  - `200`: authenticated session; render forum shell
+  - `401`: unauthenticated; redirect/render auth flow (`/login`, `/register`)
+
+### Forum content endpoints
+
+All forum content APIs must require valid session cookies and reject guest access with `401`.
+
+Examples:
+- `GET /api/v1/posts` -> `401` when unauthenticated
+- `GET /api/v1/posts/{id}` -> `401` when unauthenticated
+- `GET /api/v1/comments/{id}` -> `401` when unauthenticated
+- `GET /api/v1/categories` -> `401` when unauthenticated
+
+## Database Migration Impact
+
+None.
+
+A05 is route/middleware enforcement and test coverage only. No schema updates are required.
+
+## Verification Checklist (Pass/Fail)
+
+Derived from `docs/track-a.md` A05 gate and source docs.
+
+1. Unauthenticated users cannot access feed, posts, comments, activity, or chat:
+- [ ] `GET /api/v1/posts` without session returns `401`
+- [ ] `GET /api/v1/posts/{id}` without session returns `401`
+- [ ] `GET /api/v1/comments/{id}` without session returns `401`
+- [ ] `GET /api/v1/categories` without session returns `401`
+- [ ] `GET /api/v1/users/activity` remains `401` without session
+
+2. Authenticated users enter forum shell directly:
+- [ ] `GET /api/v1/users/me` with valid session returns `200`
+- [ ] SPA boot on `/` with valid session renders protected forum shell
+
+3. App boot routes correctly by session state:
+- [ ] SPA boot on protected route with `401` from `/users/me` redirects to `/login`
+- [ ] SPA boot on protected route with `200` from `/users/me` renders target route
+
+## Test Plan
+
+Backend:
+- Run `make test`
+- Add/adjust integration tests under `internal/tests/` for endpoint auth rejection and authenticated success.
+
+Frontend:
+- Run `bun run policy`
+- Ensure SPA auth-gating tests pass; add tests only if gaps are identified.
+
+## Done Criteria For A05
+
+- Backend forum content endpoints no longer allow guest reads.
+- SPA boot/auth gating behavior remains correct.
+- `make test` passes.
+- `bun run policy` passes.
+- Ticket status can be moved to done only after all checklist items pass.# A04 Implementation Plan: Persistent App Shell Layout
 
 ## Sources Reviewed
 - docs/requirements.md

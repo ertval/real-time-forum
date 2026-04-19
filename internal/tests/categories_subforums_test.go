@@ -13,6 +13,7 @@ import (
 func TestAPICategoriesWithPosts(t *testing.T) {
 	h, db := newTestAPI(t)
 	defer db.Close()
+	token := loginAndGetToken(t, h, "testuser", "password123")
 
 	// Seed extra category
 	_, err := db.Exec(`
@@ -33,11 +34,12 @@ func TestAPICategoriesWithPosts(t *testing.T) {
 	}
 
 	// Call endpoint (TO BE IMPLEMENTED)
-	w, body := doRequest(
+	w, body := doRequestWithToken(
 		t,
 		h,
 		http.MethodGet,
 		"/api/v1/categories/view",
+		token,
 		nil,
 	)
 
