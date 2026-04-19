@@ -313,6 +313,18 @@ func NormalizeUploadedImageURL(raw string) (string, bool) {
 		return "", false
 	}
 
+	if filename == "." || filename == ".." {
+		return "", false
+	}
+
+	if strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		return "", false
+	}
+
+	if filepath.Base(filename) != filename {
+		return "", false
+	}
+
 	return prefix + filename, true
 }
 
