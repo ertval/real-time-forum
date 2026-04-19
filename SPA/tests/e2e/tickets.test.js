@@ -13,6 +13,10 @@ function createCredentials(prefix) {
 		username,
 		email: `${username}@example.com`,
 		password: PASSWORD,
+		firstName: 'First',
+		lastName: 'Last',
+		age: 25,
+		gender: 'Other',
 	};
 }
 
@@ -37,6 +41,10 @@ async function registerUser(page, credentials) {
 			username: credentials.username,
 			email: credentials.email,
 			password: credentials.password,
+			first_name: credentials.firstName,
+			last_name: credentials.lastName,
+			age: credentials.age,
+			gender: credentials.gender,
 		},
 		failOnStatusCode: false,
 	});

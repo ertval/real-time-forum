@@ -40,10 +40,14 @@ func seedUserAndPost(t *testing.T, db *sql.DB) (userID, postID int64) {
 	t.Helper()
 
 	res, err := db.Exec(
-		`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`,
+		`INSERT INTO users (username, email, password_hash, first_name, last_name, age, gender) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		"user1",
 		"u1@example.com",
 		"hash",
+		"First",
+		"Last",
+		25,
+		"Other",
 	)
 	if err != nil {
 		t.Fatalf("insert user: %v", err)
@@ -294,10 +298,14 @@ func TestCommentReactions_CountsFlowThroughGetCommentWithAuthor(t *testing.T) {
 	userID, postID := seedUserAndPost(t, db)
 
 	res, err := db.Exec(
-		`INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`,
+		`INSERT INTO users (username, email, password_hash, first_name, last_name, age, gender) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		"user2",
 		"u2@example.com",
 		"hash",
+		"First2",
+		"Last2",
+		30,
+		"Other",
 	)
 	if err != nil {
 		t.Fatalf("insert user2: %v", err)

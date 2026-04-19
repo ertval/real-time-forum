@@ -14,13 +14,24 @@ import (
 	  Logs method, path and request duration.
 -------------------------------------------------------------*/
 
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		rw := &responseWriter{w, http.StatusOK}
 
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(rw, r)
 
-		log.Printf("%-6s %-40s %s", r.Method, r.URL.Path, time.Since(start))
+		log.Printf("%-6s %-40s %d %s", r.Method, r.URL.Path, rw.status, time.Since(start))
 	})
 }
 

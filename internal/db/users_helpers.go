@@ -44,6 +44,18 @@ func validateCreateUser(req CreateUserRequest) error {
 		return fmt.Errorf("password can't contain spaces")
 	}
 
+	// Profile validation
+	switch {
+	case strings.TrimSpace(req.FirstName) == "":
+		return fmt.Errorf("first name is required")
+	case strings.TrimSpace(req.LastName) == "":
+		return fmt.Errorf("last name is required")
+	case req.Age < 0:
+		return fmt.Errorf("invalid age")
+	case strings.TrimSpace(req.Gender) == "":
+		return fmt.Errorf("gender is required")
+	}
+
 	return nil
 }
 
@@ -117,15 +129,23 @@ func insertUser(
 	db *sql.DB,
 	username,
 	email,
-	passwordHash string,
+	passwordHash,
+	firstName,
+	lastName string,
+	age int,
+	gender string,
 ) (int64, error) {
 	formattedUsername := strings.ToLower(username)
 	result, err := db.ExecContext(ctx,
-		`INSERT INTO users (username, email, password_hash)
-		 VALUES (?, ?, ?)`,
+		`INSERT INTO users (username, email, password_hash, first_name, last_name, age, gender)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		formattedUsername,
 		email,
 		passwordHash,
+		firstName,
+		lastName,
+		age,
+		gender,
 	)
 	if err != nil {
 		if isUniqueConstraint(err) {
@@ -158,14 +178,14 @@ func fetchUserForLogin(
 
 	if strings.TrimSpace(req.Username) != "" {
 		row = db.QueryRowContext(ctx,
-			`SELECT id, username, email, password_hash, is_active
+			`SELECT id, username, email, first_name, last_name, age, gender, password_hash, is_active
 			 FROM users
 			 WHERE username = ?`,
 			strings.ToLower(req.Username),
 		)
 	} else {
 		row = db.QueryRowContext(ctx,
-			`SELECT id, username, email, password_hash, is_active
+			`SELECT id, username, email, first_name, last_name, age, gender, password_hash, is_active
 			 FROM users
 			 WHERE email = ?`,
 			strings.ToLower(req.Email),
@@ -177,6 +197,10 @@ func fetchUserForLogin(
 		&user.ID,
 		&user.Username,
 		&user.Email,
+		&user.FirstName,
+		&user.LastName,
+		&user.Age,
+		&user.Gender,
 		&user.PasswordHash,
 		&user.IsActive,
 	); err != nil {
