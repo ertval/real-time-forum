@@ -1,11 +1,11 @@
 // /web/static/js/home.js
 
-import { initCategoryFilter } from "./category.js";
-import { createPagination } from "./pagination.js";
-import { loadPostCommentsPreview, renderPostCard } from "./posts.js";
-import { initReactions } from "./reactions.js";
-import { uiNotify } from "./ui-messages.js";
-import { API_BASE } from "./utils.js";
+import { initCategoryFilter } from './category.js';
+import { createPagination } from './pagination.js';
+import { loadPostCommentsPreview, renderPostCard } from './posts.js';
+import { initReactions } from './reactions.js';
+import { uiNotify } from './ui-messages.js';
+import { API_BASE } from './utils.js';
 
 /*-----------
   URL STATE
@@ -15,20 +15,20 @@ function getQueryState() {
 	const params = new URLSearchParams(window.location.search);
 
 	return {
-		page: Number(params.get("page")) || 1,
-		perPage: Number(params.get("per_page")) || 10,
-		categoryId: params.get("category_id") || "",
+		page: Number(params.get('page')) || 1,
+		perPage: Number(params.get('per_page')) || 10,
+		categoryId: params.get('category_id') || '',
 	};
 }
 
 function setQueryState({ page, perPage, categoryId }) {
 	const params = new URLSearchParams();
 
-	if (page > 1) params.set("page", page);
-	if (perPage !== 10) params.set("per_page", perPage);
-	if (categoryId) params.set("category_id", categoryId);
+	if (page > 1) params.set('page', page);
+	if (perPage !== 10) params.set('per_page', perPage);
+	if (categoryId) params.set('category_id', categoryId);
 
-	history.pushState(null, "", `?${params.toString()}`);
+	history.pushState(null, '', `?${params.toString()}`);
 }
 
 /*--------
@@ -38,15 +38,15 @@ function setQueryState({ page, perPage, categoryId }) {
 async function loadPosts({ page, perPage, categoryId }) {
 	const url = new URL(`${API_BASE}/posts`, window.location.origin);
 
-	url.searchParams.set("page", page);
+	url.searchParams.set('page', page);
 	if (perPage > 0) {
-		url.searchParams.set("per_page", perPage);
+		url.searchParams.set('per_page', perPage);
 	}
-	if (categoryId) url.searchParams.set("category_id", categoryId);
+	if (categoryId) url.searchParams.set('category_id', categoryId);
 
 	const res = await fetch(url, {
-		credentials: "include",
-		headers: { Accept: "application/json" },
+		credentials: 'include',
+		headers: { Accept: 'application/json' },
 	});
 
 	if (!res.ok) return null;
@@ -54,10 +54,10 @@ async function loadPosts({ page, perPage, categoryId }) {
 }
 
 async function renderPosts(state, pager, paginationEl) {
-	const output = document.getElementById("posts-output");
-	const empty = document.getElementById("posts-empty");
+	const output = document.getElementById('posts-output');
+	const empty = document.getElementById('posts-empty');
 
-	output.innerHTML = "";
+	output.innerHTML = '';
 	empty.hidden = true;
 	paginationEl.hidden = true;
 
@@ -91,18 +91,18 @@ async function renderPosts(state, pager, paginationEl) {
   INIT
 ------*/
 
-document.addEventListener("DOMContentLoaded", async () => {
-	const loginSuccess = sessionStorage.getItem("auth:login-success");
+document.addEventListener('DOMContentLoaded', async () => {
+	const loginSuccess = sessionStorage.getItem('auth:login-success');
 	if (loginSuccess) {
-		uiNotify("Welcome! You are now signed in.", { type: "success" });
-		sessionStorage.removeItem("auth:login-success");
+		uiNotify('Welcome! You are now signed in.', { type: 'success' });
+		sessionStorage.removeItem('auth:login-success');
 	}
 
-	const paginationEl = document.getElementById("pagination");
-	const prevBtn = document.getElementById("prevPage");
-	const nextBtn = document.getElementById("nextPage");
-	const numbersEl = document.getElementById("pageNumbers");
-	const perPageSelect = document.getElementById("perPageSelect");
+	const paginationEl = document.getElementById('pagination');
+	const prevBtn = document.getElementById('prevPage');
+	const nextBtn = document.getElementById('nextPage');
+	const numbersEl = document.getElementById('pageNumbers');
+	const perPageSelect = document.getElementById('perPageSelect');
 
 	let state = getQueryState();
 	perPageSelect.value = state.perPage;
@@ -118,10 +118,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 		},
 	});
 
-	prevBtn.addEventListener("click", () => pager.prev());
-	nextBtn.addEventListener("click", () => pager.next());
+	prevBtn.addEventListener('click', () => pager.prev());
+	nextBtn.addEventListener('click', () => pager.next());
 
-	perPageSelect.addEventListener("change", () => {
+	perPageSelect.addEventListener('change', () => {
 		state.perPage = Number(perPageSelect.value);
 		state.page = 1;
 		setQueryState(state);
@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 	await renderPosts(state, pager, paginationEl);
 
-	window.addEventListener("popstate", () => {
+	window.addEventListener('popstate', () => {
 		state = getQueryState();
 		perPageSelect.value = state.perPage;
 		renderPosts(state, pager, paginationEl);

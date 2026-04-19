@@ -61,17 +61,17 @@ stop-all: stop-backend stop-frontend
 # 🧪 Code Quality
 # -----------------------------------------------------
 
-test: test-backend test-frontend
+test: test-backend test-frontend policy
 
 test-backend:
 	@go test ./... -v
 
 test-frontend:
 	@go test ./internal/tests/... -v
-	@./node_modules/.bin/bun run test
+	@./node_modules/.bin/bun run policy
 
-lint:
-	@./node_modules/.bin/bun run lint
+policy:
+	@./node_modules/.bin/bun run policy
 
 format: format-backend format-frontend
 

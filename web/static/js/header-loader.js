@@ -1,16 +1,16 @@
 // web/static/js/header-loader.js
 
-import { Auth } from "./auth.js";
-import { closeAuthModal, loadAuthModal } from "./auth-modal.js";
-import { initHeader } from "./header.js";
-import { initSettings } from "./settings.js";
+import { Auth } from './auth.js';
+import { closeAuthModal, loadAuthModal } from './auth-modal.js';
+import { initHeader } from './header.js';
+import { initSettings } from './settings.js';
 
 function applyAuthUI() {
 	if (Auth.isAuthenticated) {
-		document.body.classList.add("is-authenticated");
+		document.body.classList.add('is-authenticated');
 		Auth.startSessionWatcher();
 	} else {
-		document.body.classList.remove("is-authenticated");
+		document.body.classList.remove('is-authenticated');
 	}
 }
 
@@ -25,8 +25,8 @@ async function initialize() {
 initialize();
 
 /* Login via modal */
-window.addEventListener("message", async (e) => {
-	if (e.data !== "auth:success") return;
+window.addEventListener('message', async (e) => {
+	if (e.data !== 'auth:success') return;
 
 	closeAuthModal();
 

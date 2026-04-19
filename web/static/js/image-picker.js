@@ -1,5 +1,5 @@
 // web/static/js/image-picker.js
-import { MAX_IMAGE_BYTES } from "./utils.js";
+import { MAX_IMAGE_BYTES } from './utils.js';
 
 export function setupImagePicker({
 	input,
@@ -9,7 +9,7 @@ export function setupImagePicker({
 	previewContainer,
 	previewImage,
 	persistedUrl = null,
-	persistedLabel = "",
+	persistedLabel = '',
 	maxBytes = MAX_IMAGE_BYTES,
 	onTooLarge = () => {},
 	onClearPersisted = () => {},
@@ -28,20 +28,17 @@ export function setupImagePicker({
 
 	const clearPreviewCheckerboard = () => {
 		if (!previewContainer || !previewImage) return;
-		previewContainer.classList.remove("image-preview--checkerboard");
+		previewContainer.classList.remove('image-preview--checkerboard');
 		delete previewImage.dataset.transparent;
 	};
 
 	const markPreviewCheckerboard = (hasTransparency) => {
 		if (!previewContainer || !previewImage) return;
-		previewContainer.classList.toggle(
-			"image-preview--checkerboard",
-			hasTransparency,
-		);
-		previewImage.dataset.transparent = hasTransparency ? "true" : "false";
+		previewContainer.classList.toggle('image-preview--checkerboard', hasTransparency);
+		previewImage.dataset.transparent = hasTransparency ? 'true' : 'false';
 	};
 
-	const probePreviewTransparency = ({ file = null, src = "" } = {}) => {
+	const probePreviewTransparency = ({ file = null, src = '' } = {}) => {
 		if (!previewContainer || !previewImage || !src) return;
 		const token = ++previewProbeToken;
 		clearPreviewCheckerboard();
@@ -58,21 +55,30 @@ export function setupImagePicker({
 
 	const updateUI = () => {
 		const file = getFile();
+		updateClearButton(clearButton, file, currentPersistedUrl);
+		updateNameLabel(nameLabel, file, currentPersistedUrl, persistedLabel);
+		updatePreview(file);
+	};
 
-		if (clearButton) {
-			clearButton.hidden = !file && !currentPersistedUrl;
+	function updateClearButton(clearButtonEl, file, persistedUrl) {
+		if (!clearButtonEl) return;
+		clearButtonEl.hidden = !file && !persistedUrl;
+	}
+
+	function updateNameLabel(nameLabelEl, file, persistedUrl, label) {
+		if (!nameLabelEl) return;
+		if (file) {
+			nameLabelEl.textContent = `Selected: ${file.name}`;
+			return;
 		}
-
-		if (nameLabel) {
-			if (file) {
-				nameLabel.textContent = `Selected: ${file.name}`;
-			} else if (currentPersistedUrl && persistedLabel) {
-				nameLabel.textContent = persistedLabel;
-			} else {
-				nameLabel.textContent = "";
-			}
+		if (persistedUrl && label) {
+			nameLabelEl.textContent = label;
+			return;
 		}
+		nameLabelEl.textContent = '';
+	}
 
+	function updatePreview(file) {
 		if (!previewContainer || !previewImage) {
 			revokeObjectPreview();
 			return;
@@ -97,14 +103,14 @@ export function setupImagePicker({
 			return;
 		}
 
-		previewImage.removeAttribute("src");
+		previewImage.removeAttribute('src');
 		previewContainer.hidden = true;
-	};
+	}
 
 	const onInputChange = () => {
 		const file = getFile();
 		if (file && file.size > maxBytes) {
-			if (input) input.value = "";
+			if (input) input.value = '';
 			onTooLarge(file, maxBytes);
 		}
 		updateUI();
@@ -115,7 +121,7 @@ export function setupImagePicker({
 	const onClearClick = () => {
 		const file = getFile();
 		if (file && input) {
-			input.value = "";
+			input.value = '';
 			updateUI();
 			return;
 		}
@@ -127,16 +133,16 @@ export function setupImagePicker({
 		}
 	};
 
-	triggerButton?.addEventListener("click", onTriggerClick);
-	input?.addEventListener("change", onInputChange);
-	clearButton?.addEventListener("click", onClearClick);
+	triggerButton?.addEventListener('click', onTriggerClick);
+	input?.addEventListener('change', onInputChange);
+	clearButton?.addEventListener('click', onClearClick);
 
 	updateUI();
 
 	return {
 		getFile,
 		clearSelectedFile() {
-			if (input) input.value = "";
+			if (input) input.value = '';
 			updateUI();
 		},
 		setPersistedUrl(url) {
@@ -151,16 +157,16 @@ export function setupImagePicker({
 			return !!getFile() || !!currentPersistedUrl;
 		},
 		destroy() {
-			triggerButton?.removeEventListener("click", onTriggerClick);
-			input?.removeEventListener("change", onInputChange);
-			clearButton?.removeEventListener("click", onClearClick);
+			triggerButton?.removeEventListener('click', onTriggerClick);
+			input?.removeEventListener('change', onInputChange);
+			clearButton?.removeEventListener('click', onClearClick);
 			revokeObjectPreview();
 		},
 	};
 }
 
 function normalizeURL(value) {
-	if (typeof value !== "string") return null;
+	if (typeof value !== 'string') return null;
 	const trimmed = value.trim();
 	return trimmed || null;
 }
@@ -169,14 +175,14 @@ function isPngSource(src) {
 	if (!src) return false;
 	try {
 		const parsed = new URL(src, window.location.href);
-		return parsed.pathname.toLowerCase().endsWith(".png");
+		return parsed.pathname.toLowerCase().endsWith('.png');
 	} catch {
-		return src.split("?")[0].toLowerCase().endsWith(".png");
+		return src.split('?')[0].toLowerCase().endsWith('.png');
 	}
 }
 
 function isPngCandidate(file, src) {
-	if (file?.type) return file.type.toLowerCase() === "image/png";
+	if (file?.type) return file.type.toLowerCase() === 'image/png';
 	return isPngSource(src);
 }
 
@@ -195,15 +201,15 @@ function waitForImageReady(imgEl) {
 			resolve(false);
 		};
 		const cleanup = () => {
-			imgEl.removeEventListener("load", onLoad);
-			imgEl.removeEventListener("error", onError);
+			imgEl.removeEventListener('load', onLoad);
+			imgEl.removeEventListener('error', onError);
 		};
-		imgEl.addEventListener("load", onLoad, { once: true });
-		imgEl.addEventListener("error", onError, { once: true });
+		imgEl.addEventListener('load', onLoad, { once: true });
+		imgEl.addEventListener('error', onError, { once: true });
 	});
 }
 
-async function detectTransparentPng(imgEl, { file = null, src = "" } = {}) {
+async function detectTransparentPng(imgEl, { file = null, src = '' } = {}) {
 	if (!isPngCandidate(file, src)) return false;
 	const ready = await waitForImageReady(imgEl);
 	if (!ready || !imgEl.naturalWidth || !imgEl.naturalHeight) return false;
@@ -211,10 +217,10 @@ async function detectTransparentPng(imgEl, { file = null, src = "" } = {}) {
 	try {
 		const sampleWidth = Math.min(80, imgEl.naturalWidth);
 		const sampleHeight = Math.min(80, imgEl.naturalHeight);
-		const canvas = document.createElement("canvas");
+		const canvas = document.createElement('canvas');
 		canvas.width = sampleWidth;
 		canvas.height = sampleHeight;
-		const ctx = canvas.getContext("2d", { willReadFrequently: true });
+		const ctx = canvas.getContext('2d', { willReadFrequently: true });
 		if (!ctx) return false;
 
 		ctx.drawImage(imgEl, 0, 0, sampleWidth, sampleHeight);

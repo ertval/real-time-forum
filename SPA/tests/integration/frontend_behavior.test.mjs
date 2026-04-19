@@ -1,12 +1,12 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import vm from "node:vm";
-import { beforeAll, expect, test } from "vitest";
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+import { beforeAll, expect, test } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, "..", "..", "..");
+const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
 class MockClassList {
 	constructor() {
@@ -26,7 +26,7 @@ class MockClassList {
 	}
 
 	toggle(token, force) {
-		if (typeof force === "boolean") {
+		if (typeof force === 'boolean') {
 			if (force) {
 				this.items.add(token);
 			} else {
@@ -57,7 +57,7 @@ class MockStyle {
 	}
 
 	getPropertyValue(name) {
-		return this.values.get(name) ?? "";
+		return this.values.get(name) ?? '';
 	}
 }
 
@@ -68,7 +68,7 @@ class MockEventTarget {
 
 	addEventListener(type, handler, options = {}) {
 		if (!this.listeners.has(type)) this.listeners.set(type, []);
-		const once = !!(options && typeof options === "object" && options.once);
+		const once = !!(options && typeof options === 'object' && options.once);
 		this.listeners.get(type).push({ handler, once });
 	}
 
@@ -82,13 +82,13 @@ class MockEventTarget {
 	}
 
 	dispatchEvent(event) {
-		if (!event || typeof event.type !== "string") {
-			throw new Error("event.type is required");
+		if (!event || typeof event.type !== 'string') {
+			throw new Error('event.type is required');
 		}
-		if (typeof event.preventDefault !== "function") {
+		if (typeof event.preventDefault !== 'function') {
 			event.preventDefault = () => {};
 		}
-		if (typeof event.stopPropagation !== "function") {
+		if (typeof event.stopPropagation !== 'function') {
 			event.stopPropagation = () => {};
 		}
 
@@ -104,7 +104,7 @@ class MockEventTarget {
 }
 
 class MockElement extends MockEventTarget {
-	constructor(tagName = "div") {
+	constructor(tagName = 'div') {
 		super();
 		this.tagName = tagName.toUpperCase();
 		this.children = [];
@@ -113,7 +113,7 @@ class MockElement extends MockEventTarget {
 		this.style = new MockStyle();
 		this.dataset = {};
 		this.hidden = false;
-		this.textContent = "";
+		this.textContent = '';
 		this.attributes = new Map();
 	}
 
@@ -125,9 +125,7 @@ class MockElement extends MockEventTarget {
 
 	remove() {
 		if (!this.parentNode) return;
-		this.parentNode.children = this.parentNode.children.filter(
-			(c) => c !== this,
-		);
+		this.parentNode.children = this.parentNode.children.filter((c) => c !== this);
 		this.parentNode = null;
 	}
 
@@ -150,10 +148,10 @@ class MockElement extends MockEventTarget {
 
 class MockImageElement extends MockElement {
 	constructor() {
-		super("img");
-		this._src = "";
-		this.currentSrc = "";
-		this.alt = "";
+		super('img');
+		this._src = '';
+		this.currentSrc = '';
+		this.alt = '';
 		this.complete = false;
 		this.naturalWidth = 0;
 		this.naturalHeight = 0;
@@ -175,14 +173,14 @@ class MockImageElement extends MockElement {
 
 class MockInputElement extends MockElement {
 	constructor() {
-		super("input");
+		super('input');
 		this.files = [];
-		this._value = "";
+		this._value = '';
 	}
 
 	set value(v) {
 		this._value = String(v);
-		if (this._value === "") {
+		if (this._value === '') {
 			this.files = [];
 		}
 	}
@@ -192,7 +190,7 @@ class MockInputElement extends MockElement {
 	}
 
 	click() {
-		this.dispatchEvent({ type: "click" });
+		this.dispatchEvent({ type: 'click' });
 	}
 }
 
@@ -207,7 +205,7 @@ class MockCanvasContext {
 
 class MockCanvasElement extends MockElement {
 	constructor() {
-		super("canvas");
+		super('canvas');
 		this.width = 0;
 		this.height = 0;
 	}
@@ -219,14 +217,14 @@ class MockCanvasElement extends MockElement {
 
 class MockDocument {
 	constructor() {
-		this.body = new MockElement("body");
+		this.body = new MockElement('body');
 	}
 
 	createElement(tagName) {
 		const tag = String(tagName).toLowerCase();
-		if (tag === "canvas") return new MockCanvasElement();
-		if (tag === "img") return new MockImageElement();
-		if (tag === "input") return new MockInputElement();
+		if (tag === 'canvas') return new MockCanvasElement();
+		if (tag === 'img') return new MockImageElement();
+		if (tag === 'input') return new MockInputElement();
 		return new MockElement(tag);
 	}
 
@@ -238,7 +236,7 @@ class MockDocument {
 function installTestEnvironment() {
 	const doc = new MockDocument();
 	const win = {
-		location: { href: "https://example.test/" },
+		location: { href: 'https://example.test/' },
 		addEventListener() {},
 		removeEventListener() {},
 		setTimeout,
@@ -252,7 +250,7 @@ function installTestEnvironment() {
 	globalThis.HTMLImageElement = MockImageElement;
 
 	const NativeURL = globalThis.URL;
-	NativeURL.createObjectURL = () => "blob:mock-preview";
+	NativeURL.createObjectURL = () => 'blob:mock-preview';
 	NativeURL.revokeObjectURL = () => {};
 	globalThis.URL = NativeURL;
 
@@ -260,49 +258,37 @@ function installTestEnvironment() {
 }
 
 function loadImagePickerForTests() {
-	const filePath = path.join(
-		repoRoot,
-		"web",
-		"static",
-		"js",
-		"image-picker.js",
-	);
-	const source = fs.readFileSync(filePath, "utf8");
+	const filePath = path.join(repoRoot, 'web', 'static', 'js', 'image-picker.js');
+	const source = fs.readFileSync(filePath, 'utf8');
 
-	const noImports = source.replace(/^\s*import[\s\S]*?;\s*$/gm, "");
+	const noImports = source.replace(/^\s*import[\s\S]*?;\s*$/gm, '');
 
 	const transformed = [
-		"var MAX_IMAGE_BYTES = 20 * 1024 * 1024;",
-		noImports.replace(
-			"export function setupImagePicker",
-			"function setupImagePicker",
-		),
-		"globalThis.__setupImagePicker = setupImagePicker;",
-	].join("\n");
+		'var MAX_IMAGE_BYTES = 20 * 1024 * 1024;',
+		noImports.replace('export function setupImagePicker', 'function setupImagePicker'),
+		'globalThis.__setupImagePicker = setupImagePicker;',
+	].join('\n');
 
-	vm.runInThisContext(transformed, { filename: "image-picker.test.eval.js" });
+	vm.runInThisContext(transformed, { filename: 'image-picker.test.eval.js' });
 }
 
 function loadPostsHelpersForTests() {
-	const filePath = path.join(repoRoot, "web", "static", "js", "posts.js");
-	const source = fs.readFileSync(filePath, "utf8");
+	const filePath = path.join(repoRoot, 'web', 'static', 'js', 'posts.js');
+	const source = fs.readFileSync(filePath, 'utf8');
 
-	const noImports = source.replace(/^\s*import[\s\S]*?;\s*$/gm, "");
+	const noImports = source.replace(/^\s*import[\s\S]*?;\s*$/gm, '');
 
 	const transformed = [
 		noImports
-			.replace(/export\s+async\s+function /g, "async function ")
-			.replace(/export function /g, "function ")
-			.replace(
-				"function openImageLightbox(",
-				"function __originalOpenImageLightbox(",
-			)
-			.replace(/\bopenImageLightbox\(/g, "globalThis.__openImageLightboxSpy("),
-		"globalThis.__bindExpandableImage = bindExpandableImage;",
-		"globalThis.__syncImageTransparencyPresentation = syncImageTransparencyPresentation;",
-	].join("\n");
+			.replace(/export\s+async\s+function /g, 'async function ')
+			.replace(/export function /g, 'function ')
+			.replace('function openImageLightbox(', 'function __originalOpenImageLightbox(')
+			.replace(/\bopenImageLightbox\(/g, 'globalThis.__openImageLightboxSpy('),
+		'globalThis.__bindExpandableImage = bindExpandableImage;',
+		'globalThis.__syncImageTransparencyPresentation = syncImageTransparencyPresentation;',
+	].join('\n');
 
-	vm.runInThisContext(transformed, { filename: "posts.test.eval.js" });
+	vm.runInThisContext(transformed, { filename: 'posts.test.eval.js' });
 }
 
 async function flushMicrotasks() {
@@ -317,16 +303,16 @@ beforeAll(() => {
 	loadPostsHelpersForTests();
 });
 
-test("Image preview behavior", async () => {
+test('Image preview behavior', async () => {
 	const setupImagePicker = globalThis.__setupImagePicker;
-	expect(typeof setupImagePicker).toBe("function");
+	expect(typeof setupImagePicker).toBe('function');
 
 	const input = new MockInputElement();
-	const triggerButton = new MockElement("button");
-	const clearButton = new MockElement("button");
+	const triggerButton = new MockElement('button');
+	const clearButton = new MockElement('button');
 	clearButton.hidden = true;
-	const nameLabel = new MockElement("span");
-	const previewContainer = new MockElement("div");
+	const nameLabel = new MockElement('span');
+	const previewContainer = new MockElement('div');
 	previewContainer.hidden = true;
 	const previewImage = new MockImageElement();
 
@@ -345,28 +331,28 @@ test("Image preview behavior", async () => {
 		},
 	});
 
-	input.files = [{ name: "ok.jpg", size: 9, type: "image/jpeg" }];
-	input.dispatchEvent({ type: "change" });
+	input.files = [{ name: 'ok.jpg', size: 9, type: 'image/jpeg' }];
+	input.dispatchEvent({ type: 'change' });
 
 	expect(previewContainer.hidden).toBe(false);
 	expect(clearButton.hidden).toBe(false);
-	expect(nameLabel.textContent).toBe("Selected: ok.jpg");
-	expect(previewImage.src.startsWith("blob:mock-preview")).toBeTruthy();
+	expect(nameLabel.textContent).toBe('Selected: ok.jpg');
+	expect(previewImage.src.startsWith('blob:mock-preview')).toBeTruthy();
 
-	input.value = "had-file";
-	input.files = [{ name: "too-big.jpg", size: 11, type: "image/jpeg" }];
-	input.dispatchEvent({ type: "change" });
+	input.value = 'had-file';
+	input.files = [{ name: 'too-big.jpg', size: 11, type: 'image/jpeg' }];
+	input.dispatchEvent({ type: 'change' });
 
 	expect(tooLargeCalls).toBe(1);
-	expect(input.value).toBe("");
+	expect(input.value).toBe('');
 	expect(input.files.length).toBe(0);
 });
 
-test("Preview checkerboard for transparent PNG", async () => {
+test('Preview checkerboard for transparent PNG', async () => {
 	const setupImagePicker = globalThis.__setupImagePicker;
 
 	const input = new MockInputElement();
-	const previewContainer = new MockElement("div");
+	const previewContainer = new MockElement('div');
 	previewContainer.hidden = true;
 	const previewImage = new MockImageElement();
 
@@ -379,51 +365,48 @@ test("Preview checkerboard for transparent PNG", async () => {
 
 	globalThis.__mockCanvasAlpha = 80;
 
-	input.files = [{ name: "transparent.png", size: 200, type: "image/png" }];
-	input.dispatchEvent({ type: "change" });
+	input.files = [{ name: 'transparent.png', size: 200, type: 'image/png' }];
+	input.dispatchEvent({ type: 'change' });
 
 	await flushMicrotasks();
 
 	expect(previewContainer.hidden).toBe(false);
-	expect(
-		previewContainer.classList.contains("image-preview--checkerboard"),
-	).toBeTruthy();
-	expect(previewImage.dataset.transparent).toBe("true");
+	expect(previewContainer.classList.contains('image-preview--checkerboard')).toBeTruthy();
+	expect(previewImage.dataset.transparent).toBe('true');
 });
 
-test("Posted image expand by click", () => {
+test('Posted image expand by click', () => {
 	const bindExpandableImage = globalThis.__bindExpandableImage;
-	expect(typeof bindExpandableImage).toBe("function");
+	expect(typeof bindExpandableImage).toBe('function');
 
 	const calls = [];
 	globalThis.__openImageLightboxSpy = (...args) => calls.push(args);
 
 	const image = new MockImageElement();
-	image.src = "https://example.test/uploads/post.jpg";
-	image.alt = "Post image";
-	image.dataset.transparent = "true";
+	image.src = 'https://example.test/uploads/post.jpg';
+	image.alt = 'Post image';
+	image.dataset.transparent = 'true';
 	image.getBoundingClientRect = () => ({ width: 320.2, height: 180.7 });
 
-	bindExpandableImage(image, "post");
+	bindExpandableImage(image, 'post');
 
-	image.dispatchEvent({ type: "click" });
+	image.dispatchEvent({ type: 'click' });
 
 	expect(calls.length).toBe(1);
 	expect(calls[0][0]).toBe(image.src);
-	expect(calls[0][1]).toBe("Post image");
-	expect(calls[0][2]).toBe("post");
+	expect(calls[0][1]).toBe('Post image');
+	expect(calls[0][2]).toBe('post');
 	expect(calls[0][3]).toBe(true);
 	expect(calls[0][4]).toEqual({ minWidth: 320, minHeight: 181 });
 });
 
-test("Posted transparent PNG checkerboard", async () => {
-	const syncImageTransparencyPresentation =
-		globalThis.__syncImageTransparencyPresentation;
-	expect(typeof syncImageTransparencyPresentation).toBe("function");
+test('Posted transparent PNG checkerboard', async () => {
+	const syncImageTransparencyPresentation = globalThis.__syncImageTransparencyPresentation;
+	expect(typeof syncImageTransparencyPresentation).toBe('function');
 
-	const frame = new MockElement("div");
+	const frame = new MockElement('div');
 	const image = new MockImageElement();
-	image.src = "https://example.test/uploads/transparent.png";
+	image.src = 'https://example.test/uploads/transparent.png';
 	image.currentSrc = image.src;
 	image.naturalWidth = 80;
 	image.naturalHeight = 80;
@@ -433,11 +416,11 @@ test("Posted transparent PNG checkerboard", async () => {
 	syncImageTransparencyPresentation({
 		imgEl: image,
 		frameEl: frame,
-		checkerboardClass: "post-image--checkerboard",
+		checkerboardClass: 'post-image--checkerboard',
 	});
 
 	await flushMicrotasks();
 
-	expect(image.dataset.transparent).toBe("true");
-	expect(frame.classList.contains("post-image--checkerboard")).toBeTruthy();
+	expect(image.dataset.transparent).toBe('true');
+	expect(frame.classList.contains('post-image--checkerboard')).toBeTruthy();
 });

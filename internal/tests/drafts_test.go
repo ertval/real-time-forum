@@ -287,7 +287,7 @@ func TestCreatePostJS_ConditionallyRendersPostImageMarkup(t *testing.T) {
 	if !strings.Contains(s, "const imageMarkup = imageUrl") {
 		t.Fatalf("expected posts.js to define conditional image markup")
 	}
-	if !strings.Contains(s, `: ""`) {
+	if !strings.Contains(s, ": ''") {
 		t.Fatalf("expected posts.js to omit image container when no image URL")
 	}
 }
