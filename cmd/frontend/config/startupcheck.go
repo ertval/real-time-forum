@@ -8,29 +8,21 @@ func StartupCheckConfig() startupcheck.Config {
 		WebRoot: "web",
 
 		CriticalHTML: []string{
-			"templates/home.html",
-			"templates/login.html",
-			"templates/register.html",
-			"templates/create-post.html",
-			"templates/edit-post.html",
-			"templates/activity.html",
-			"templates/view-post.html",
-			"static/partials/header.html",
+			"SPA/index.html",
 			"errors/error.html",
 		},
 
 		JSDirs: []string{
-			"static/js",
+			"SPA",
 		},
 
 		CriticalCSS: []string{
-			"static/css/base.css",
-			"static/css/home.css",
-			"static/css/posts.css",
+			"SPA/assets/css/main.css",
+			"errors/common.css",
 		},
 
-		MinJSFiles:   0,  // disabled
-		ExactJSFiles: 34, // enforced
+		MinJSFiles:   1, // main.js
+		ExactJSFiles: 0, // disabled
 	}
 }
 

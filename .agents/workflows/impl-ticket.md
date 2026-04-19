@@ -51,7 +51,11 @@ You are an expert Senior Full-Stack Engineer tasked with implementing a specific
 - Use **Vanilla CSS** in `web/static/css/`. Leverage CSS Variables and Flexbox/Grid for layouts.
 - Implement UI state in a reactive store module.
 
-### Step 3: Testing, QA & Verification
+### Parallel Steps 3 & 4: Post-Implementation Tasks
+> [!IMPORTANT]
+> Once Step 2 has finished, **Step 3 and Step 4 must be executed in parallel from different agents with new contexts.**
+
+#### Step 3: Testing, QA & Verification (Agent A)
 - **Run QA Tests**: Execute `make test` and Vitest suites. Verify all gates are met. If tests fail, you **must** iterate until they pass.
 - **Bug Workflow**: If you encounter a bug during implementation:
   1. Create a minimal test case that reproduces the bug.
@@ -59,9 +63,9 @@ You are an expert Senior Full-Stack Engineer tasked with implementing a specific
   3. Verify the reproduction test and all integration tests pass.
 - **Final Polish**: Use **Biome** for linting and formatting (`biome check --apply .`).
 
-### Step 4: Documentation & Handover
+#### Step 4: Documentation & Handover (Agent B)
 - **PR Message**: Create a detailed PR message summarizing your changes, technical decisions, and verification results.
-- **Update ticket-tracker.md** Update the status of ticket you just finished implementing to `Done`, put x in status.
+- **Update ticket-tracker.md**: Update the status of ticket you just finished implementing to `Done`, put x in status.
 - **Template Compliance**: You **must** use [docs/pr-message/pr-template.md](file:///home/ertval/code/zone-modules/real-time-forum/docs/pr-message/pr-template.md) as the blueprint for your message. Ensure the Ticket Name is in the header and all verification results (automated and manual) are documented.
 - **Storage**: Save the PR message as a new markdown file in `docs/pr-message/` using the ticket ID as the filename and a short description of the ticket (e.g., `docs/pr-message/A01-[ShortDescription]-pr.md`).
 
