@@ -50,14 +50,17 @@ internal/
 web/
   static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
   templates/         → HTML templates (legacy)
-  SPA/               → Single Page Application Shell (Vanilla JS ES2026+)
-    index.html       → SPA Entrypoint
-    main.js          → Bootstrap Application Logic
-    assets/          → Global CSS & Static Images
-    core/            → State, Router, and API Logic
-    components/      → Shared UI Elements
-    features/        → Domain Slices (Auth, Feed, Chat, etc.)
-    tests/           → Vitest Unit & Integration Tests
+SPA/                 → Single Page Application Shell (Vanilla JS ES2026+)
+  index.html         → SPA Entrypoint
+  main.js            → Bootstrap Application Logic
+  assets/            → Global CSS & Static Images
+  core/              → State, Router, and API Logic
+  components/        → Shared UI Elements
+  features/        → Domain Slices (each with its {feature}.views.js)
+  tests/           → Vitest shared test suite
+    unit/          → Isolated logic tests
+    integration/   → Feature and interaction tests
+    e2e/           → User journey tests
 data/                → SQLite database file
 docs/                → Project documentation (PRD, SDS, tickets)
 ```
@@ -420,7 +423,7 @@ On `dm.send`:
 - The frontend must be implemented in modern vanilla JS (ES2026+) using optimal best practice patterns.
 - **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `SPA/`. The structure is organized as follows:
   - `SPA/components/`: Shared, reusable UI components (e.g., buttons, modals, cards).
-  - `SPA/features/`: Vertical slices for major application domains (e.g., `auth/`, `feed/`, `chat/`, `post/`, `profile/`). Each slice contains its own logic, components, and tests.
+  - `SPA/features/`: Vertical slices for major application domains (e.g., `auth/auth.views.js`, `feed/feed.views.js`, `chat/chat.views.js`, `post/post.views.js`, `profile/profile.views.js`). Each slice contains its own logic, components, and tests.
   - `SPA/core/`: Application-wide infrastructure:
     - `api/`: API clients and service definitions.
     - `router/`: Client-side routing logic.
@@ -431,7 +434,7 @@ On `dm.send`:
   - `SPA/main.js`: The main JavaScript bootstrap file.
 - Bun is the required runtime and package manager for frontend dev tools.
 - Biome handles all linting, formatting, and static testing checks.
-- Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests.
+- Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests, with all files residing in `SPA/tests/`.
 
 ## 7.1 SPA Routes
 
@@ -524,11 +527,11 @@ On application load:
 
 ### 10.2.1 Test Categories (Vitest framework)
 
-| Category | Description |
-| :--- | :--- |
-| **Unit** | Isolated component and helper logic tests. |
-| **Integration** | Feature-level interaction tests (e.g., Auth + Feed). |
-| **E2E** | Multi-step user journey verification. |
+| Category | Description | Location |
+| :--- | :--- | :--- |
+| **Unit** | Isolated component and helper logic tests. | `SPA/tests/unit/` |
+| **Integration** | Feature-level interaction tests (e.g., Auth + Feed). | `SPA/tests/integration/` |
+| **E2E** | Multi-step user journey verification. | `SPA/tests/e2e/` |
 
 ## 10.3 Regression Coverage
 

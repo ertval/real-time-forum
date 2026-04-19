@@ -63,6 +63,9 @@ stop-all: stop-backend stop-frontend
 
 test: test-backend test-frontend policy
 
+lint:
+	@./node_modules/.bin/bun run lint
+
 test-backend:
 	@go test ./... -v
 

@@ -15,6 +15,7 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 - **Source of Truth**: Requirements in `docs/` are absolute. If a subagent contradicts them, you must command a retry.
 - **Premium Design**: Force the use of `frontend-design` skill for all UI tasks.
 - **Test-Driven Baseline**: Every implementation MUST include corresponding integration or E2E tests.
+- **Commit** After each phase, every code change MUST be committed with a clear message referencing the ticket ID.
 
 ---
 
@@ -41,19 +42,23 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 
 ### Phase 3: Independent Audit (Spawn Audit Agent)
 **Task**: `spawn subagent` for a cold-start audit. This agent MUST NOT be the same as the implementation agents.
-1. **Regression**: Run `make test` for the full tests suite.
-2. **Functional Audit**: Execute every check in `docs/audit.md` relevant to this ticket.
-3. **Verification**: Confirm the ticket's **Verification Gate** is fully satisfied.
-4. **Loop**: If the Audit Agent finds ANY defect, violation of `docs/audit.md`, or failing test:
-   - Identify the failure.
+1. **Scope**: The Audit Agent **MUST NOT** read `PLAN.md` or implementation logs. It must evaluate the work solely against the **Source of Truth** (`docs/audit.md`, `docs/requirements.md`, `docs/SDS.md`, and `docs/PRD.md`).
+2. **Quality Audit**: Review code logic, design patterns, and quality of implementation. Ensure it matches the high standards defined in `AGENTS.md`.
+3. **Compliance Audit**: Check for 100% compliance with the ticket requirements, correctness, and the verification gate.
+4. **Automated Testing**: Run **ONLY** `make test` (backend) and `bun run policy` (frontend/SPA) to validate the QA gate.
+5. **Verification**: Confirm the ticket's **Verification Gate** is fully satisfied based on the documentation.
+6. **Loop**: If the Audit Agent finds ANY defect, violation of requirements, or failing test:
+   - Identify the failure clearly referencing the authoritative documentation.
    - Send the failure back to the relevant Implementation Agent (Phase 2).
    - Restart the Audit once implementation is fixed.
-5. **Output**: A `VERIFICATION_MANIFEST.md` with proof of all passing checks.
+7. **Audit Report**: Return a detailed audit summary (the "Verification Manifest" content) to the Orchestrator, including proof of all passing checks and an evaluation of implementation quality.
 
 ### Phase 4: Closure (Spawn Documentation Agent)
 **Task**: `spawn subagent` to finalize the ticket.
 1. Update `docs/ticket-tracker.md` to `[x]`.
 2. Create a PR summary in `docs/pr-message/` using the `{TicketID}-{Description}-pr.md` filename and `pr-template.md` structure.
+3. **Integration**: Ensure the Audit Report from Phase 3 is fully integrated into the PR's "Verification Gate Satisfaction" and "Testing & Validation Verified" sections.
+4. Commit the PR and link it to the ticket in `docs/ticket-tracker.md`.
 
 ---
 
@@ -68,4 +73,4 @@ You are the **Master Orchestrator**. Your goal is to coordinate independent spec
 > [!IMPORTANT]
 > {TicketDefinition}
 
-**Execution Directive**: Spawn Phase 1 → Review PLAN.md → Spawn Phase 2 (Parallel) → Review Implementation Outputs → Spawn Phase 3 (Audit) → Loop until VERIFICATION_MANIFEST is green → Spawn Phase 4 (Closure).
+**Execution Directive**: Spawn Phase 1 → Review PLAN.md → Spawn Phase 2 (Parallel) → Review Implementation Outputs → Spawn Phase 3 (Audit) → Review Audit Report → Spawn Phase 4 (Closure).

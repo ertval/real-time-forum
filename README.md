@@ -1,222 +1,124 @@
-# Real-Time Forum
+# 🌐 Real-Time Forum
 
-A full-stack, real-time single-page forum built with Go and vanilla JavaScript. Users register, log in, create posts, comment, and exchange live private messages through WebSockets — all from a single HTML page.
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
+[![JavaScript](https://img.shields.io/badge/Vanilla_JS-ES2026+-F7DF1E?style=for-the-badge&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Runtime](https://img.shields.io/badge/Bun-Runtime-000000?style=for-the-badge&logo=bun)](https://bun.sh)
+[![Linter](https://img.shields.io/badge/Biome-Linted-60A5FA?style=for-the-badge&logo=biome)](https://biomejs.dev)
 
-This project satisfies the [01-edu real-time-forum](docs/requirements.md) exercise requirements.
-
----
-
-## Features
-
-### Authentication
-- Registration with nickname, email, password, age, gender, first name, and last name
-- Login with nickname **or** email + password
-- Session-based authentication with `HttpOnly` cookies
-- Logout available from every page
-- All forum content requires authentication — no guest access
-
-### Posts & Comments
-- Create, edit, and view posts with category tagging
-- Image upload support in posts and comments
-- Posts displayed in a paginated feed
-- Comments visible **only** on the post detail view (not in the feed)
-- Publish and draft state management
-
-### Private Messaging (Real-Time)
-- Always-visible chat sidebar with user roster
-- Online/offline presence indicators (real-time via WebSocket)
-- Roster ordered by last message activity; new users listed alphabetically
-- Send private messages to online users
-- Read chat history with offline users
-- Messages display sender username and timestamp
-- Last 10 messages loaded on conversation open
-- Scroll up to load 10 more messages (throttled to prevent API spam)
-- Messages delivered in real-time without page refresh
-
-### Retained Features
-- Post and comment reactions (like/dislike)
-- Notification system with polling, badges, and mark-as-read
-- My Activity dashboard
-- Draft workflows
-
-### Bonus Features
-- User profile pages with extended registration data
-- Image attachments in private messages
-- Concurrency patterns (goroutines/channels, Promises) for performance
+A powerhouse, production-grade **Real-Time Single-Page Application (SPA)**. Built with a high-performance Go backend and a cutting-edge Vanilla JavaScript (ES2026+) frontend. Experience seamless navigation, lightning-fast interactions, and live private messaging—all delivered through a single HTML document.
 
 ---
 
-## Tech Stack
+## ✨ Key Features
 
-| Layer | Technology |
-|-------|------------|
-| Backend | Go 1.24+ (standard library) |
-| Database | SQLite via `mattn/go-sqlite3` |
-| WebSocket | `gorilla/websocket` |
-| Auth | `bcrypt` (password hashing), `google/uuid` (sessions) |
-| Frontend | Vanilla JS (ES2026+), HTML, CSS |
-| Dev Tools | Bun, Biome, Vitest |
-| Containerization | Docker / Docker Compose (optional) |
+### 🔐 Secure Authentication
+- **Universal Login**: Access via **Nickname** or **Email** with a secure password.
+- **Extended Profiles**: Rich registration capturing age, gender, and full name.
+- **Session Integrity**: Hardened `HttpOnly` session cookies—no fragile JWTs.
+- **Global Auth Shell**: Persistent login/logout controls reachable from every corner of the app.
+- **Zero Guest Access**: A private, authenticated-only community experience.
 
-### Allowed Packages
+### 📜 Dynamic Content
+- **Fluid Feed**: Paginated post exploration with category tagging and rich media.
+- **Deep Conversations**: Detail-focused comment threads load on-demand, keeping the feed lean.
+- **Draft Mastery**: Save your thoughts and polish your posts before they go live.
+- **Rich Media**: Dedicated image upload support for both posts and comments.
 
-Only the following Go packages are permitted:
-
-- All [standard Go packages](https://golang.org/pkg/)
-- [gorilla/websocket](https://pkg.go.dev/github.com/gorilla/websocket)
-- [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)
-- [golang.org/x/crypto/bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
-- [google/uuid](https://github.com/google/uuid) or [gofrs/uuid](https://github.com/gofrs/uuid)
-
-No frontend frameworks (React, Angular, Vue, etc.) are used. Tooling relies on modernized standards including Bun for speed, Biome for linting, and Vitest for testing.
+### 💬 Real-Time Private Messaging
+- **Dynamic Roster**: A persistent chat sidebar with live presence indicators.
+- **Intelligent Sorting**: Users are ordered by latest activity or alphabetically for new connections.
+- **Elastic History**: Infinite-scroll chat history loading (10-message batches) with smart throttling.
+- **Live Delivery**: Instant message arrival via WebSockets—no refresh, no delay.
+- **Bonus Capabilities**: Send images in DMs and view full user profiles.
 
 ---
 
-## Architecture
+## 🛠️ Technical Excellence
 
-```
-cmd/
-  backend/           → Backend API server (port 8080)
-  frontend/          → Frontend server (port 3000) — serves SPA + proxies API/WS
-internal/
-  db/                → Persistence layer (SQLite, repository functions, schema)
-  handlers/          → HTTP handlers (REST API under /api/v1)
-  middleware/        → Request middleware (auth, logging, CORS, recovery)
-  router/            → Route registration
-  tests/             → Backend integration tests
-web/
-  static/            → CSS, JS, images, sounds, uploads (legacy multi-page assets)
-  templates/         → HTML templates (legacy)
-  SPA/               → Single Page Application Shell (Vanilla JS ES2026+)
-    index.html       → SPA Entrypoint
-    main.js          → Bootstrap Application Logic
-    assets/          → Global CSS & Static Images
-    core/            → State, Router, and API Logic
-    components/      → Shared UI Elements
-    features/        → Domain Slices (Auth, Feed, Chat, etc.)
-    tests/           → Vitest Unit & Integration Tests
-data/                → SQLite database file
-docs/                → Project documentation (PRD, SDS, tickets)
-```
+### Backend Stack
+- **Engine**: Go 1.24+ (Standard Library focus)
+- **Database**: SQLite (ACID compliant persistence)
+- **Real-Time**: `gorilla/websocket` for low-latency events
+- **Security**: `bcrypt` hashing & `google/uuid` session tracking
+- **Concurrency**: Advanced Goroutine/Channel patterns for maximum throughput
 
-The project uses a **split-server** topology:
-- **Frontend server** (`:3000`): serves the single HTML shell, static assets, and proxies `/api/` and `/ws` to the backend.
-- **Backend server** (`:8080`): owns business logic, persistence, REST APIs, and WebSocket endpoint.
+### Frontend Stack
+- **Logic**: Vanilla JS (ES2026+) — zero frameworks (React/Vue/Angular)
+- **Tooling**: **Bun** for speed, **Biome** for precision, **Vitest** for testing
+- **Design**: Modern Clean Vertical Slices / Screaming Architecture
+- **Performance**: Promise-based async operations and Proxy-driven state
 
 ---
 
-## Quick Start
+## 🏗️ Architecture
 
-### Requirements
+| Path | Purpose |
+|:--- |:--- |
+| `cmd/` | Server entry points (Backend: 8080, Frontend: 3000) |
+| `SPA/` | **The Frontend Core** — Vertical slices for Auth, Feed, Chat |
+| `internal/` | Business logic, persistence, and request handlers |
+| `web/` | Historical assets, static uploads, and startup guards |
+| `data/` | Persistent SQLite storage |
+| `docs/` | System Design (SDS), Product Requirements (PRD), and Audit trails |
 
-- Go 1.24+
-- Bun (primary runtime & package manager)
-- Make
-- SQLite (bundled via CGo)
-- Docker & Docker Compose (optional)
+> [!NOTE]
+> The project utilizes a **Split-Server Topology**. The Frontend server (`:3000`) serves the SPA shell and proxies all `/api/` and `/ws` traffic to the Backend server (`:8080`).
 
-### Install & Run
+---
 
+## 🚀 Quick Start
+
+### 📋 Prerequisites
+- **Go 1.24+**
+- **Bun** (Runtime & Package Manager)
+- **Make**
+- **SQLite**
+
+### ⚡ Run the Stack
 ```bash
-make deps          # Install Go and Node dependencies
-make run-all       # Start backend (8080) + frontend (3000)
+# 1. Install all dependencies
+make deps
+
+# 2. Launch both servers (Backend & Frontend)
+make run-all
 ```
+🔗 **Access the Forum**: [http://localhost:3000](http://localhost:3000)
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Individual Commands
-
+### 🧪 Quality Control
 ```bash
-# Build
-make build-backend    # Build backend binary
-make build-frontend   # Build frontend binary
-make build-all        # Build both
-
-# Run
-make run-backend      # Start backend only
-make run-frontend     # Start frontend only
-make stop-all         # Stop all processes
-
-# Quality Gates (Go & JS)
-make test             # Run all tests (Go + Vitest)
-make test-backend     # Run Go tests only
-make test-frontend    # Run Vitest only
-make lint             # Run Biome lint
-make format           # Run Biome & Go format
-make vet              # Run Go vet
-```
-
-### Docker (Optional)
-
-```bash
-make docker-build     # Build Docker image
-make docker-run       # Run backend container
-make docker-up        # Docker Compose up
-make docker-down      # Docker Compose down
+make test          # Run the full suite (Go + Vitest)
+make lint          # Execute Biome static analysis
+make lint:fix      # Fix Biome static analysis
+make format        # Standardize code formatting
 ```
 
 ---
 
-## API Overview
+## 📂 Documentation
 
-All REST endpoints are under `/api/v1/`:
+Deep dive into the project's blueprints:
+
+- 📖 **[docs/requirements.md](docs/requirements.md)**: The ultimate source of truth.
+- 📐 **[docs/SDS.md](docs/SDS.md)**: Detailed technical specifications.
+- 📋 **[docs/audit.md](docs/audit.md)**: Success criteria and verification gate.
+- 🤖 **[AGENTS.md](AGENTS.md)**: Essential guide for AI coding assistants.
+- 🏗️ **[architecture.md](architecture.md)**: High-level structural overview.
+
+---
+
+## 🛰️ API at a Glance
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/users/register` | Register a new user |
-| `POST` | `/api/v1/users/login` | Login (nickname or email) |
-| `POST` | `/api/v1/users/logout` | Logout |
-| `GET` | `/api/v1/users/me` | Current session user |
-| `GET` | `/api/v1/posts` | List posts (feed) |
-| `POST` | `/api/v1/posts` | Create a post |
-| `GET` | `/api/v1/chats` | Chat roster (all users + presence) |
-| `GET` | `/api/v1/chats/{userID}/messages` | Chat history (paginated) |
-| `GET` | `/api/v1/users/{userID}/profile` | User profile (bonus) |
-| `POST` | `/api/v1/chats/{userID}/images` | DM image upload (bonus) |
-| `GET` | `/ws` | WebSocket — presence + private messaging |
-
-See [docs/SDS.md](docs/SDS.md) for full API contracts and WebSocket event schemas.
+|:--- |:--- |:--- |
+| `POST` | `/api/v1/users/login` | Authenticate and start session |
+| `POST` | `/api/v1/users/register` | Create account with profile data |
+| `GET` | `/api/v1/users/me` | Bootstrap session verification |
+| `GET` | `/api/v1/posts` | Fetch the paginated global feed |
+| `GET` | `/api/v1/chats` | Retrieve roster with presence state |
+| `GET` | `/ws` | WebSocket for live chat & events |
 
 ---
 
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [docs/requirements.md](docs/requirements.md) | Exercise specification (source of truth) |
-| [docs/audit.md](docs/audit.md) | Audit checklist questions |
-| [docs/PRD.md](docs/PRD.md) | Product requirements document |
-| [docs/SDS.md](docs/SDS.md) | Software design specification |
-| [docs/ticket-tracker.md](docs/ticket-tracker.md) | Implementation progress tracker |
-| [architecture.md](architecture.md) | Codebase architecture overview |
-| [AGENTS.md](AGENTS.md) | Coding agent guide |
-
----
-
-## Troubleshooting
-
-### Port 8080 already in use
-
-```bash
-fuser -k 8080/tcp          # Linux
-lsof -i :8080              # Find PID, then kill -9 <PID>
-```
-
-### Port 3000 already in use
-
-```bash
-fuser -k 3000/tcp
-```
-
----
-
-## Contributors
-
-- Chris Baikas (chbaikas)
-- Alex Smyroglou (asmyrogl)
-
----
-
-## License
-
-This project is licensed under the [GNU General Public License v3.0](LICENSE).
+<div align="center">
+  <sub>Built with ❤️ by the Real-Time Forum Team. Licensed under GPL-3.0.</sub>
+</div>
