@@ -159,7 +159,7 @@ func createPostAndGetID(t *testing.T, h http.Handler, token string, payload map[
 func registerUser(t *testing.T, h http.Handler, username, email, password string) {
 	t.Helper()
 
-	body := fmt.Sprintf(`{"username":%q,"email":%q,"password":%q}`, username, email, password)
+	body := fmt.Sprintf(`{"username":%q,"email":%q,"password":%q,"first_name":"First","last_name":"Last","age":20,"gender":"Other"}`, username, email, password)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 
