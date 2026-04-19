@@ -76,6 +76,12 @@ export function createApp(options = {}) {
 	const windowRef = options.windowRef ?? (typeof window !== 'undefined' ? window : null);
 	const documentRef = options.documentRef ?? (typeof document !== 'undefined' ? document : null);
 	const fetchRef = options.fetchRef ?? (typeof fetch === 'function' ? fetch : null);
+	const alertRef =
+		typeof options.alertRef === 'function'
+			? options.alertRef
+			: typeof globalThis.alert === 'function'
+				? globalThis.alert.bind(globalThis)
+				: null;
 
 	if (!windowRef || !documentRef) {
 		return null;
@@ -222,17 +228,17 @@ export function createApp(options = {}) {
 	}
 
 	async function handleAuthForm(form) {
-		const formData = new FormData(form);
-		const data = Object.fromEntries(formData.entries());
-
-		// Basic data normalization for age
-		if (data.age) {
-			data.age = Number.parseInt(data.age, 10);
-		}
-
-		const endpoint = form.id === 'login-form' ? '/api/v1/users/login' : '/api/v1/users/register';
-
 		try {
+			const formData = new FormData(form);
+			const data = Object.fromEntries(formData.entries());
+
+			// Basic data normalization for age
+			if (data.age) {
+				data.age = Number.parseInt(data.age, 10);
+			}
+
+			const endpoint = form.id === 'login-form' ? '/api/v1/users/login' : '/api/v1/users/register';
+
 			const response = await fetchRef(endpoint, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -245,11 +251,15 @@ export function createApp(options = {}) {
 				goTo('/');
 			} else {
 				const error = await response.json();
-				alert(error.error?.message || 'Authentication failed');
+				if (alertRef) {
+					alertRef(error.error?.message || 'Authentication failed');
+				}
 			}
 		} catch (err) {
 			console.error('Auth error:', err);
-			alert('A connection error occurred. Please try again.');
+			if (alertRef) {
+				alertRef('A connection error occurred. Please try again.');
+			}
 		}
 	}
 
