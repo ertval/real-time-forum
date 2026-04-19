@@ -192,19 +192,29 @@ export function createApp(options = {}) {
 		renderRoute(access.match);
 	}
 
+	function shouldFinalizeLogout(response) {
+		return Boolean(response?.ok) || response?.status === 401;
+	}
+
 	async function performLogout() {
-		if (typeof fetchRef === 'function') {
-			try {
-				await fetchRef('/api/v1/users/logout', {
-					method: 'POST',
-					credentials: 'include',
-					headers: {
-						Accept: 'application/json',
-					},
-				});
-			} catch {
-				// Continue local logout flow even on network failure.
+		if (typeof fetchRef !== 'function') {
+			return;
+		}
+
+		try {
+			const response = await fetchRef('/api/v1/users/logout', {
+				method: 'POST',
+				credentials: 'include',
+				headers: {
+					Accept: 'application/json',
+				},
+			});
+
+			if (!shouldFinalizeLogout(response)) {
+				return;
 			}
+		} catch {
+			return;
 		}
 
 		state.isAuthenticated = false;
