@@ -387,7 +387,17 @@ On `dm.send`:
 ## 7.0 Tooling & Practices (ES2026+)
 
 - The frontend must be implemented in modern vanilla JS (ES2026+) using optimal best practice patterns.
-- **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `web/SPA/` (e.g. `core/`, `components/`, and vertical `features/` rather than grouping by file type).
+- **Folder Structure**: Follow Clean Vertical Slices / Screaming Architecture inside `web/SPA/`. The structure is organized as follows:
+  - `web/SPA/components/`: Shared, reusable UI components (e.g., buttons, modals, cards).
+  - `web/SPA/features/`: Vertical slices for major application domains (e.g., `auth/`, `feed/`, `chat/`, `post/`, `profile/`). Each slice contains its own logic, components, and tests.
+  - `web/SPA/core/`: Application-wide infrastructure:
+    - `api/`: API clients and service definitions.
+    - `router/`: Client-side routing logic.
+    - `state/`: Global state management using Proxy-based reactivity.
+    - `utils/`: Shared helper functions.
+  - `web/SPA/assets/`: Static assets such as global CSS, images, and sounds.
+  - `web/SPA/index.html`: The single entry point for the application.
+  - `web/SPA/main.js`: The main JavaScript bootstrap file.
 - Bun is the required runtime and package manager for frontend dev tools.
 - Biome handles all linting, formatting, and static testing checks.
 - Vitest provides the test runner for unit, integration, and end-to-end (E2E) tests.
