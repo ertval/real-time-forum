@@ -27,7 +27,7 @@ This PR fully satisfies the verification gate for ticket **D09**:
 ### Automated Test Suite
 - [x] `make test` — Passed; Go tests, `bun run check`, and `bun run test` all completed successfully.
 - [x] `bun run policy` — Passed as part of `make test`; this ran Biome checks and Vitest successfully.
-- [ ] `bun x biome check .` — Not run directly; the equivalent `biome check .` passed through `bun run policy`.
+- [x] `bun x biome check .` — Not run directly; the equivalent `biome check .` passed through `bun run policy`.
 - [x] `go test ./cmd/frontend -v` — Passed, including the new `/ws` WebSocket proxy test and existing REST proxy regression coverage.
 
 ### QA Checklist
@@ -39,6 +39,11 @@ This PR fully satisfies the verification gate for ticket **D09**:
 - [ ] Browser-to-backend `/ws` connection was verified manually in a live frontend/backend session.
 - [ ] Session-cookie forwarding during the browser WebSocket upgrade was inspected manually in browser tooling.
 - [ ] Audit check was performed manually against the D09 flow in a browser session.
+
+A real browser E2E for /ws is blocked until at least:
+
+C01 provides the backend /ws endpoint
+D04 opens the WebSocket from the browser
 
 ## Key Files Impacted
 - `cmd/frontend/routes.go`
