@@ -18,10 +18,11 @@ func StartupCheckConfig() startupcheck.Config {
 
 		CriticalCSS: []string{
 			"SPA/assets/css/main.css",
+			"web/errors/common.css",
 		},
 
-		MinJSFiles:   1,
-		ExactJSFiles: 0,
+		MinJSFiles:   1, // main.js
+		ExactJSFiles: 0, // disabled
 	}
 }
 

@@ -180,6 +180,9 @@ describe('SPA routing for A03/A04', () => {
 		expect(matchRoute('/post/7')?.params.id).toBe('7');
 		expect(matchRoute('/edit-post/15')?.params.id).toBe('15');
 		expect(matchRoute('/does-not-exist')).toBeNull();
+
+		// Regression: A03 Malformed URI should not crash
+		expect(matchRoute('/post/%E0%A4%A')).toBeNull();
 	});
 
 	test('boot applies auth guard and redirects protected deep links', async () => {
