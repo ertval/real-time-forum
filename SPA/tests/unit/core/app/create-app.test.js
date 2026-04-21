@@ -257,20 +257,22 @@ describe('SPA Application Engine', () => {
 	});
 
 	test('auth entry routes do not expose guest or OAuth options', async () => {
-		const browser = createMockBrowser('/login');
-		const app = createApp({
-			windowRef: browser.windowRef,
-			documentRef: browser.documentRef,
-			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
-		});
+		for (const path of ['/login', '/register']) {
+			const browser = createMockBrowser(path);
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			});
 
-		await app.boot();
+			await app.boot();
 
-		expect(browser.mainContent.innerHTML).not.toContain('Continue with Google');
-		expect(browser.mainContent.innerHTML).not.toContain('/api/v1/auth/google');
-		expect(browser.mainContent.innerHTML).not.toContain('/api/v1/auth/github');
-		expect(browser.mainContent.innerHTML).not.toContain('Continue as guest');
-		expect(browser.mainContent.innerHTML).not.toContain('guest-login');
+			expect(browser.mainContent.innerHTML).not.toContain('Continue with Google');
+			expect(browser.mainContent.innerHTML).not.toContain('/api/v1/auth/google');
+			expect(browser.mainContent.innerHTML).not.toContain('/api/v1/auth/github');
+			expect(browser.mainContent.innerHTML).not.toContain('Continue as guest');
+			expect(browser.mainContent.innerHTML).not.toContain('guest-login');
+		}
 	});
 
 	test('logout button calls API and returns user to login flow', async () => {

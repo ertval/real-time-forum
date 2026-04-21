@@ -102,6 +102,7 @@ function buildLoginPayload(formData) {
 	const password = readField(formData, 'password');
 	const payload = { password };
 
+	// This heuristic is safe because the backend rejects usernames containing `@`.
 	if (identifier.includes('@')) {
 		payload.email = identifier;
 	} else {
