@@ -99,10 +99,10 @@ export function renderRegisterView() {
 						</div>
 
 						<div class="auth-grid-2">
-							<div class="form-group">
-								<label class="form-label" for="reg-age">Age</label>
-								<input class="auth-input auth-input--plain-padding" type="number" id="reg-age" name="age" min="13" placeholder="25" required>
-							</div>
+								<div class="form-group">
+									<label class="form-label" for="reg-age">Age</label>
+									<input class="auth-input auth-input--plain-padding" type="number" id="reg-age" name="age" min="13" max="120" placeholder="25" required>
+								</div>
 							<div class="form-group">
 								<label class="form-label" for="reg-gender">Gender</label>
 								<select class="auth-input auth-input--plain-padding" id="reg-gender" name="gender" required>
@@ -137,13 +137,13 @@ export function renderRegisterView() {
 
 						<div class="form-group">
 							<label class="form-label" for="reg-password">Password</label>
-							<div class="input-wrapper">
-								<span class="input-icon">
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-								</span>
-								<input class="auth-input" type="password" id="reg-password" name="password" placeholder="Min. 8 characters" required autocomplete="new-password">
+								<div class="input-wrapper">
+									<span class="input-icon">
+										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+									</span>
+									<input class="auth-input" type="password" id="reg-password" name="password" placeholder="Min. 8 characters" minlength="8" required autocomplete="new-password">
+								</div>
 							</div>
-						</div>
 
 						<button type="submit" class="auth-button">Create Account</button>
 					</form>
