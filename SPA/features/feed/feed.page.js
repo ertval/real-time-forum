@@ -1,51 +1,12 @@
-import { createPagination } from '/static/js/pagination.js';
-import { loadPostCommentsPreview, renderPostCard } from '/static/js/posts.js';
-import { initReactions } from '/static/js/reactions.js';
-import { API_BASE } from '/static/js/utils.js';
+import { API_BASE } from '../../core/api/constants.js';
+import { getPageWindow, nextPage, previousPage } from '../../core/ui/pagination.js';
+import { loadPostCommentsPreview } from '../post/post.api.js';
+import { initReactionBindings } from '../post/post.reactions.bindings.js';
+import { renderPostCard } from '../post/post-card.views.js';
+import { coercePerPage, getFeedQueryState, setFeedQueryState } from './feed.state.js';
 
-const DEFAULT_PER_PAGE = 10;
-const ALLOWED_PER_PAGE_VALUES = new Set([0, 5, 10, 20]);
 const FEED_BOUND_ATTR = 'data-feed-bound';
-
-function toPositiveInt(value) {
-	const parsed = Number.parseInt(value ?? '', 10);
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function getQueryState(windowRef) {
-	const params = new URLSearchParams(windowRef.location.search);
-	const page = toPositiveInt(params.get('page')) ?? 1;
-	const requestedPerPage = Number.parseInt(params.get('per_page') ?? '', 10);
-	const perPage = ALLOWED_PER_PAGE_VALUES.has(requestedPerPage)
-		? requestedPerPage
-		: DEFAULT_PER_PAGE;
-	const categoryId = toPositiveInt(params.get('category_id'));
-
-	return {
-		page,
-		perPage,
-		categoryId: categoryId ? String(categoryId) : '',
-	};
-}
-
-function setQueryState(windowRef, { page, perPage, categoryId }) {
-	const url = new URL(windowRef.location.href);
-	url.search = '';
-
-	if (page > 1) {
-		url.searchParams.set('page', String(page));
-	}
-
-	if (perPage !== DEFAULT_PER_PAGE) {
-		url.searchParams.set('per_page', String(perPage));
-	}
-
-	if (categoryId) {
-		url.searchParams.set('category_id', String(categoryId));
-	}
-
-	windowRef.history.pushState({}, '', `${url.pathname}${url.search}`);
-}
+const SHOW_COMMENT_PREVIEW = true;
 
 async function loadCategories(fetchRef) {
 	const response = await fetchRef(`${API_BASE}/categories`, {
@@ -106,8 +67,9 @@ function syncCategoryOptions(documentRef, select, categories, selectedCategoryId
 
 async function renderPosts(elements, state, pager, fetchRef, windowRef) {
 	const { postsOutput, postsEmpty, pagination } = elements;
+	const documentRef = postsOutput?.ownerDocument;
 
-	if (!postsOutput || !postsEmpty || !pagination) {
+	if (!postsOutput || !postsEmpty || !pagination || !documentRef) {
 		return;
 	}
 
@@ -124,15 +86,23 @@ async function renderPosts(elements, state, pager, fetchRef, windowRef) {
 		return;
 	}
 
-	for (const post of posts) {
-		const card = renderPostCard(post, {
+	const postsWithPreviewComments = await Promise.all(
+		posts.map(async (post) => ({
+			...post,
+			previewComments: SHOW_COMMENT_PREVIEW ? await loadPostCommentsPreview(fetchRef, post.id) : [],
+		})),
+	);
+
+	for (const post of postsWithPreviewComments) {
+		const card = renderPostCard(documentRef, post, {
 			onNavigate: (targetPost) => {
 				windowRef.history.pushState({}, '', `/post/${targetPost.id}`);
 				windowRef.dispatchEvent(new PopStateEvent('popstate'));
 			},
+			previewComments: post.previewComments,
+			showCommentPreview: SHOW_COMMENT_PREVIEW,
 		});
 		postsOutput.appendChild(card);
-		await loadPostCommentsPreview(post.id, card);
 	}
 
 	if (state.perPage === 0) {
@@ -147,6 +117,66 @@ async function renderPosts(elements, state, pager, fetchRef, windowRef) {
 	}
 
 	pager.set(1, 1);
+}
+
+function renderPagination(documentRef, numbersEl, items, onPageChange) {
+	if (!numbersEl) {
+		return;
+	}
+
+	numbersEl.innerHTML = '';
+
+	for (const item of items) {
+		if (item.type === 'ellipsis') {
+			const span = documentRef.createElement('span');
+			span.className = 'pagination-ellipsis';
+			span.textContent = '...';
+			numbersEl.appendChild(span);
+			continue;
+		}
+
+		const button = documentRef.createElement('button');
+		button.type = 'button';
+		button.className = 'pagination-btn';
+		button.textContent = String(item.value);
+		button.disabled = item.active;
+		if (item.active) {
+			button.classList.add('is-active');
+		}
+		button.addEventListener('click', () => onPageChange(item.value));
+		numbersEl.appendChild(button);
+	}
+}
+
+function createPaginationController(documentRef, { prevBtn, nextBtn, numbersEl, onPageChange }) {
+	let currentPage = 1;
+	let totalPages = 1;
+
+	function updateControls() {
+		if (prevBtn) {
+			prevBtn.disabled = currentPage <= 1;
+		}
+
+		if (nextBtn) {
+			nextBtn.disabled = currentPage >= totalPages;
+		}
+
+		renderPagination(documentRef, numbersEl, getPageWindow(currentPage, totalPages), onPageChange);
+	}
+
+	return {
+		set(page, total) {
+			currentPage = page;
+			totalPages = total;
+			updateControls();
+		},
+		next() {
+			onPageChange(nextPage(currentPage, totalPages));
+		},
+		prev() {
+			onPageChange(previousPage(currentPage, totalPages));
+		},
+	};
 }
 
 export function initFeedPage(options = {}) {
@@ -186,21 +216,24 @@ export function initFeedPage(options = {}) {
 		pageNumbers: root.querySelector('#pageNumbers'),
 	};
 
-	const state = getQueryState(windowRef);
+	const state = getFeedQueryState(windowRef);
 
 	if (elements.perPageSelect) {
 		elements.perPageSelect.value = String(state.perPage);
 	}
 
-	initReactions();
+	initReactionBindings({ documentRef, fetchRef });
 
-	const pager = createPagination({
+	const pager = createPaginationController(documentRef, {
 		prevBtn: elements.prevPage,
 		nextBtn: elements.nextPage,
 		numbersEl: elements.pageNumbers,
 		onPageChange: (page) => {
+			if (page === state.page) {
+				return;
+			}
 			state.page = page;
-			setQueryState(windowRef, state);
+			setFeedQueryState(windowRef, state);
 			void renderPosts(elements, state, pager, fetchRef, windowRef);
 		},
 	});
@@ -210,16 +243,16 @@ export function initFeedPage(options = {}) {
 
 	elements.perPageSelect?.addEventListener('change', () => {
 		const nextPerPage = Number.parseInt(elements.perPageSelect.value, 10);
-		state.perPage = ALLOWED_PER_PAGE_VALUES.has(nextPerPage) ? nextPerPage : DEFAULT_PER_PAGE;
+		state.perPage = coercePerPage(nextPerPage);
 		state.page = 1;
-		setQueryState(windowRef, state);
+		setFeedQueryState(windowRef, state);
 		void renderPosts(elements, state, pager, fetchRef, windowRef);
 	});
 
 	elements.categoryFilter?.addEventListener('change', () => {
 		state.categoryId = elements.categoryFilter.value || '';
 		state.page = 1;
-		setQueryState(windowRef, state);
+		setFeedQueryState(windowRef, state);
 		void renderPosts(elements, state, pager, fetchRef, windowRef);
 	});
 
