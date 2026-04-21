@@ -115,15 +115,21 @@ function buildLoginPayload(formData) {
 // Mirrors the SDS registration payload shape so the auth slice owns the form
 // field-to-API mapping in one place.
 function buildRegisterPayload(formData) {
-	return {
+	const payload = {
 		first_name: readTrimmedField(formData, 'first_name'),
 		last_name: readTrimmedField(formData, 'last_name'),
-		age: readNumericField(formData, 'age'),
 		gender: readTrimmedField(formData, 'gender'),
 		username: readTrimmedField(formData, 'username'),
 		email: readTrimmedField(formData, 'email'),
 		password: readField(formData, 'password'),
 	};
+
+	const age = readIntegerField(formData, 'age');
+	if (typeof age === 'number') {
+		payload.age = age;
+	}
+
+	return payload;
 }
 
 // Resolves the outbound request definition from the submitted auth form.
@@ -156,16 +162,20 @@ function readTrimmedField(formData, name) {
 	return readField(formData, name).trim();
 }
 
-// Keeps age numeric when possible while preserving the raw entry if the input
-// is invalid, so the backend remains the source of truth for final validation.
-function readNumericField(formData, name) {
+// Parses integer-only number fields so invalid programmatic submissions do not
+// get serialized as strings into an otherwise numeric API contract.
+function readIntegerField(formData, name) {
 	const rawValue = readTrimmedField(formData, name);
 	if (rawValue === '') {
-		return '';
+		return undefined;
 	}
 
-	const numericValue = Number(rawValue);
-	return Number.isFinite(numericValue) ? numericValue : rawValue;
+	if (!/^-?\d+$/.test(rawValue)) {
+		return undefined;
+	}
+
+	const numericValue = Number.parseInt(rawValue, 10);
+	return Number.isNaN(numericValue) ? undefined : numericValue;
 }
 
 // Handles empty or malformed JSON responses without breaking the auth flow.

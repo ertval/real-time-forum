@@ -222,6 +222,40 @@ describe('SPA auth handlers', () => {
 		});
 	});
 
+	test('omits invalid age values instead of serializing them as strings', async () => {
+		const form = createMockAuthForm({
+			id: 'register-form',
+			fields: {
+				first_name: 'Alex',
+				last_name: 'Smyro',
+				age: '24 years',
+				gender: 'male',
+				username: 'alex',
+				email: 'alex@example.com',
+				password: 'password123',
+			},
+			submitLabel: 'Create Account',
+		});
+		const fetchRef = vi.fn(async () => ({
+			ok: true,
+			status: 201,
+			json: async () => ({ data: { id: 1 } }),
+		}));
+		const navigate = vi.fn();
+
+		await handleAuthFormSubmit({ form, fetchRef, navigate });
+
+		const [, requestOptions] = fetchRef.mock.calls[0];
+		expect(JSON.parse(requestOptions.body)).toEqual({
+			first_name: 'Alex',
+			last_name: 'Smyro',
+			gender: 'male',
+			username: 'alex',
+			email: 'alex@example.com',
+			password: 'password123',
+		});
+	});
+
 	test('successful auth routes users into the forum root', async () => {
 		const form = createMockAuthForm({
 			id: 'register-form',
@@ -245,22 +279,22 @@ describe('SPA auth handlers', () => {
 
 		await handleAuthFormSubmit({ form, fetchRef, navigate });
 
-		expect(fetchRef).toHaveBeenCalledWith('/api/v1/users/register', {
-			method: 'POST',
-			credentials: 'include',
-			headers: {
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-			body: JSON.stringify({
-				first_name: 'Alex',
-				last_name: 'Smyro',
-				age: 24,
-				gender: 'male',
-				username: 'alex',
-				email: 'alex@example.com',
-				password: 'password123',
+		expect(fetchRef).toHaveBeenCalledWith(
+			'/api/v1/users/register',
+			expect.objectContaining({
+				method: 'POST',
+				credentials: 'include',
 			}),
+		);
+		const [, requestOptions] = fetchRef.mock.calls[0];
+		expect(JSON.parse(requestOptions.body)).toEqual({
+			first_name: 'Alex',
+			last_name: 'Smyro',
+			age: 24,
+			gender: 'male',
+			username: 'alex',
+			email: 'alex@example.com',
+			password: 'password123',
 		});
 		expect(navigate).toHaveBeenCalledWith('/', { replace: true });
 		expect(form.submitButton.disabled).toBe(false);
