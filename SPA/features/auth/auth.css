@@ -73,6 +73,17 @@
 	gap: var(--space-md);
 }
 
+.auth-form-error {
+	margin: 0;
+	padding: 0.875rem 1rem;
+	border: 1px solid rgba(185, 28, 28, 0.18);
+	border-radius: var(--radius-md);
+	background: linear-gradient(180deg, rgba(254, 242, 242, 0.96) 0%, rgba(254, 226, 226, 0.9) 100%);
+	color: #991b1b;
+	font-size: 0.95rem;
+	line-height: 1.45;
+}
+
 .auth-grid-2 {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
@@ -161,6 +172,12 @@ select.auth-input {
 .auth-button:hover {
 	background: var(--accent-hover);
 	transform: translateY(-1px);
+}
+
+.auth-button:disabled {
+	cursor: wait;
+	opacity: 0.72;
+	transform: none;
 }
 
 .separator {
