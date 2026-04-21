@@ -72,6 +72,24 @@ export async function handleAuthFormSubmit({
 			response,
 			responseBody,
 		};
+	} catch (error) {
+		const message = getNetworkErrorMessage();
+		writeFormError(form, message);
+		onError?.(message, {
+			error,
+			response: null,
+			responseBody: null,
+			kind: authRequest.kind,
+		});
+		return {
+			handled: true,
+			ok: false,
+			kind: authRequest.kind,
+			message,
+			error,
+			response: null,
+			responseBody: null,
+		};
 	} finally {
 		setFormBusy(submitButton, false);
 	}
@@ -169,6 +187,12 @@ function getErrorMessage(responseBody, kind) {
 	return kind === 'login'
 		? 'Login failed. Please check your credentials.'
 		: 'Registration failed. Please review your details and try again.';
+}
+
+// Keeps network-level failures distinct from backend validation or auth errors
+// so the UI can explain why no server response was available.
+function getNetworkErrorMessage() {
+	return 'Network error. Please try again.';
 }
 
 // Finds the submit control so the form can be temporarily locked during the
