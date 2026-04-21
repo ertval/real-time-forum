@@ -12,13 +12,7 @@ export function canHandleAuthForm(form) {
 
 // Executes the SPA auth request flow for either login or registration.
 // The app shell can call this later without knowing auth-specific payload rules.
-export async function handleAuthFormSubmit({
-	form,
-	fetchRef,
-	navigate,
-	onError,
-	onSuccess,
-}) {
+export async function handleAuthFormSubmit({ form, fetchRef, navigate, onError, onSuccess }) {
 	if (!canHandleAuthForm(form)) {
 		return { handled: false };
 	}
