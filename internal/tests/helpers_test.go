@@ -50,9 +50,13 @@ func setupTestDB(t *testing.T) *sql.DB {
 	  SEED USER (correct bcrypt)
 	---------------------------*/
 	_, err = db.CreateUser(context.Background(), dbConn, db.CreateUserRequest{
-		Username: "testuser",
-		Email:    "test@example.com",
-		Password: "password123",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		Password:  "password123",
+		Age:       20,
+		Gender:    "other",
+		FirstName: "Test",
+		LastName:  "User",
 	})
 	if err != nil {
 		t.Fatalf("failed to seed test user: %v", err)
