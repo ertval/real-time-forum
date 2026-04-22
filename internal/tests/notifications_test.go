@@ -23,9 +23,13 @@ func createTestUser(t *testing.T, dbConn *sql.DB, username string) (int64, strin
 	email := fmt.Sprintf("%s_%d@example.com", username, time.Now().UnixNano())
 
 	userID, err := dbpkg.CreateUser(context.Background(), dbConn, dbpkg.CreateUserRequest{
-		Username: username,
-		Email:    email,
-		Password: "password123",
+		Username:  username,
+		Email:     email,
+		Password:  "password123",
+		Age:       20,
+		Gender:    "other",
+		FirstName: "Test",
+		LastName:  "User",
 	})
 	if err != nil {
 		t.Fatalf("create user: %v", err)

@@ -21,15 +21,23 @@ type User struct {
 	Username     string `json:"username"`
 	Email        string `json:"email"`
 	PasswordHash string `json:"-"`
+	Age          int    `json:"age"`
+	Gender       string `json:"gender"`
+	FirstName    string `json:"first_name"`
+	LastName     string `json:"last_name"`
 	IsActive     bool   `json:"is_active"`
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
 }
 
 type CreateUserRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	Age       int    `json:"age"`
+	Gender    string `json:"gender"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }
 
 type LoginRequest struct {
@@ -60,7 +68,7 @@ func CreateUser(
 		return 0, err
 	}
 
-	id, err := insertUser(ctx, db, req.Username, req.Email, hash)
+	id, err := insertUser(ctx, db, req.Username, req.Email, hash, req.Age, req.Gender, req.FirstName, req.LastName)
 	if err != nil {
 		return 0, err
 	}
@@ -100,11 +108,11 @@ func GetUser(
 
 	var user User
 	err := db.QueryRowContext(ctx,
-		`SELECT id, username, email, is_active, created_at, updated_at
+		`SELECT id, username, email, age, gender, first_name, last_name, is_active, created_at, updated_at
 		 FROM users
 		 WHERE id = ?`,
 		id,
-	).Scan(&user.ID, &user.Username, &user.Email, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Username, &user.Email, &user.Age, &user.Gender, &user.FirstName, &user.LastName, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
