@@ -32,8 +32,8 @@ This PR fully satisfies the verification gate for ticket **C10**:
 
 ### Automated Test Suite
 - [x] `go test ./internal/...` — All 3 packages PASS (`internal/db`, `internal/handlers`, `internal/tests`)
-- [ ] `bun run policy` — N/A (backend-only ticket, no frontend changes)
-- [ ] `bun x biome check .` — N/A (no JS/TS files changed)
+- [x] `bun run policy` — 23 frontend tests PASS, Biome clean (82 files, no fixes applied)
+- [x] `bun x biome check .` — 82 files checked, no fixes applied
 
 ### QA Checklist
 - [x] `go test ./internal/... -coverpkg=./internal/...` — `CreateUser` 90.9%, `GetUser` 88.9%, `insertUser` 84.6%
