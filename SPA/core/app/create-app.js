@@ -1,5 +1,6 @@
 // SPA/core/app/create-app.js
 
+import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
 import { matchRoute, normalizePathname } from '../router/routes.js';
@@ -166,6 +167,10 @@ export function createApp(options = {}) {
 		handleLocationChange();
 	}
 
+	function navigate(pathname, navigationOptions = {}) {
+		goTo(pathname, Boolean(navigationOptions.replace));
+	}
+
 	function handleLocationChange() {
 		const normalizedPath = normalizePathname(windowRef.location.pathname || '/');
 
@@ -253,15 +258,20 @@ export function createApp(options = {}) {
 
 	function onDocumentSubmit(event) {
 		const form = event.target?.closest?.('form');
-		if (!form) {
+		if (!form || !canHandleAuthForm(form)) {
 			return;
 		}
 
-		// Only intercept critical authentication forms to prevent URL exposure
-		const criticalForms = ['login-form', 'register-form'];
-		if (criticalForms.includes(form.id)) {
-			event.preventDefault();
-		}
+		event.preventDefault();
+
+		void handleAuthFormSubmit({
+			form,
+			fetchRef,
+			navigate,
+			onSuccess() {
+				state.isAuthenticated = true;
+			},
+		});
 	}
 
 	function onPopState() {
@@ -292,9 +302,7 @@ export function createApp(options = {}) {
 	return {
 		boot: start,
 		stop,
-		navigate: (pathname, navigationOptions = {}) => {
-			goTo(pathname, Boolean(navigationOptions.replace));
-		},
+		navigate,
 		handleLocationChange,
 		getState: () => ({ ...state }),
 	};
