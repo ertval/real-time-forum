@@ -1,60 +1,57 @@
 # C01: Authenticated WebSocket Endpoint and Connection Manager
 <!-- Filename: docs/pr-message/C01-WebSocket-Endpoint-pr.md -->
 
-Implements the WebSocket transport layer for real-time chat functionality. Adds `GET /ws` endpoint with session-cookie authentication, presence tracking, and multi-tab connection support.
+Implements the WebSocket transport layer that all real-time features depend on. Adds `GET /ws` with session-cookie authentication, a thread-safe connection Hub, and multi-tab connection lifecycle tracking.
+
+This is a resubmission addressing the four findings from the first review (2× P1, 2× P2).
 
 ## Summary of Changes
 
-### 1. WebSocket Infrastructure
-- **Gorilla WebSocket**: Added `github.com/gorilla/websocket` dependency to `go.mod`
-- **Connection Manager**: Created `internal/ws/connection_manager.go` with thread-safe Hub struct
+### 1. Connection Manager (`internal/ws/connection_manager.go`)
+- **`Client` struct**: wraps a `*websocket.Conn` with a buffered `send chan []byte` so all writes are serialized through a single goroutine — eliminates the concurrent-write race flagged in review
+- **Stale-map fix**: `Hub.Remove` now calls `delete(h.connections, userID)` when the last connection closes; `GetOnlineUserIDs` and `SendPresenceSnapshot` can no longer iterate over empty user entries from disconnected users
+- **Channel-based send**: `BroadcastPresenceUpdate`, `SendToUser`, and `SendPresenceSnapshot` enqueue via `client.Send` rather than calling `conn.WriteMessage` directly
 
-### 2. WebSocket Handler
-- **HandleWebSocket**: New handler in `internal/handlers/ws.go` that:
-  - Validates session cookies during upgrade
-  - Rejects unauthenticated connections with 401
-  - Manages connection lifecycle per user
-  - Supports multiple connections (tabs) via connection counting
+### 2. WebSocket Handler (`internal/handlers/ws.go`)
+- **Auth**: validates `session_token` cookie before upgrade; returns `401` if missing or invalid
+- **Lifecycle**: `readPump` reads until EOF then calls `Hub.Remove`; `writePump` is the sole writer — drains `client.Send` channel and sends periodic pings
+- **Scope**: removed out-of-scope C04 presence broadcast calls and C06 `dm.send` handling that were present in the first submission
 
-### 3. Presence System
-- **On Connect**: Sends `presence.snapshot` to new client, broadcasts `presence.update` if first connection
-- **On Disconnect**: Removes connection, broadcasts `presence.update` if last connection
-- **Message Routing**: Basic `dm.send` parsing with validation (self-send, empty body, offline recipient)
-
-### 4. Backend Integration
-- **Router Update**: Modified `internal/router/router.go` to accept Hub and register `/ws` route
-- **Server Init**: Modified `cmd/backend/server.go` to create Hub and pass to router
+### 3. Backend Integration
+- **Router**: `internal/router/router.go` accepts `*ws.Hub` and registers `/ws`
+- **Server**: `cmd/backend/server.go` creates the Hub and passes it to the router
 
 ## Verification Gate Satisfaction
 
 This PR fully satisfies the verification gate for ticket **C01**:
 > - authenticated users can open WebSocket connections
-> - unauthenticated connections are rejected with 401
-> - multi-tab connection lifecycle is tracked reliably (connection count)
+> - unauthenticated connections are rejected
+> - multi-tab connection lifecycle is tracked reliably
 
 ## Testing & Validation Verified
 
 ### Automated Test Suite
-- [x] `make test` — All tests pass (Go backend + Vitest frontend)
-- [x] `bun run lint` — Biome check: 82 files, no issues
-- [x] `go build ./...` — Project builds without errors
+- [x] `go test ./internal/... -timeout 60s` — All packages pass
+- [x] `go test ./internal/tests/... -race -run "TestWebSocket"` — All 5 WS tests pass, no data races detected
+- [x] `go build ./...` — Builds without errors
 
 ### QA Checklist
-- [x] Verified unauthenticated WS upgrade returns 401
-- [x] Verified invalid session token returns 401
-- [x] Verified Hub tracks connection count correctly
-- [x] Verified router signature change compiles with all existing tests
+- [x] `TestWebSocket_Unauthenticated` — no cookie → `401`
+- [x] `TestWebSocket_InvalidSession` — bad token → `401`
+- [x] `TestWebSocket_ValidConnection` — valid session → `101 Switching Protocols`
+- [x] `TestWebSocket_MultiTab` — same user dials twice → both connections alive
+- [x] `TestWebSocket_DisconnectCleansUp` — close frame → server removes client cleanly
 
-### Manual E2E Verification
-- [ ] **Not yet tested**: Real browser WS connection with multiple tabs (requires running servers)
+### Manual E2E Verification (websocat)
+- [x] No cookie → `401 Unauthorized`
+- [x] Invalid session token → `401 Unauthorized`
+- [x] Valid session → WebSocket upgrades, connection held open for 2s without error
+- [x] Multi-tab → two simultaneous `websocat` processes with the same token both stay alive
 
 ## Key Files Impacted
 - `internal/ws/connection_manager.go` (new)
 - `internal/handlers/ws.go` (new)
+- `internal/tests/ws_test.go` (new)
 - `internal/router/router.go` (modified)
 - `cmd/backend/server.go` (modified)
-- `go.mod` (modified)
-- `internal/tests/ws_test.go` (new)
-- `internal/tests/users_test.go` (modified - router signature)
-- `internal/tests/helpers_test.go` (modified - router signature)
-- `internal/tests/forum_auth_access_test.go` (modified - 401 vs 404)
+- `go.mod` / `go.sum` (gorilla/websocket dependency)

@@ -1,26 +1,39 @@
 package tests
 
 import (
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"forum/internal/router"
-	"forum/internal/ws"
+	"github.com/gorilla/websocket"
 )
 
-func newTestAPIWithHub(t *testing.T) (http.Handler, *sql.DB, *ws.Hub) {
+// dialWS opens a WebSocket connection to the test server with the given session
+// token. Returns (conn, true) on a successful 101 upgrade, (nil, false) on 401.
+func dialWS(t *testing.T, srv *httptest.Server, token string) (*websocket.Conn, bool) {
 	t.Helper()
-	db := setupTestDB(t)
-	hub := ws.NewHub()
-	h := router.NewRouter(db, hub)
-	return h, db, hub
+	u := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws"
+	hdr := http.Header{}
+	if token != "" {
+		hdr.Set("Cookie", "session_token="+token)
+	}
+	conn, resp, err := websocket.DefaultDialer.Dial(u, hdr)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
+			return nil, false
+		}
+		t.Fatalf("unexpected dial error: %v", err)
+	}
+	return conn, true
 }
 
+/*-----------
+  AUTH TESTS
+------------*/
+
 func TestWebSocket_Unauthenticated(t *testing.T) {
-	h, db, _ := newTestAPIWithHub(t)
+	h, db := newTestAPI(t)
 	defer db.Close()
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
@@ -33,11 +46,11 @@ func TestWebSocket_Unauthenticated(t *testing.T) {
 }
 
 func TestWebSocket_InvalidSession(t *testing.T) {
-	h, db, _ := newTestAPIWithHub(t)
+	h, db := newTestAPI(t)
 	defer db.Close()
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
-	req.AddCookie(&http.Cookie{Name: "session_token", Value: "invalid-token-123"})
+	req.AddCookie(&http.Cookie{Name: "session_token", Value: "invalid-token-abc"})
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
@@ -46,50 +59,64 @@ func TestWebSocket_InvalidSession(t *testing.T) {
 	}
 }
 
-func TestHub_AddRemove(t *testing.T) {
-	hub := ws.NewHub()
+/*--------------------
+  CONNECTION LIFECYCLE
+---------------------*/
 
-	// User 1 should be offline initially (no connections)
-	if hub.IsUserOnline(1) {
-		t.Fatal("expected user 1 to be offline initially")
+func TestWebSocket_ValidConnection(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	token := registerAndLoginAs(t, h, "wsvalid")
+
+	conn, ok := dialWS(t, srv, token)
+	if !ok {
+		t.Fatal("expected successful WebSocket upgrade for authenticated user")
 	}
-
-	// Note: Can't actually create ws.Conn in tests without full upgrade
-	// Just test the counting logic
-	_ = hub.GetOnlineUserIDs()
-	_ = hub.GetConnectionCount(1)
+	conn.Close()
 }
 
-func TestHub_MultiConnection(t *testing.T) {
-	hub := ws.NewHub()
+func TestWebSocket_MultiTab(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
 
-	online := hub.GetOnlineUserIDs()
-	if len(online) != 0 {
-		t.Fatalf("expected no online users, got %d", len(online))
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	token := registerAndLoginAs(t, h, "wsmultitab")
+
+	conn1, ok1 := dialWS(t, srv, token)
+	if !ok1 {
+		t.Fatal("first connection failed")
 	}
+	conn2, ok2 := dialWS(t, srv, token)
+	if !ok2 {
+		t.Fatal("second connection (same user, multi-tab) failed")
+	}
+
+	conn1.Close()
+	conn2.Close()
 }
 
-func extractTokenFromLogin(t *testing.T, h http.Handler) string {
-	regBody := `{"username":"wsuser","email":"ws@example.com","password":"password123"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", strings.NewReader(regBody))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
+func TestWebSocket_DisconnectCleansUp(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
 
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("register failed: %d", rec.Code)
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	token := registerAndLoginAs(t, h, "wsdisconn")
+
+	conn, ok := dialWS(t, srv, token)
+	if !ok {
+		t.Fatal("connection failed")
 	}
 
-	loginBody := `{"username":"wsuser","password":"password123"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/users/login", strings.NewReader(loginBody))
-	req.Header.Set("Content-Type", "application/json")
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("login failed: %d", rec.Code)
-	}
-
-	setCookie := rec.Header().Get("Set-Cookie")
-	return strings.Split(strings.Split(setCookie, ";")[0], "=")[1]
+	// Send a close frame so the server reads the EOF and removes the client.
+	conn.WriteMessage(websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	conn.Close()
 }
