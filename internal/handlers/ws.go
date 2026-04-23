@@ -62,6 +62,7 @@ func (h *WsHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 func (h *WsHandler) readPump(userID int64, c *ws.Client) {
 	defer func() {
 		h.hub.Remove(userID, c)
+		close(c.Send)
 		c.Conn.Close()
 	}()
 
