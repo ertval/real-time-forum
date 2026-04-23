@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"forum/internal/router"
+	"forum/internal/ws"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,7 +19,8 @@ import (
 func TestUserRegistration(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	r := router.NewRouter(db)
+	hub := ws.NewHub()
+	r := router.NewRouter(db, hub)
 	// Test valid registration
 	validBody := `{"username":"newuser","email":"new@example.com","password":"password123","age":20,"gender":"other","first_name":"Test","last_name":"User"}`
 	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(validBody))
@@ -98,7 +100,8 @@ func TestUserRegistration(t *testing.T) {
 func TestUserLoginByUsername(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	r := router.NewRouter(db)
+	hub := ws.NewHub()
+	r := router.NewRouter(db, hub)
 	// Register a user
 	regBody := `{"username":"newuser123","email":"test2@example.com","password":"password123","age":20,"gender":"other","first_name":"Test","last_name":"User"}`
 	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(regBody))
