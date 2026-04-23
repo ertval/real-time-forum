@@ -168,6 +168,21 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- ===============================================================
+-- PRIVATE MESSAGES
+-- ===============================================================
+CREATE TABLE IF NOT EXISTS private_messages (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  sender_id     INTEGER NOT NULL,
+  recipient_id  INTEGER NOT NULL,
+  body          TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  FOREIGN KEY (sender_id)    REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+  CHECK (sender_id <> recipient_id),
+  CHECK (length(trim(body)) > 0)
+);
+
+-- ===============================================================
 -- INDEXES
 -- ===============================================================
 
@@ -217,6 +232,13 @@ ON oauth_users(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_notifications_unread
   ON notifications(recipient_id, is_read);
+
+-- Private Messages
+CREATE INDEX IF NOT EXISTS idx_pm_sender
+  ON private_messages(sender_id, recipient_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_pm_recipient
+  ON private_messages(recipient_id, sender_id, created_at DESC);
 
   -- ===============================================================
 -- NOTIFICATION UNIQUENESS (ANTI-SPAM)
