@@ -26,7 +26,7 @@ This PR fully satisfies the verification gate for ticket **C02**:
 ### Automated Test Suite
 - [x] `go test ./internal/... -timeout 60s` — all packages pass
 - [x] `go build ./...` — builds without errors
-- [ ] `bun run policy` — not applicable (no frontend changes)
+- [x] `bun run policy` — biome: 82 files, no issues; vitest: 23 tests passing
 
 ### QA Checklist
 - [x] `TestCreateMessage_Persists` — row written, all fields returned correctly
