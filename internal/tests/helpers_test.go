@@ -16,6 +16,7 @@ import (
 	db "forum/internal/db"
 	"forum/internal/handlers"
 	"forum/internal/router"
+	"forum/internal/ws"
 )
 
 /*------------------------------------------------------------
@@ -50,9 +51,13 @@ func setupTestDB(t *testing.T) *sql.DB {
 	  SEED USER (correct bcrypt)
 	---------------------------*/
 	_, err = db.CreateUser(context.Background(), dbConn, db.CreateUserRequest{
-		Username: "testuser",
-		Email:    "test@example.com",
-		Password: "password123",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		Password:  "password123",
+		Age:       20,
+		Gender:    "other",
+		FirstName: "Test",
+		LastName:  "User",
 	})
 	if err != nil {
 		t.Fatalf("failed to seed test user: %v", err)
@@ -99,7 +104,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 func newTestAPI(t *testing.T) (http.Handler, *sql.DB) {
 	t.Helper()
 	db := setupTestDB(t)
-	h := router.NewRouter(db)
+	hub := ws.NewHub()
+	h := router.NewRouter(db, hub)
 	return h, db
 }
 

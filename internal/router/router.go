@@ -8,11 +8,12 @@ import (
 
 	"forum/internal/handlers"
 	"forum/internal/middleware"
+	"forum/internal/ws"
 )
 
 const apiPrefix = "/api/v1"
 
-func NewRouter(database *sql.DB) http.Handler {
+func NewRouter(database *sql.DB, hub *ws.Hub) http.Handler {
 	mux := http.NewServeMux()
 
 	/*-----------
@@ -22,6 +23,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	posts := handlers.NewPostsHandler(database)
 	users := handlers.NewUsersHandler(database)
 	categories := handlers.NewCategoriesHandler(database)
+	wsHandler := handlers.NewWsHandler(database, hub)
 
 	/*------------
 	  MIDDLEWARE
@@ -272,6 +274,11 @@ func NewRouter(database *sql.DB) http.Handler {
 			http.MethodPatch,
 		),
 	)
+
+	/*-------------------------
+	  WEBSOCKET
+	-------------------------*/
+	mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
 	/*-------------------------
 	  API FALLBACK (JSON 404)
