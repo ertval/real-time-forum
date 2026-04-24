@@ -8,6 +8,8 @@ import (
 	"net/url"
 )
 
+// NewMux builds the frontend server mux, including static SPA delivery and the
+// backend proxy routes used for REST and authenticated WebSocket traffic.
 func NewMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
@@ -46,7 +48,9 @@ func NewMux() *http.ServeMux {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(backendURL)
 
-	// Single proxy handler for both REST and WebSocket
+	// Route both /api/ and /ws through the same backend proxy so the frontend
+	// server stays the browser-facing entry point while preserving session-cookie
+	// authentication for both HTTP requests and WebSocket upgrades.
 	proxyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Host = backendURL.Host
 		proxy.ServeHTTP(w, r)
@@ -71,6 +75,8 @@ func NewMux() *http.ServeMux {
 	return mux
 }
 
+// setNoStoreHeaders prevents browsers from caching the SPA shell so auth-gated
+// routes always revalidate through the frontend server.
 func setNoStoreHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 	w.Header().Set("Pragma", "no-cache")
