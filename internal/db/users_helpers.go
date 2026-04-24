@@ -1,3 +1,4 @@
+// internal/db/users_helpers.go
 package db
 
 import (
@@ -118,14 +119,22 @@ func insertUser(
 	username,
 	email,
 	passwordHash string,
+	age int,
+	gender,
+	firstName,
+	lastName string,
 ) (int64, error) {
 	formattedUsername := strings.ToLower(username)
 	result, err := db.ExecContext(ctx,
-		`INSERT INTO users (username, email, password_hash)
-		 VALUES (?, ?, ?)`,
+		`INSERT INTO users (username, email, password_hash, age, gender, first_name, last_name)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		formattedUsername,
 		email,
 		passwordHash,
+		age,
+		gender,
+		firstName,
+		lastName,
 	)
 	if err != nil {
 		if isUniqueConstraint(err) {
