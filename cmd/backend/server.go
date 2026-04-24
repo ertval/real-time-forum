@@ -11,6 +11,7 @@ import (
 	"forum/internal/db"
 	"forum/internal/env"
 	"forum/internal/router"
+	"forum/internal/ws"
 )
 
 const addr = ":8080"
@@ -55,9 +56,14 @@ func Start() {
 	}()
 
 	/* ----------------------------
+	   WebSocket Hub
+	-----------------------------*/
+	hub := ws.NewHub()
+
+	/* ----------------------------
 	   HTTP server
 	-----------------------------*/
-	handler := router.NewRouter(database)
+	handler := router.NewRouter(database, hub)
 
 	log.Println("Server running on http://localhost" + addr)
 

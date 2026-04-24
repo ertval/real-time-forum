@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `6`
+- Done: `8`
 - Partially Implemented: `0`
-- Not Started: `31`
+- Not Started: `29`
 
 ---
 
@@ -64,8 +64,8 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup | None | A02 |
 | 2 | [x] | **A02** | A | Frontend Architecture & Directory Restructuring | A01 | A10, D09 |
 | 3 | [x] | **A10** | A | Single SPA Shell Entry | A02 | D09, A03 |
-| 4 | [ ] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
-| 5 | [ ] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
+| 4 | [x] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
+| 5 | [x] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
 | 6 | [x] | **A03** | A | SPA Boot and Client Routing | A10 | A04, D10, A05, B01, B05 |
 
 ### Wave 2 — Auth + Shell + Core Forum (P1)
