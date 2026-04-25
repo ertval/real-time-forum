@@ -216,6 +216,65 @@ describe('SPA Application Engine', () => {
 		expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
 	});
 
+	test('login and registration routes render inside the SPA auth flow', async () => {
+		const cases = [
+			{ path: '/login', expected: 'data-screen="login"' },
+			{ path: '/register', expected: 'data-screen="register"' },
+		];
+
+		for (const testCase of cases) {
+			const browser = createMockBrowser(testCase.path);
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			});
+
+			await app.boot();
+
+			expect(browser.mainContent.innerHTML).toContain(testCase.expected);
+			expect(browser.mainContent.innerHTML).not.toContain('data-auth-shell');
+		}
+	});
+
+	test('registration route renders all required D10 fields', async () => {
+		const browser = createMockBrowser('/register');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+		});
+
+		await app.boot();
+
+		expect(browser.mainContent.innerHTML).toContain('name="first_name"');
+		expect(browser.mainContent.innerHTML).toContain('name="last_name"');
+		expect(browser.mainContent.innerHTML).toContain('name="age"');
+		expect(browser.mainContent.innerHTML).toContain('name="gender"');
+		expect(browser.mainContent.innerHTML).toContain('name="username"');
+		expect(browser.mainContent.innerHTML).toContain('name="email"');
+		expect(browser.mainContent.innerHTML).toContain('name="password"');
+	});
+
+	test('auth entry routes do not expose guest or OAuth options', async () => {
+		for (const path of ['/login', '/register']) {
+			const browser = createMockBrowser(path);
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			});
+
+			await app.boot();
+
+			expect(browser.mainContent.innerHTML).not.toContain('Continue with Google');
+			expect(browser.mainContent.innerHTML).not.toContain('/api/v1/auth/google');
+			expect(browser.mainContent.innerHTML).not.toContain('/api/v1/auth/github');
+			expect(browser.mainContent.innerHTML).not.toContain('Continue as guest');
+			expect(browser.mainContent.innerHTML).not.toContain('guest-login');
+		}
+	});
+
 	test('logout button calls API and returns user to login flow', async () => {
 		const browser = createMockBrowser('/activity');
 		const fetchRef = vi.fn(async (url) => {
