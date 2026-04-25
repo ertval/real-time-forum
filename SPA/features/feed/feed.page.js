@@ -1,12 +1,10 @@
 import { API_BASE } from '../../core/api/constants.js';
 import { getPageWindow, nextPage, previousPage } from '../../core/ui/pagination.js';
-import { loadPostCommentsPreview } from '../post/post.api.js';
 import { initReactionBindings } from '../post/post.reactions.bindings.js';
 import { renderPostCard } from '../post/post-card.views.js';
 import { coercePerPage, getFeedQueryState, setFeedQueryState } from './feed.state.js';
 
 const FEED_BOUND_ATTR = 'data-feed-bound';
-const SHOW_COMMENT_PREVIEW = true;
 
 async function loadCategories(fetchRef) {
 	const response = await fetchRef(`${API_BASE}/categories`, {
@@ -86,21 +84,12 @@ async function renderPosts(elements, state, pager, fetchRef, windowRef) {
 		return;
 	}
 
-	const postsWithPreviewComments = await Promise.all(
-		posts.map(async (post) => ({
-			...post,
-			previewComments: SHOW_COMMENT_PREVIEW ? await loadPostCommentsPreview(fetchRef, post.id) : [],
-		})),
-	);
-
-	for (const post of postsWithPreviewComments) {
+	for (const post of posts) {
 		const card = renderPostCard(documentRef, post, {
 			onNavigate: (targetPost) => {
-				windowRef.history.pushState({}, '', `/post/${targetPost.id}`);
+				windowRef.history.pushState({}, '', `/posts/${targetPost.id}`);
 				windowRef.dispatchEvent(new PopStateEvent('popstate'));
 			},
-			previewComments: post.previewComments,
-			showCommentPreview: SHOW_COMMENT_PREVIEW,
 		});
 		postsOutput.appendChild(card);
 	}

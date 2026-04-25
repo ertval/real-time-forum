@@ -38,13 +38,19 @@ Verification Gate:
 - opening a post uses SPA navigation instead of full document navigation
 
 ### B02 - Remove Feed Comment Rendering
-Source: RTF-11 | Phase: P1
+Source: RTF-11 | Phase: P1 | Status: Done
 Depends on: B01
 Blocks: D05
 
 Work:
 - stop fetching comment previews for feed cards
 - preserve clean post-card rendering in the feed
+- keep feed cards and feed data flow fully decoupled from comment loading
+
+Implementation Notes:
+- removed feed-side preview comment fetching and preview-specific post-card props
+- feed post cards now render post-only content and route to canonical SPA post detail paths
+- comment loading responsibility is isolated to post detail work in B03
 
 Verification Gate:
 - feed cards no longer render comments

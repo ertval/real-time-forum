@@ -70,50 +70,7 @@ function reactionTemplate(post) {
 	`;
 }
 
-function renderCommentPreview(comment) {
-	const body = typeof comment.body === 'string' ? comment.body.trim() : '';
-	const previewBody = body ? `<p class="comment-text">${escapeHTML(body)}</p>` : '';
-
-	return `
-		<article class="comment" data-comment-id="${escapeHTML(comment.id)}">
-			<div class="comment-meta muted">
-				<strong>${escapeHTML(resolveUsername(comment))}</strong>
-				<span>${formatCreatedAt(comment.created_at)}</span>
-			</div>
-			<div class="comment-body">
-				${previewBody}
-			</div>
-		</article>
-	`;
-}
-
-function commentPreviewTemplate(previewComments = [], showCommentPreview = true) {
-	if (!showCommentPreview) {
-		return '';
-	}
-
-	if (!Array.isArray(previewComments) || previewComments.length === 0) {
-		return `
-			<section class="post-comments" data-comments-preview>
-				<p class="muted">No comments yet.</p>
-			</section>
-		`;
-	}
-
-	return `
-		<section class="post-comments" data-comments-preview>
-			<div class="comments comments-scroll">
-				${previewComments.map((comment) => renderCommentPreview(comment)).join('')}
-			</div>
-		</section>
-	`;
-}
-
-export function renderPostCard(
-	documentRef,
-	post,
-	{ clickable = true, onNavigate = null, previewComments = [], showCommentPreview = true } = {},
-) {
+export function renderPostCard(documentRef, post, { clickable = true, onNavigate = null } = {}) {
 	const article = documentRef.createElement('article');
 	article.className = 'post card card-pad';
 	article.dataset.postId = String(post.id);
@@ -155,8 +112,6 @@ export function renderPostCard(
 		<section class="post-actions">
 			${reactionTemplate(post)}
 		</section>
-
-		${commentPreviewTemplate(previewComments, showCommentPreview)}
 	`;
 
 	if (clickable) {
