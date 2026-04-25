@@ -24,7 +24,13 @@ let lastFocusedElement = null;
 
 export function renderPostCard(
 	post,
-	{ clickable = true, showStatusToggle = false, showDelete = false, showEdit = false } = {},
+	{
+		clickable = true,
+		showStatusToggle = false,
+		showDelete = false,
+		showEdit = false,
+		onNavigate = null,
+	} = {},
 ) {
 	const article = document.createElement('article');
 	article.className = 'post card card-pad';
@@ -83,6 +89,11 @@ export function renderPostCard(
 	if (clickable) {
 		article.querySelectorAll('.clickable').forEach((el) => {
 			el.addEventListener('click', () => {
+				if (typeof onNavigate === 'function') {
+					onNavigate(post);
+					return;
+				}
+
 				window.location.href = `/view-post/${post.id}`;
 			});
 		});

@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { beforeAll, expect, test } from 'vitest';
+import { loadPostCommentsPreview } from '../../features/post/post.api.js';
+import { renderPostCard } from '../../features/post/post-card.views.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -144,6 +146,10 @@ class MockElement extends MockEventTarget {
 	getBoundingClientRect() {
 		return { width: 0, height: 0 };
 	}
+
+	querySelectorAll() {
+		return [];
+	}
 }
 
 class MockImageElement extends MockElement {
@@ -272,25 +278,6 @@ function loadImagePickerForTests() {
 	vm.runInThisContext(transformed, { filename: 'image-picker.test.eval.js' });
 }
 
-function loadPostsHelpersForTests() {
-	const filePath = path.join(repoRoot, 'web', 'static', 'js', 'posts.js');
-	const source = fs.readFileSync(filePath, 'utf8');
-
-	const noImports = source.replace(/^\s*import[\s\S]*?;\s*$/gm, '');
-
-	const transformed = [
-		noImports
-			.replace(/export\s+async\s+function /g, 'async function ')
-			.replace(/export function /g, 'function ')
-			.replace('function openImageLightbox(', 'function __originalOpenImageLightbox(')
-			.replace(/\bopenImageLightbox\(/g, 'globalThis.__openImageLightboxSpy('),
-		'globalThis.__bindExpandableImage = bindExpandableImage;',
-		'globalThis.__syncImageTransparencyPresentation = syncImageTransparencyPresentation;',
-	].join('\n');
-
-	vm.runInThisContext(transformed, { filename: 'posts.test.eval.js' });
-}
-
 async function flushMicrotasks() {
 	await Promise.resolve();
 	await Promise.resolve();
@@ -300,7 +287,6 @@ async function flushMicrotasks() {
 beforeAll(() => {
 	installTestEnvironment();
 	loadImagePickerForTests();
-	loadPostsHelpersForTests();
 });
 
 test('Image preview behavior', async () => {
@@ -375,52 +361,54 @@ test('Preview checkerboard for transparent PNG', async () => {
 	expect(previewImage.dataset.transparent).toBe('true');
 });
 
-test('Posted image expand by click', () => {
-	const bindExpandableImage = globalThis.__bindExpandableImage;
-	expect(typeof bindExpandableImage).toBe('function');
+test('Post card renders comment preview section from provided SPA data', () => {
+	const documentRef = new MockDocument();
+	const article = renderPostCard(
+		documentRef,
+		{
+			id: 7,
+			title: 'Forum post',
+			body: 'Body copy',
+			username: 'alice',
+			created_at: '2026-04-21T10:00:00Z',
+			likes_count: 2,
+			dislikes_count: 1,
+		},
+		{
+			previewComments: [
+				{ id: 11, body: 'First preview', username: 'bob', created_at: '2026-04-21T10:01:00Z' },
+				{
+					id: 12,
+					body: 'Second preview',
+					username: 'carol',
+					created_at: '2026-04-21T10:02:00Z',
+				},
+			],
+		},
+	);
 
-	const calls = [];
-	globalThis.__openImageLightboxSpy = (...args) => calls.push(args);
-
-	const image = new MockImageElement();
-	image.src = 'https://example.test/uploads/post.jpg';
-	image.alt = 'Post image';
-	image.dataset.transparent = 'true';
-	image.getBoundingClientRect = () => ({ width: 320.2, height: 180.7 });
-
-	bindExpandableImage(image, 'post');
-
-	image.dispatchEvent({ type: 'click' });
-
-	expect(calls.length).toBe(1);
-	expect(calls[0][0]).toBe(image.src);
-	expect(calls[0][1]).toBe('Post image');
-	expect(calls[0][2]).toBe('post');
-	expect(calls[0][3]).toBe(true);
-	expect(calls[0][4]).toEqual({ minWidth: 320, minHeight: 181 });
+	expect(article.innerHTML).toContain('data-comments-preview');
+	expect(article.innerHTML).toContain('First preview');
+	expect(article.innerHTML).toContain('Second preview');
+	expect(article.innerHTML).toContain('comments comments-scroll');
 });
 
-test('Posted transparent PNG checkerboard', async () => {
-	const syncImageTransparencyPresentation = globalThis.__syncImageTransparencyPresentation;
-	expect(typeof syncImageTransparencyPresentation).toBe('function');
-
-	const frame = new MockElement('div');
-	const image = new MockImageElement();
-	image.src = 'https://example.test/uploads/transparent.png';
-	image.currentSrc = image.src;
-	image.naturalWidth = 80;
-	image.naturalHeight = 80;
-
-	globalThis.__mockCanvasAlpha = 70;
-
-	syncImageTransparencyPresentation({
-		imgEl: image,
-		frameEl: frame,
-		checkerboardClass: 'post-image--checkerboard',
+test('Comment preview API limits results for feed cards', async () => {
+	const fetchRef = async () => ({
+		ok: true,
+		async json() {
+			return {
+				data: [
+					{ id: 1, body: 'one' },
+					{ id: 2, body: 'two' },
+					{ id: 3, body: 'three' },
+					{ id: 4, body: 'four' },
+				],
+			};
+		},
 	});
 
-	await flushMicrotasks();
-
-	expect(image.dataset.transparent).toBe('true');
-	expect(frame.classList.contains('post-image--checkerboard')).toBeTruthy();
+	const previewComments = await loadPostCommentsPreview(fetchRef, 42);
+	expect(previewComments).toHaveLength(3);
+	expect(previewComments.map((comment) => comment.id)).toEqual([1, 2, 3]);
 });

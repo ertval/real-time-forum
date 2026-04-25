@@ -4,10 +4,18 @@ import { Auth } from './auth.js';
 import { playReaction } from './sound-effects.js';
 import { API_BASE } from './utils.js';
 
+let reactionsInitialized = false;
+
 export function initReactions() {
+	if (reactionsInitialized) {
+		return;
+	}
+
 	document.addEventListener('change', (e) => {
 		void handleReactionChange(e);
 	});
+
+	reactionsInitialized = true;
 }
 
 async function handleReactionChange(e) {
