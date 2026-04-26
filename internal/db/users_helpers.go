@@ -44,6 +44,17 @@ func validateCreateUser(req CreateUserRequest) error {
 	case strings.Contains(req.Password, " "):
 		return fmt.Errorf("password can't contain spaces")
 	}
+	// Profile field validation
+	switch {
+	case req.Age <= 0:
+		return fmt.Errorf("age must be a positive integer")
+	case strings.TrimSpace(req.Gender) == "":
+		return fmt.Errorf("gender is required")
+	case strings.TrimSpace(req.FirstName) == "":
+		return fmt.Errorf("first name is required")
+	case strings.TrimSpace(req.LastName) == "":
+		return fmt.Errorf("last name is required")
+	}
 
 	return nil
 }
