@@ -12,7 +12,11 @@ This PR implements the User Profile Page bonus feature for the real-time forum. 
 ### 2. Backend API
 - **User Profile Endpoint**: Added `GET /api/v1/users/{userID}/profile` handler in `internal/handlers/users.go`. Modifies the existing `HandleUser` to conditionally return only public profile data (`user_id`, `username`, `first_name`, `last_name`, `age`, `gender`) when the `/profile` suffix is present in the path.
 
-### 3. Navigation Links
+### 3. Bug Fixes
+- **Feed Comment Preview**: Fixed a core requirement violation where comments were being rendered in the feed. The `SHOW_COMMENT_PREVIEW` flag in `SPA/features/feed/feed.page.js` was set to `true` (introduced by Chris Baikas in commit `646a9508` - merged by Magnus Edvall into main), violating the requirement "See comments only if they click on a post". This has been corrected to `false`.
+- **Auth Form Robustness**: Refactored `handleAuthForm` in `SPA/core/app/create-app.js` to safely handle response parsing and avoid `TypeError` on non-JSON responses.
+
+### 4. Navigation Links
 - **Post & Comment Integration**: Updated `SPA/features/post/post-card.views.js` to wrap the author's name in a clickable `<a data-link class="profile-link">` anchor tag linking to `/profile/{user_id}`.
 
 ## Verification Gate Satisfaction
