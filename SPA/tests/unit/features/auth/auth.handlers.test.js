@@ -329,6 +329,33 @@ describe('SPA auth handlers', () => {
 		});
 	});
 
+	test('calls onSuccess before navigate so the app shell can unlock protected routes first', async () => {
+		const form = createMockAuthForm({
+			id: 'login-form',
+			fields: {
+				identifier: 'alex',
+				password: 'password123',
+			},
+			submitLabel: 'Sign In',
+		});
+		const fetchRef = vi.fn(async () => ({
+			ok: true,
+			status: 200,
+			json: async () => ({ data: { message: 'ok' } }),
+		}));
+		const callOrder = [];
+		const onSuccess = vi.fn(() => {
+			callOrder.push('success');
+		});
+		const navigate = vi.fn(() => {
+			callOrder.push('navigate');
+		});
+
+		await handleAuthFormSubmit({ form, fetchRef, navigate, onSuccess });
+
+		expect(callOrder).toEqual(['success', 'navigate']);
+	});
+
 	test('failed auth shows an inline error without leaving the current route', async () => {
 		const form = createMockAuthForm({
 			id: 'login-form',
