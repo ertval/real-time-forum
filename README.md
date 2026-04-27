@@ -144,6 +144,14 @@ Important notes:
 - The seed runner resets QA-owned tables and recreates the same users, posts, comments, reactions, and notifications each time.
 - Bootstrap categories are not treated as QA sample data and are preserved separately.
 - Do not reseed a database that is actively being used by a running backend process.
+ 
+
+### 🧪 Test Credentials
+For quick testing and QA, the following user is available in the default seed data:
+
+| Role | Nickname / Email | Password |
+|:--- |:--- |:--- |
+| **Test User** | `tester` / `tester@example.com` | `password` |
 
 ---
 
