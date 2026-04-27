@@ -572,3 +572,18 @@ The main critical path is:
 2. data-model and auth updates
 3. WebSocket and direct-message backend
 4. persistent chat UI and history loading
+
+## 12. Development and QA Tools
+
+### 12.1 Test Credentials
+
+For local development and manual QA, a test user is included in the database seed (`internal/db/seeds/10_users.sql`).
+
+| Credential | Value |
+|:--- |:--- |
+| **Nickname** | `tester` |
+| **Email** | `tester@example.com` |
+| **Password** | `password` |
+
+These credentials can be used to log in immediately after running `make seed-qa`.
+
