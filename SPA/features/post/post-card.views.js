@@ -77,7 +77,7 @@ function renderCommentPreview(comment) {
 	return `
 		<article class="comment" data-comment-id="${escapeHTML(comment.id)}">
 			<div class="comment-meta muted">
-				<strong>${escapeHTML(resolveUsername(comment))}</strong>
+				<strong><a data-link class="profile-link" href="/profile/${escapeHTML(comment.author_id || comment.user_id || '')}">${escapeHTML(resolveUsername(comment))}</a></strong>
 				<span>${formatCreatedAt(comment.created_at)}</span>
 			</div>
 			<div class="comment-body">
@@ -139,7 +139,7 @@ export function renderPostCard(
 			<div>
 				${renderCategories(post.categories)}
 				<h3 class="post-title">${escapeHTML(post.title)}</h3>
-				<p class="muted">Author: ${escapeHTML(resolveUsername(post))}</p>
+				<p class="muted">Author: <a data-link class="profile-link" href="/profile/${escapeHTML(post.author_id || post.user_id || '')}">${escapeHTML(resolveUsername(post))}</a></p>
 			</div>
 
 			<div class="post-header-right">
