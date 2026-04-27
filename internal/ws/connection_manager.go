@@ -38,6 +38,11 @@ func NewHub() *Hub {
 	}
 }
 
+// SetCallbacks registers lifecycle hooks that fire on first connect and last
+// disconnect. The callbacks are invoked while the Hub's write lock is held, so
+// they must not call any Hub method that acquires a read or write lock
+// (e.g. BroadcastPresenceUpdate, SendPresenceSnapshot, SendToUser) — doing so
+// will deadlock. Use these hooks only for lightweight, non-Hub side-effects.
 func (h *Hub) SetCallbacks(onConnect, onDisconnect func(int64)) {
 	h.onConnect = onConnect
 	h.onDisconnect = onDisconnect
@@ -137,11 +142,15 @@ func (h *Hub) BroadcastPresenceUpdate(userID int64, isOnline bool) {
 }
 
 // SendToUser enqueues data for every connection belonging to the given user.
+// The read lock is held for the entire iteration because the channel sends are
+// non-blocking (select/default), making it safe to hold a read lock here — and
+// necessary to prevent a concurrent Remove from mutating the clients map while
+// we iterate it.
 func (h *Hub) SendToUser(userID int64, data []byte) error {
 	h.mu.RLock()
-	clients := h.connections[userID]
-	h.mu.RUnlock()
+	defer h.mu.RUnlock()
 
+	clients := h.connections[userID]
 	if len(clients) == 0 {
 		return ErrUserOffline
 	}
@@ -155,9 +164,11 @@ func (h *Hub) SendToUser(userID int64, data []byte) error {
 	return nil
 }
 
-// SendPresenceSnapshot enqueues a presence.snapshot for all of the given
-// user's connections.
-func (h *Hub) SendPresenceSnapshot(userID int64) error {
+// SendSnapshotToClient enqueues a presence.snapshot to a single client.
+// Call this immediately after Add so the connecting client learns who is online.
+// Using the Client directly (rather than a userID) ensures only the new
+// connection receives the snapshot — not any existing tabs for the same user.
+func (h *Hub) SendSnapshotToClient(c *Client) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -175,13 +186,10 @@ func (h *Hub) SendPresenceSnapshot(userID int64) error {
 	}
 	data, _ := json.Marshal(msg)
 
-	for c := range h.connections[userID] {
-		select {
-		case c.Send <- data:
-		default:
-		}
+	select {
+	case c.Send <- data:
+	default:
 	}
-	return nil
 }
 
 type WSMessage struct {
