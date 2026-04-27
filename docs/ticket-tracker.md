@@ -83,7 +83,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 13 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
 | 14 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
 | 15 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
-| 16 | [ ] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
+| 16 | [x] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
 
 ### Wave 3 — Real-Time Chat MVP (P2 + P3)
 

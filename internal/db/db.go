@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"io/fs"
+	"sort"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -16,8 +19,11 @@ import (
 //go:embed forum_schema.sql
 var schemaFS embed.FS
 
-//go:embed seeds/categories.sql
+//go:embed bootstrap/default_categories.sql
 var categoriesSeed string
+
+//go:embed seeds/*.sql
+var qaSeedFS embed.FS
 
 // InitDB opens/creates the SQLite database,
 // applies PRAGMA options via DSN,
@@ -69,4 +75,43 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+// ApplyQASeeds resets QA-owned tables and loads deterministic sample data.
+// Categories are intentionally excluded because they are bootstrap data.
+func ApplyQASeeds(db *sql.DB) error {
+	seedFiles, err := fs.Glob(qaSeedFS, "seeds/*.sql")
+	if err != nil {
+		return WrapError("glob qa seed files", err)
+	}
+
+	sort.Strings(seedFiles)
+
+	tx, err := db.Begin()
+	if err != nil {
+		return WrapError("begin qa seed transaction", err)
+	}
+	defer tx.Rollback()
+
+	for _, seedFile := range seedFiles {
+		sqlBytes, err := qaSeedFS.ReadFile(seedFile)
+		if err != nil {
+			return WrapError("read "+seedFile, err)
+		}
+
+		sqlText := strings.TrimSpace(string(sqlBytes))
+		if sqlText == "" {
+			continue
+		}
+
+		if _, err := tx.Exec(sqlText); err != nil {
+			return WrapError("apply "+seedFile, MapSQLError(err))
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return WrapError("commit qa seed transaction", err)
+	}
+
+	return nil
 }
