@@ -1,5 +1,6 @@
 // SPA/core/app/create-app.js
 
+import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
 import { initFeedPage } from '../../features/feed/feed.page.js';
 import { initProfilePage } from '../../features/profile/profile.page.js';
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
@@ -78,12 +79,6 @@ export function createApp(options = {}) {
 	const windowRef = options.windowRef ?? (typeof window !== 'undefined' ? window : null);
 	const documentRef = options.documentRef ?? (typeof document !== 'undefined' ? document : null);
 	const fetchRef = options.fetchRef ?? (typeof fetch === 'function' ? fetch : null);
-	const alertRef =
-		typeof options.alertRef === 'function'
-			? options.alertRef
-			: typeof globalThis.alert === 'function'
-				? globalThis.alert.bind(globalThis)
-				: null;
 
 	if (!windowRef || !documentRef) {
 		return null;
@@ -184,6 +179,10 @@ export function createApp(options = {}) {
 		handleLocationChange();
 	}
 
+	function navigate(pathname, navigationOptions = {}) {
+		goTo(pathname, Boolean(navigationOptions.replace));
+	}
+
 	function handleLocationChange() {
 		const normalizedPath = normalizePathname(windowRef.location.pathname || '/');
 
@@ -239,46 +238,6 @@ export function createApp(options = {}) {
 		goTo('/login', true);
 	}
 
-	async function handleAuthResponse(response) {
-		if (response.ok) {
-			state.isAuthenticated = true;
-			goTo('/');
-			return;
-		}
-
-		const error = typeof response.json === 'function' ? await response.json() : {};
-		if (alertRef) {
-			alertRef(error.error?.message || 'Authentication failed');
-		}
-	}
-
-	async function handleAuthForm(form) {
-		try {
-			const formData = new FormData(form);
-			const data = Object.fromEntries(formData.entries());
-
-			if (data.age) {
-				data.age = Number.parseInt(data.age, 10);
-			}
-
-			const endpoint = form.id === 'login-form' ? '/api/v1/users/login' : '/api/v1/users/register';
-
-			const response = await fetchRef(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(data),
-				credentials: 'include',
-			});
-
-			await handleAuthResponse(response);
-		} catch (err) {
-			console.error('Auth error:', err);
-			if (alertRef) {
-				alertRef('A connection error occurred. Please try again.');
-			}
-		}
-	}
-
 	function onDocumentClick(event) {
 		if (event.defaultPrevented || event.button !== 0) {
 			return;
@@ -311,16 +270,20 @@ export function createApp(options = {}) {
 
 	function onDocumentSubmit(event) {
 		const form = event.target?.closest?.('form');
-		if (!form) {
+		if (!form || !canHandleAuthForm(form)) {
 			return;
 		}
 
-		// Only intercept critical authentication forms to prevent URL exposure
-		const criticalForms = ['login-form', 'register-form'];
-		if (criticalForms.includes(form.id)) {
-			event.preventDefault();
-			void handleAuthForm(form);
-		}
+		event.preventDefault();
+
+		void handleAuthFormSubmit({
+			form,
+			fetchRef,
+			navigate,
+			onSuccess() {
+				state.isAuthenticated = true;
+			},
+		});
 	}
 
 	function onPopState() {
@@ -351,9 +314,7 @@ export function createApp(options = {}) {
 	return {
 		boot: start,
 		stop,
-		navigate: (pathname, navigationOptions = {}) => {
-			goTo(pathname, Boolean(navigationOptions.replace));
-		},
+		navigate,
 		handleLocationChange,
 		getState: () => ({ ...state }),
 	};

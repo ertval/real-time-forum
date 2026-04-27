@@ -10,6 +10,7 @@ APP_NAME = forum
 
 BACKEND_BIN  = forum-backend
 FRONTEND_BIN = forum-frontend
+QA_SEED_PKG  = ./cmd/qa-seed
 
 BACKEND_PKG  = ./cmd/backend
 FRONTEND_PKG = ./cmd/frontend
@@ -44,6 +45,11 @@ run: build
 	@echo "🔥 Starting backend & frontend..."
 	@./$(BACKEND_BIN) &
 	@./$(FRONTEND_BIN)
+
+seed-qa:
+	@echo "🌱 Applying QA seeds..."
+	@go run $(QA_SEED_PKG)
+	@echo "✅ QA seed complete"
 
 # -----------------------------------------------------
 # 🛑 Stop Local Processes

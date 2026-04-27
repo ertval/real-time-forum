@@ -1,6 +1,8 @@
 # --- Build Artifacts ---
 # Go
 bin/
+backend
+frontend
 forum-backend
 forum-frontend
 *.exe
