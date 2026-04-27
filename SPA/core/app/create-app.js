@@ -239,12 +239,24 @@ export function createApp(options = {}) {
 		goTo('/login', true);
 	}
 
+	async function handleAuthResponse(response) {
+		if (response.ok) {
+			state.isAuthenticated = true;
+			goTo('/');
+			return;
+		}
+
+		const error = typeof response.json === 'function' ? await response.json() : {};
+		if (alertRef) {
+			alertRef(error.error?.message || 'Authentication failed');
+		}
+	}
+
 	async function handleAuthForm(form) {
 		try {
 			const formData = new FormData(form);
 			const data = Object.fromEntries(formData.entries());
 
-			// Basic data normalization for age
 			if (data.age) {
 				data.age = Number.parseInt(data.age, 10);
 			}
@@ -258,15 +270,7 @@ export function createApp(options = {}) {
 				credentials: 'include',
 			});
 
-			if (response.ok) {
-				state.isAuthenticated = true;
-				goTo('/');
-			} else {
-				const error = await response.json();
-				if (alertRef) {
-					alertRef(error.error?.message || 'Authentication failed');
-				}
-			}
+			await handleAuthResponse(response);
 		} catch (err) {
 			console.error('Auth error:', err);
 			if (alertRef) {
