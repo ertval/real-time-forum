@@ -1,9 +1,14 @@
 // SPA/tests/unit/core/app/create-app.test.js
 
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { createApp } from '../../../../core/app/create-app.js';
 import { matchRoute, normalizePathname } from '../../../../core/router/routes.js';
+import * as authHandlers from '../../../../features/auth/auth.handlers.js';
 import { createMockBrowser } from '../../helpers/browser-mock.js';
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 describe('SPA routing for A03/A04', () => {
 	test('normalizes and matches required routes', () => {
@@ -466,22 +471,67 @@ describe('SPA Application Engine', () => {
 		}
 	});
 
-	test('form submission should be intercepted and prevented', async () => {
+	test('login-form submit is delegated through the auth feature and prevented', async () => {
 		const browser = createMockBrowser('/login');
+		const fetchRef = vi.fn(async () => ({ ok: false, status: 401 }));
+		const canHandleAuthForm = vi
+			.spyOn(authHandlers, 'canHandleAuthForm')
+			.mockImplementation((form) => form?.id === 'login-form' || form?.id === 'register-form');
+		const handleAuthFormSubmit = vi
+			.spyOn(authHandlers, 'handleAuthFormSubmit')
+			.mockResolvedValue({ handled: true });
 		const app = createApp({
 			windowRef: browser.windowRef,
 			documentRef: browser.documentRef,
-			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			fetchRef,
 		});
 
 		await app.boot();
 
 		const event = browser.submitForm('login-form');
-		expect(event.preventDefault).toHaveBeenCalled();
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(canHandleAuthForm).toHaveBeenCalled();
+		expect(handleAuthFormSubmit).toHaveBeenCalledWith({
+			form: expect.objectContaining({ id: 'login-form' }),
+			fetchRef,
+			navigate: expect.any(Function),
+			onSuccess: expect.any(Function),
+		});
+	});
+
+	test('register-form submit is delegated through the auth feature and prevented', async () => {
+		const browser = createMockBrowser('/register');
+		const fetchRef = vi.fn(async () => ({ ok: false, status: 401 }));
+		const canHandleAuthForm = vi
+			.spyOn(authHandlers, 'canHandleAuthForm')
+			.mockImplementation((form) => form?.id === 'login-form' || form?.id === 'register-form');
+		const handleAuthFormSubmit = vi
+			.spyOn(authHandlers, 'handleAuthFormSubmit')
+			.mockResolvedValue({ handled: true });
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+
+		const event = browser.submitForm('register-form');
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
+		expect(canHandleAuthForm).toHaveBeenCalled();
+		expect(handleAuthFormSubmit).toHaveBeenCalledWith({
+			form: expect.objectContaining({ id: 'register-form' }),
+			fetchRef,
+			navigate: expect.any(Function),
+			onSuccess: expect.any(Function),
+		});
 	});
 
 	test('non-critical forms should not be intercepted by default', async () => {
 		const browser = createMockBrowser('/');
+		const handleAuthFormSubmit = vi
+			.spyOn(authHandlers, 'handleAuthFormSubmit')
+			.mockResolvedValue({ handled: true });
 		const app = createApp({
 			windowRef: browser.windowRef,
 			documentRef: browser.documentRef,
@@ -492,5 +542,64 @@ describe('SPA Application Engine', () => {
 
 		const event = browser.submitForm('search-form');
 		expect(event.preventDefault).not.toHaveBeenCalled();
+		expect(handleAuthFormSubmit).not.toHaveBeenCalled();
+	});
+
+	test('successful delegated auth marks the session as authenticated and lands on /', async () => {
+		const browser = createMockBrowser('/login');
+		const fetchRef = vi.fn(async () => ({ ok: false, status: 401 }));
+		vi.spyOn(authHandlers, 'canHandleAuthForm').mockImplementation(
+			(form) => form?.id === 'login-form' || form?.id === 'register-form',
+		);
+		vi.spyOn(authHandlers, 'handleAuthFormSubmit').mockImplementation(
+			async ({ navigate, onSuccess }) => {
+				onSuccess?.({
+					kind: 'login',
+					response: { ok: true, status: 200 },
+					responseBody: { data: { message: 'ok' } },
+				});
+				navigate?.('/', { replace: true });
+				return { handled: true, ok: true, kind: 'login' };
+			},
+		);
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+		browser.submitForm('login-form');
+
+		expect(app.getState().isAuthenticated).toBe(true);
+		expect(browser.windowRef.location.pathname).toBe('/');
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="feed"');
+	});
+
+	test('failed delegated auth stays on the current auth route', async () => {
+		const browser = createMockBrowser('/register');
+		const fetchRef = vi.fn(async () => ({ ok: false, status: 401 }));
+		vi.spyOn(authHandlers, 'canHandleAuthForm').mockImplementation(
+			(form) => form?.id === 'login-form' || form?.id === 'register-form',
+		);
+		vi.spyOn(authHandlers, 'handleAuthFormSubmit').mockImplementation(async () => ({
+			handled: true,
+			ok: false,
+			kind: 'register',
+			message: 'Registration failed.',
+		}));
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef,
+		});
+
+		await app.boot();
+		browser.submitForm('register-form');
+
+		expect(app.getState().isAuthenticated).toBe(false);
+		expect(browser.windowRef.location.pathname).toBe('/register');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
 	});
 });
