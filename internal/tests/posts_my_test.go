@@ -14,7 +14,7 @@ func TestAPIMyPostsList(t *testing.T) {
 	defer db.Close()
 
 	// Register + login USER A
-	regA := `{"username":"alice","email":"a@example.com","password":"password123","first_name":"Alice","last_name":"User","age":20,"gender":"Female"}`
+	regA := `{"username":"alice","email":"a@example.com","password":"password123","first_name":"Alice","last_name":"User","age":20,"gender":"female"}`
 	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regA))
 
 	loginA := `{"username":"alice","password":"password123"}`
@@ -23,7 +23,7 @@ func TestAPIMyPostsList(t *testing.T) {
 	tokenA := extractToken(t, recA)
 
 	// Register + login USER B
-	regB := `{"username":"bob","email":"b@example.com","password":"password123","first_name":"Bob","last_name":"User","age":22,"gender":"Male"}`
+	regB := `{"username":"bob","email":"b@example.com","password":"password123","first_name":"Bob","last_name":"User","age":22,"gender":"male"}`
 	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regB))
 
 	loginB := `{"username":"bob","password":"password123"}`

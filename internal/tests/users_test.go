@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"forum/internal/router"
+	"forum/internal/ws"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,9 +19,10 @@ import (
 func TestUserRegistration(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	r := router.NewRouter(db)
+	hub := ws.NewHub()
+	r := router.NewRouter(db, hub)
 	// Test valid registration
-	validBody := `{"username":"newuser","email":"new@example.com","password":"password123","first_name":"New","last_name":"User","age":20,"gender":"Other"}`
+	validBody := `{"username":"newuser","email":"new@example.com","password":"password123","first_name":"New","last_name":"User","age":20,"gender":"other"}`
 	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(validBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -98,9 +100,10 @@ func TestUserRegistration(t *testing.T) {
 func TestUserLoginByUsername(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	r := router.NewRouter(db)
+	hub := ws.NewHub()
+	r := router.NewRouter(db, hub)
 	// Register a user
-	regBody := `{"username":"newuser123","email":"test2@example.com","password":"password123","first_name":"First","last_name":"Last","age":30,"gender":"Other"}`
+	regBody := `{"username":"newuser123","email":"test2@example.com","password":"password123","first_name":"First","last_name":"Last","age":30,"gender":"other"}`
 	req := httptest.NewRequest("POST", "/api/v1/users/register", bytes.NewBufferString(regBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -167,7 +170,7 @@ func TestUserLoginByEmail(t *testing.T) {
 	defer db.Close()
 
 	// Register
-	regBody := `{"username":"emailuser","email":"emailuser@example.com","password":"password123","first_name":"Email","last_name":"User","age":25,"gender":"Other"}`
+	regBody := `{"username":"emailuser","email":"emailuser@example.com","password":"password123","first_name":"Email","last_name":"User","age":25,"gender":"other"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -211,7 +214,7 @@ func TestUserLogin_WrongPassword(t *testing.T) {
 	defer db.Close()
 
 	// Register
-	regBody := `{"username":"wrongpassuser","email":"wrongpass@example.com","password":"password123","first_name":"Wrong","last_name":"Pass","age":22,"gender":"Other"}`
+	regBody := `{"username":"wrongpassuser","email":"wrongpass@example.com","password":"password123","first_name":"Wrong","last_name":"Pass","age":22,"gender":"other"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -281,7 +284,7 @@ func TestUserLogout(t *testing.T) {
 	defer db.Close()
 
 	// Register + Login
-	regBody := `{"username":"logoutUser","email":"logout@example.com","password":"password123","first_name":"Logout","last_name":"User","age":40,"gender":"Other"}`
+	regBody := `{"username":"logoutUser","email":"logout@example.com","password":"password123","first_name":"Logout","last_name":"User","age":40,"gender":"other"}`
 	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
 
 	loginBody := `{"username":"logoutUser","password":"password123"}`
@@ -353,7 +356,7 @@ func TestUserGet_NonExistent(t *testing.T) {
 	defer db.Close()
 
 	// Register + login
-	regBody := `{"username":"exists","email":"exists@example.com","password":"password123","first_name":"Exists","last_name":"User","age":28,"gender":"Other"}`
+	regBody := `{"username":"exists","email":"exists@example.com","password":"password123","first_name":"Exists","last_name":"User","age":28,"gender":"other"}`
 	_, _ = doRequest(t, h, http.MethodPost, "/api/v1/users/register", []byte(regBody))
 
 	loginBody := `{"username":"exists","password":"password123"}`
@@ -374,5 +377,56 @@ func TestUserGet_NonExistent(t *testing.T) {
 	if rec2.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 for non-existent user, got %d body=%s",
 			rec2.Code, rec2.Body.String())
+	}
+}
+
+/*---------------------------
+  C11 - PROFILE FIELD VALIDATION
+----------------------------*/
+
+func TestC11_Registration_MissingProfileFields(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	cases := []struct {
+		desc string
+		body string
+	}{
+		{"missing age", `{"username":"u1","email":"u1@example.com","password":"password123","age":0,"gender":"male","first_name":"A","last_name":"B"}`},
+		{"negative age", `{"username":"u2","email":"u2@example.com","password":"password123","age":-1,"gender":"male","first_name":"A","last_name":"B"}`},
+		{"missing gender", `{"username":"u3","email":"u3@example.com","password":"password123","age":20,"gender":"","first_name":"A","last_name":"B"}`},
+		{"whitespace gender", `{"username":"u4","email":"u4@example.com","password":"password123","age":20,"gender":"   ","first_name":"A","last_name":"B"}`},
+		{"missing first_name", `{"username":"u5","email":"u5@example.com","password":"password123","age":20,"gender":"male","first_name":"","last_name":"B"}`},
+		{"whitespace first_name", `{"username":"u6","email":"u6@example.com","password":"password123","age":20,"gender":"male","first_name":"   ","last_name":"B"}`},
+		{"missing last_name", `{"username":"u7","email":"u7@example.com","password":"password123","age":20,"gender":"male","first_name":"A","last_name":""}`},
+		{"whitespace last_name", `{"username":"u8","email":"u8@example.com","password":"password123","age":20,"gender":"male","first_name":"A","last_name":"   "}`},
+	}
+
+	for _, tc := range cases {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: expected 400, got %d body=%s", tc.desc, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestC11_Registration_ValidPayloadSucceeds(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	body := `{"username":"c11user","email":"c11@example.com","password":"password123","age":22,"gender":"female","first_name":"Clara","last_name":"Smith"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for valid extended payload, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get("Set-Cookie") == "" {
+		t.Fatal("expected session cookie after registration")
 	}
 }
