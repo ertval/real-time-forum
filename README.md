@@ -92,6 +92,30 @@ make lint:fix      # Fix Biome static analysis
 make format        # Standardize code formatting
 ```
 
+### 🌱 Database Seeding
+Use the QA seed runner when you want a deterministic local dataset.
+
+```bash
+make seed-qa
+```
+
+By default this seeds:
+
+```bash
+./data/forum.db
+```
+
+You can also target a different SQLite file:
+
+```bash
+go run ./cmd/qa-seed --db-path /tmp/forum-seed-check.db
+```
+
+Important notes:
+- The seed runner resets QA-owned tables and recreates the same users, posts, comments, reactions, and notifications each time.
+- Bootstrap categories are not treated as QA sample data and are preserved separately.
+- Do not reseed a database that is actively being used by a running backend process.
+
 ---
 
 ## 📂 Documentation
