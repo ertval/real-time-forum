@@ -1,3 +1,4 @@
+// internal/db/messages.go
 package db
 
 import (
