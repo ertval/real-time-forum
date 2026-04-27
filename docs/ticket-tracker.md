@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `8`
+- Done: `9`
 - Partially Implemented: `0`
-- Not Started: `29`
+- Not Started: `28`
 
 ---
 
@@ -74,16 +74,16 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 7 | [ ] | **C11** | C | Registration API Contract | C10 | C08 |
+| 7 | [x] | **C11** | C | Registration API Contract | C10 | C08 |
 | 8 | [x] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
 | 9 | [x] | **A05** | A | Authenticated-Only Forum Access ([PR](pr-message/A05-Authenticated-Only-Forum-Access-pr.md)) | A03 | A06, B01, B04, B05, D04, C08 |
 | 10 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
 | 11 | [x] | **A06** | A | Global Logout Across the Forum ([PR](pr-message/A06-Global-Logout-Across-the-Forum-pr.md)) | A04, A05 | D05 |
-| 12 | [ ] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
+| 12 | [x] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
 | 13 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
 | 14 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
 | 15 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
-| 16 | [ ] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
+| 16 | [x] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
 
 ### Wave 3 — Real-Time Chat MVP (P2 + P3)
 
@@ -91,7 +91,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 17 | [ ] | **D09** | D | Frontend WebSocket Proxy | A02 | D04 |
+| 17 | [x] | **D09** | D | Frontend WebSocket Proxy | A02 | D04 |
 | 18 | [ ] | **C03** | C | Chat History API | C02 | D02, C08 |
 | 19 | [ ] | **C04** | C | Presence Broadcasting | C01 | C06, D04, C08 |
 | 20 | [ ] | **C05** | C | Chat Roster API | C02, C01 | D01, C08 |

@@ -1,5 +1,6 @@
 // SPA/core/app/create-app.js
 
+import { initFeedPage } from '../../features/feed/feed.page.js';
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
 import { matchRoute, normalizePathname } from '../router/routes.js';
@@ -146,10 +147,18 @@ export function createApp(options = {}) {
 
 		if (match.route.access === 'protected') {
 			renderProtectedRoute(routeMarkup);
+			runRouteInitializer(match);
 			return;
 		}
 
 		renderPublicRoute(routeMarkup);
+		runRouteInitializer(match);
+	}
+
+	function runRouteInitializer(match) {
+		if (match?.route?.id === 'feed') {
+			initFeedPage({ windowRef, documentRef, fetchRef });
+		}
 	}
 
 	function goTo(pathname, replace = false) {

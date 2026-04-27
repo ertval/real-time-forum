@@ -379,3 +379,54 @@ func TestUserGet_NonExistent(t *testing.T) {
 			rec2.Code, rec2.Body.String())
 	}
 }
+
+/*---------------------------
+  C11 - PROFILE FIELD VALIDATION
+----------------------------*/
+
+func TestC11_Registration_MissingProfileFields(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	cases := []struct {
+		desc string
+		body string
+	}{
+		{"missing age", `{"username":"u1","email":"u1@example.com","password":"password123","age":0,"gender":"male","first_name":"A","last_name":"B"}`},
+		{"negative age", `{"username":"u2","email":"u2@example.com","password":"password123","age":-1,"gender":"male","first_name":"A","last_name":"B"}`},
+		{"missing gender", `{"username":"u3","email":"u3@example.com","password":"password123","age":20,"gender":"","first_name":"A","last_name":"B"}`},
+		{"whitespace gender", `{"username":"u4","email":"u4@example.com","password":"password123","age":20,"gender":"   ","first_name":"A","last_name":"B"}`},
+		{"missing first_name", `{"username":"u5","email":"u5@example.com","password":"password123","age":20,"gender":"male","first_name":"","last_name":"B"}`},
+		{"whitespace first_name", `{"username":"u6","email":"u6@example.com","password":"password123","age":20,"gender":"male","first_name":"   ","last_name":"B"}`},
+		{"missing last_name", `{"username":"u7","email":"u7@example.com","password":"password123","age":20,"gender":"male","first_name":"A","last_name":""}`},
+		{"whitespace last_name", `{"username":"u8","email":"u8@example.com","password":"password123","age":20,"gender":"male","first_name":"A","last_name":"   "}`},
+	}
+
+	for _, tc := range cases {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: expected 400, got %d body=%s", tc.desc, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestC11_Registration_ValidPayloadSucceeds(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	body := `{"username":"c11user","email":"c11@example.com","password":"password123","age":22,"gender":"female","first_name":"Clara","last_name":"Smith"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for valid extended payload, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get("Set-Cookie") == "" {
+		t.Fatal("expected session cookie after registration")
+	}
+}
