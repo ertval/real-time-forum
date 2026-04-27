@@ -417,7 +417,7 @@ func registerAndLogin(t *testing.T, h http.Handler) string {
 	t.Helper()
 
 	// Register
-	regBody := `{"username":"reactor","email":"reactor@example.com","password":"password123","first_name":"Reactor","last_name":"User","age":25,"gender":"Other"}`
+	regBody := `{"username":"reactor","email":"reactor@example.com","password":"password123","first_name":"Reactor","last_name":"User","age":25,"gender":"other"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -506,7 +506,7 @@ func registerAndLoginAs(t *testing.T, h http.Handler, username string) string {
 	t.Helper()
 
 	regBody := fmt.Sprintf(
-		`{"username":"%s","email":"%s@example.com","password":"password123","first_name":"%s","last_name":"User","age":25,"gender":"Other"}`,
+		`{"username":"%s","email":"%s@example.com","password":"password123","first_name":"%s","last_name":"User","age":25,"gender":"other"}`,
 		username, username, username,
 	)
 
