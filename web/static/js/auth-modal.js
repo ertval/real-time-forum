@@ -54,19 +54,21 @@ export function closeAuthModal() {
    IFRAME → PARENT MESSAGES
 ========================= */
 
-window.addEventListener('message', (event) => {
-	if (!event?.data) return;
+if (typeof window !== 'undefined') {
+	window.addEventListener('message', (event) => {
+		if (!event?.data) return;
 
-	if (event.data.type === 'auth:notify') {
-		const { message, level } = event.data.payload || {};
-		if (message) {
-			uiNotify(message, { type: level || 'info' });
+		if (event.data.type === 'auth:notify') {
+			const { message, level } = event.data.payload || {};
+			if (message) {
+				uiNotify(message, { type: level || 'info' });
+			}
+			return;
 		}
-		return;
-	}
 
-	if (event.data === 'auth:success') {
-		closeAuthModal();
-		window.location.href = '/';
-	}
-});
+		if (event.data === 'auth:success') {
+			closeAuthModal();
+			window.location.href = '/';
+		}
+	});
+}
