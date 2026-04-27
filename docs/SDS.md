@@ -23,15 +23,13 @@ The current codebase is a Go application with:
 - REST endpoints for posts, comments, reactions, drafts, notifications, and activity
 - polling-based notifications
 
-The current implementation is not yet suitable for the target state because:
+The current implementation has advanced significantly toward the target state. Remaining gaps include:
 
-- the frontend serves multiple templates instead of one SPA shell
-- public read routes still support unauthenticated access
-- registration persists only username, email, and password
-- comments are fetched and rendered in the home feed
-- there is no WebSocket endpoint
-- there is no persistence model for private messages
-- there is no presence model for online or offline status
+- comments are still fetched and rendered in the home feed (B02 pending)
+- there is no persistence model for private messages (C02 pending)
+- there is no presence model for online or offline status (C04 pending)
+- chat history and roster APIs are not yet implemented (C03, C05 pending)
+- post detail, create, and edit flows are still using placeholder SPA views (B03, B04 pending)
 
 ## 3. Target Architecture
 

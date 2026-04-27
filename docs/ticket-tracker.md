@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `8`
+- Done: `14`
 - Partially Implemented: `0`
-- Not Started: `29`
+- Not Started: `23`
 
 ---
 
@@ -61,12 +61,12 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup | None | A02 |
-| 2 | [x] | **A02** | A | Frontend Architecture & Directory Restructuring | A01 | A10, D09 |
-| 3 | [x] | **A10** | A | Single SPA Shell Entry | A02 | D09, A03 |
-| 4 | [x] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
-| 5 | [x] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
-| 6 | [x] | **A03** | A | SPA Boot and Client Routing | A10 | A04, D10, A05, B01, B05 |
+| 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup ([PR](pr-message/A01-InfrastructureSetup-pr.md)) | None | A02 |
+| 2 | [x] | **A02** | A | Frontend Architecture & Directory Restructuring ([PR](pr-message/A02-FrontendArchitecture-pr.md)) | A01 | A10, D09 |
+| 3 | [x] | **A10** | A | Single SPA Shell Entry ([PR](pr-message/A10-Single-SPA-Shell-Entry-pr.md)) | A02 | D09, A03 |
+| 4 | [x] | **C10** | C | User Profile Schema Extension ([PR](pr-message/C10-UserProfileSchemaExtension-pr.md)) | None | C11, C02, C07 |
+| 5 | [x] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager ([PR](pr-message/C01-WebSocket-Endpoint-pr.md)) | None | C04, C05, C06, D04, C08 |
+| 6 | [x] | **A03** | A | SPA Boot and Client Routing ([PR](pr-message/A03-SPA-Boot-and-Client-Routing-pr.md)) | A10 | A04, D10, A05, B01, B05 |
 
 ### Wave 2 — Auth + Shell + Core Forum (P1)
 
@@ -74,10 +74,10 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 7 | [x] | **C11** | C | Registration API Contract | C10 | C08 |
-| 8 | [x] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
+| 7 | [x] | **C11** | C | Registration API Contract ([PR](pr-message/C11-RegistrationAPIContract-pr.md)) | C10 | C08 |
+| 8 | [x] | **A04** | A | Persistent App Shell Layout ([PR](pr-message/A04-Persistent-App-Shell-Layout-pr.md)) | A03 | A06, B01, B04, B05, D01, B06 |
 | 9 | [x] | **A05** | A | Authenticated-Only Forum Access ([PR](pr-message/A05-Authenticated-Only-Forum-Access-pr.md)) | A03 | A06, B01, B04, B05, D04, C08 |
-| 10 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
+| 10 | [x] | **D10** | D | SPA Login and Registration Views ([PR](pr-message/D10-SPA-Login-and-Registration-Views-pr.md)) | A03 | D05 |
 | 11 | [x] | **A06** | A | Global Logout Across the Forum ([PR](pr-message/A06-Global-Logout-Across-the-Forum-pr.md)) | A04, A05 | D05 |
 | 12 | [x] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
 | 13 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
@@ -91,7 +91,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 17 | [x] | **D09** | D | Frontend WebSocket Proxy | A02 | D04 |
+| 17 | [x] | **D09** | D | Frontend WebSocket Proxy ([PR](pr-message/D09-Frontend-WebSocket-Proxy-pr.md)) | A02 | D04 |
 | 18 | [ ] | **C03** | C | Chat History API | C02 | D02, C08 |
 | 19 | [ ] | **C04** | C | Presence Broadcasting | C01 | C06, D04, C08 |
 | 20 | [ ] | **C05** | C | Chat Roster API | C02, C01 | D01, C08 |
