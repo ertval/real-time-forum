@@ -19,7 +19,7 @@ This PR implements the User Profile Page bonus feature for the real-time forum. 
 
 This PR fully satisfies the verification gate for ticket **A07**:
 > "- navigating to a user profile shows all extended registration fields
-- profile is accessible from the chat roster and post/comment author links
+- profile is accessible from the chat roster (Note: Currently blocked by D01 implementation) and post/comment author links
 - profile data matches what was entered during registration"
 
 ## Testing & Validation Verified

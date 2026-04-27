@@ -6,7 +6,7 @@ import { renderPostCard } from '../post/post-card.views.js';
 import { coercePerPage, getFeedQueryState, setFeedQueryState } from './feed.state.js';
 
 const FEED_BOUND_ATTR = 'data-feed-bound';
-const SHOW_COMMENT_PREVIEW = true;
+const SHOW_COMMENT_PREVIEW = false;
 
 async function loadCategories(fetchRef) {
 	const response = await fetchRef(`${API_BASE}/categories`, {

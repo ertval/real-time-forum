@@ -472,6 +472,7 @@ describe('SPA Application Engine', () => {
 			windowRef: browser.windowRef,
 			documentRef: browser.documentRef,
 			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			alertRef: vi.fn(),
 		});
 
 		await app.boot();

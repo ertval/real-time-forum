@@ -593,6 +593,57 @@ test.describe('Ticket Manual E2E Verification', () => {
 		});
 	});
 
+	test.describe('A07', () => {
+		test('A07-01: profile displays extended registration fields', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a07-profile-fields', async () => {
+				const credentials = createCredentials('a07_fields');
+				await ensureLoggedOut(page);
+				await registerUser(page, credentials);
+
+				// Navigate to my own profile via API ID if possible, or manual link
+				const response = await page.request.get('/api/v1/users/me');
+				const me = await response.json();
+				const myID = me.data.id;
+
+				await page.goto(`/profile/${myID}`);
+				await expectPathname(page, `/profile/${myID}`);
+				await expect(page.locator('[data-screen="profile"]')).toBeVisible();
+
+				await expect(page.locator('.profile-name')).toContainText(credentials.firstName);
+				await expect(page.locator('.profile-name')).toContainText(credentials.lastName);
+				await expect(page.locator('.profile-username')).toContainText(credentials.username);
+				await expect(page.locator('.stat-value').nth(0)).toContainText(String(credentials.age));
+				await expect(page.locator('.stat-value').nth(1)).toContainText(credentials.gender);
+			});
+		});
+
+		test('A07-02: profile is accessible from post author links', async ({ page }, testInfo) => {
+			await runWithDiagnostics(page, testInfo, 'a07-post-author-link', async () => {
+				const credentials = createCredentials('a07_link');
+				await registerUser(page, credentials);
+
+				// Create a post
+				await page.request.post('/api/v1/posts', {
+					data: {
+						title: 'Profile Link Test',
+						body: 'Check my profile link',
+						category_ids: [1],
+					},
+				});
+
+				await page.goto('/');
+				await expect(page.locator('[data-screen="feed"]')).toBeVisible();
+
+				const authorLink = page.locator('.profile-link').first();
+				await expect(authorLink).toBeVisible();
+				await authorLink.click();
+
+				await expect(page.locator('[data-screen="profile"]')).toBeVisible();
+				await expect(page.url()).toContain('/profile/');
+			});
+		});
+	});
+
 	test.describe('A10', () => {
 		test('A10-01: visiting / loads SPA shell', async ({ page }, testInfo) => {
 			await runWithDiagnostics(page, testInfo, 'a10-root-shell', async () => {

@@ -149,5 +149,5 @@ Work:
 
 Verification Gate:
 - navigating to a user profile shows all extended registration fields
-- profile is accessible from the chat roster and post/comment author links
+- profile is accessible from the chat roster (Blocked by D01) and post/comment author links
 - profile data matches what was entered during registration
