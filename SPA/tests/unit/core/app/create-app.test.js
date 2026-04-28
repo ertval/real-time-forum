@@ -13,16 +13,18 @@ afterEach(() => {
 describe('SPA routing for A03/A04', () => {
 	test('normalizes and matches required routes', () => {
 		expect(normalizePathname('')).toBe('/');
-		expect(normalizePathname('/view-post/42')).toBe('/post/42');
+		expect(normalizePathname('/view-post/42')).toBe('/posts/42');
+		expect(normalizePathname('/post/42')).toBe('/posts/42');
 		expect(normalizePathname('/activity/')).toBe('/activity');
 
 		expect(matchRoute('/')?.route.id).toBe('feed');
+		expect(matchRoute('/posts/7')?.params.id).toBe('7');
 		expect(matchRoute('/post/7')?.params.id).toBe('7');
 		expect(matchRoute('/edit-post/15')?.params.id).toBe('15');
 		expect(matchRoute('/does-not-exist')).toBeNull();
 
 		// Regression: A03 Malformed URI should not crash
-		expect(matchRoute('/post/%E0%A4%A')).toBeNull();
+		expect(matchRoute('/posts/%E0%A4%A')).toBeNull();
 	});
 });
 
@@ -69,7 +71,7 @@ describe('SPA Application Engine', () => {
 	});
 
 	test('unauthenticated boot blocks every protected route and redirects to login', async () => {
-		const protectedRoutes = ['/', '/post/9', '/create-post', '/edit-post/3', '/activity'];
+		const protectedRoutes = ['/', '/posts/9', '/create-post', '/edit-post/3', '/activity'];
 
 		for (const path of protectedRoutes) {
 			const browser = createMockBrowser(path);
@@ -131,7 +133,7 @@ describe('SPA Application Engine', () => {
 
 		await app.boot();
 		app.navigate('/create-post');
-		app.navigate('/post/42');
+		app.navigate('/posts/42');
 
 		expect(browser.mainContent.innerHTML).toContain('data-screen="post-detail"');
 
@@ -148,7 +150,7 @@ describe('SPA Application Engine', () => {
 	test('deep-link boot renders expected authenticated routes', async () => {
 		const cases = [
 			{ path: '/', expected: 'data-screen="feed"' },
-			{ path: '/post/9', expected: 'data-screen="post-detail"' },
+			{ path: '/posts/9', expected: 'data-screen="post-detail"' },
 			{ path: '/create-post', expected: 'data-screen="create-post"' },
 			{ path: '/edit-post/3', expected: 'data-screen="edit-post"' },
 			{ path: '/activity', expected: 'data-screen="activity"' },
@@ -440,7 +442,7 @@ describe('SPA Application Engine', () => {
 	});
 
 	test('logout is usable from every authenticated route', async () => {
-		const protectedRoutes = ['/', '/post/9', '/create-post', '/edit-post/3', '/activity'];
+		const protectedRoutes = ['/', '/posts/9', '/create-post', '/edit-post/3', '/activity'];
 
 		for (const path of protectedRoutes) {
 			const browser = createMockBrowser(path);
