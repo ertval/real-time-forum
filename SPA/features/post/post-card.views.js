@@ -87,7 +87,7 @@ function renderCommentPreview(comment) {
 	`;
 }
 
-function commentPreviewTemplate(previewComments = [], showCommentPreview = true) {
+function commentPreviewTemplate(previewComments = [], showCommentPreview = false) {
 	if (!showCommentPreview) {
 		return '';
 	}
@@ -112,7 +112,7 @@ function commentPreviewTemplate(previewComments = [], showCommentPreview = true)
 export function renderPostCard(
 	documentRef,
 	post,
-	{ clickable = true, onNavigate = null, previewComments = [], showCommentPreview = true } = {},
+	{ clickable = true, onNavigate = null, previewComments = [], showCommentPreview = false } = {},
 ) {
 	const article = documentRef.createElement('article');
 	article.className = 'post card card-pad';
