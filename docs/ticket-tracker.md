@@ -80,7 +80,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 10 | [x] | **D10** | D | SPA Login and Registration Views ([PR](pr-message/D10-SPA-Login-and-Registration-Views-pr.md)) | A03 | D05 |
 | 11 | [x] | **A06** | A | Global Logout Across the Forum ([PR](pr-message/A06-Global-Logout-Across-the-Forum-pr.md)) | A04, A05 | D05 |
 | 12 | [x] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
-| 13 | [ ] | **B02** | B | Remove Feed Comment Rendering | B01 | D05 |
+| 13 | [x] | **B02** | B | Remove Feed Comment Rendering ([PR](pr-message/B02-Remove-Feed-Comment-Rendering-pr.md)) | B01 | D05 |
 | 14 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
 | 15 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
 | 16 | [x] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |

@@ -441,7 +441,7 @@ Required client routes:
 - `/login`
 - `/register`
 - `/`
-- `/post/:id`
+- `/posts/:id`
 - `/create-post`
 - `/edit-post/:id`
 - `/activity`

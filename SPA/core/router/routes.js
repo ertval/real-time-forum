@@ -11,7 +11,7 @@ const ROUTE_DEFINITIONS = [
 	{ id: 'feed', pattern: '/', access: 'protected', title: 'Feed' },
 	{
 		id: 'post-detail',
-		pattern: '/post/:id',
+		pattern: '/posts/:id',
 		access: 'protected',
 		title: 'Post Detail',
 	},
@@ -89,7 +89,12 @@ export function normalizePathname(pathname) {
 
 	const legacyPostMatch = /^\/view-post\/([^/]+)$/.exec(normalized);
 	if (legacyPostMatch) {
-		normalized = `/post/${legacyPostMatch[1]}`;
+		normalized = `/posts/${legacyPostMatch[1]}`;
+	}
+
+	const singularPostMatch = /^\/post\/([^/]+)$/.exec(normalized);
+	if (singularPostMatch) {
+		normalized = `/posts/${singularPostMatch[1]}`;
 	}
 
 	return normalized || '/';

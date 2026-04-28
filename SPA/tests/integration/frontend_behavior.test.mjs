@@ -3,7 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { beforeAll, expect, test } from 'vitest';
-import { loadPostCommentsPreview } from '../../features/post/post.api.js';
 import { renderPostCard } from '../../features/post/post-card.views.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -361,54 +360,20 @@ test('Preview checkerboard for transparent PNG', async () => {
 	expect(previewImage.dataset.transparent).toBe('true');
 });
 
-test('Post card renders comment preview section from provided SPA data', () => {
+test('Post card renders body and reactions without comment preview markup', () => {
 	const documentRef = new MockDocument();
-	const article = renderPostCard(
-		documentRef,
-		{
-			id: 7,
-			title: 'Forum post',
-			body: 'Body copy',
-			username: 'alice',
-			created_at: '2026-04-21T10:00:00Z',
-			likes_count: 2,
-			dislikes_count: 1,
-		},
-		{
-			previewComments: [
-				{ id: 11, body: 'First preview', username: 'bob', created_at: '2026-04-21T10:01:00Z' },
-				{
-					id: 12,
-					body: 'Second preview',
-					username: 'carol',
-					created_at: '2026-04-21T10:02:00Z',
-				},
-			],
-		},
-	);
-
-	expect(article.innerHTML).toContain('data-comments-preview');
-	expect(article.innerHTML).toContain('First preview');
-	expect(article.innerHTML).toContain('Second preview');
-	expect(article.innerHTML).toContain('comments comments-scroll');
-});
-
-test('Comment preview API limits results for feed cards', async () => {
-	const fetchRef = async () => ({
-		ok: true,
-		async json() {
-			return {
-				data: [
-					{ id: 1, body: 'one' },
-					{ id: 2, body: 'two' },
-					{ id: 3, body: 'three' },
-					{ id: 4, body: 'four' },
-				],
-			};
-		},
+	const article = renderPostCard(documentRef, {
+		id: 7,
+		title: 'Forum post',
+		body: 'Body copy',
+		username: 'alice',
+		created_at: '2026-04-21T10:00:00Z',
+		likes_count: 2,
+		dislikes_count: 1,
 	});
 
-	const previewComments = await loadPostCommentsPreview(fetchRef, 42);
-	expect(previewComments).toHaveLength(3);
-	expect(previewComments.map((comment) => comment.id)).toEqual([1, 2, 3]);
+	expect(article.innerHTML).toContain('Forum post');
+	expect(article.innerHTML).toContain('Body copy');
+	expect(article.innerHTML).toContain('data-reaction-scope="post"');
+	expect(article.innerHTML).not.toContain('data-comments-preview');
 });
