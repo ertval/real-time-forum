@@ -296,7 +296,7 @@ test.describe('Ticket Manual E2E Verification', () => {
 				const unauthCases = [
 					{ path: '/login', expectedPath: '/login', screen: 'login' },
 					{ path: '/register', expectedPath: '/register', screen: 'register' },
-					{ path: '/post/7', expectedPath: '/login', screen: 'login' },
+					{ path: '/posts/7', expectedPath: '/login', screen: 'login' },
 					{ path: '/view-post/7', expectedPath: '/login', screen: 'login' },
 				];
 
@@ -319,10 +319,10 @@ test.describe('Ticket Manual E2E Verification', () => {
 						screen: 'edit-post',
 						postID: '7',
 					},
-					{ path: '/post/7', expectedPath: '/post/7', screen: 'post-detail', postID: '7' },
+					{ path: '/posts/7', expectedPath: '/posts/7', screen: 'post-detail', postID: '7' },
 					{
 						path: '/view-post/7',
-						expectedPath: '/post/7',
+						expectedPath: '/posts/7',
 						screen: 'post-detail',
 						postID: '7',
 					},
@@ -349,7 +349,7 @@ test.describe('Ticket Manual E2E Verification', () => {
 
 				const routes = [
 					{ path: '/', screen: 'feed' },
-					{ path: '/post/9', screen: 'post-detail' },
+					{ path: '/posts/9', screen: 'post-detail' },
 					{ path: '/create-post', screen: 'create-post' },
 					{ path: '/edit-post/3', screen: 'edit-post' },
 					{ path: '/activity', screen: 'activity' },
@@ -454,7 +454,7 @@ test.describe('Ticket Manual E2E Verification', () => {
 			await runWithDiagnostics(page, testInfo, 'a05-unauth-routes', async () => {
 				await ensureLoggedOut(page);
 
-				const protectedRoutes = ['/', '/activity', '/create-post', '/post/7', '/edit-post/7'];
+				const protectedRoutes = ['/', '/activity', '/create-post', '/posts/7', '/edit-post/7'];
 				for (const route of protectedRoutes) {
 					await page.goto(route);
 					await expect(page.locator('[data-screen="login"]')).toBeVisible();
@@ -521,7 +521,7 @@ test.describe('Ticket Manual E2E Verification', () => {
 
 				const protectedRoutes = [
 					{ path: '/', screen: 'feed' },
-					{ path: '/post/9', screen: 'post-detail' },
+					{ path: '/posts/9', screen: 'post-detail' },
 					{ path: '/create-post', screen: 'create-post' },
 					{ path: '/edit-post/3', screen: 'edit-post' },
 					{ path: '/activity', screen: 'activity' },
@@ -583,7 +583,7 @@ test.describe('Ticket Manual E2E Verification', () => {
 				await expect(page.locator('[data-screen="login"]')).toBeVisible();
 				await expect(page.locator('[data-auth-shell]')).toHaveCount(0);
 
-				for (const route of ['/', '/activity', '/create-post', '/post/7']) {
+				for (const route of ['/', '/activity', '/create-post', '/posts/7']) {
 					await page.goto(route);
 					await expectPathname(page, '/login');
 					await expect(page.locator('[data-screen="login"]')).toBeVisible();
