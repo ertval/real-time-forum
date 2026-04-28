@@ -276,6 +276,25 @@ func NewRouter(database *sql.DB, hub *ws.Hub) http.Handler {
 	)
 
 	/*-------------------------
+	  CHATS
+	-------------------------*/
+	chats := handlers.NewChatsHandler(database)
+	mux.Handle(
+		apiPrefix+"/chats",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(chats.HandleChatMessages)),
+			http.MethodGet,
+		),
+	)
+	mux.Handle(
+		apiPrefix+"/chats/",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(chats.HandleChatMessages)),
+			http.MethodGet,
+		),
+	)
+
+	/*-------------------------
 	  WEBSOCKET
 	-------------------------*/
 	mux.HandleFunc("/ws", wsHandler.HandleWebSocket)

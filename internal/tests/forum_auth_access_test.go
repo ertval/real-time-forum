@@ -80,9 +80,9 @@ func TestChatRoutes_GuestCannotSuccessfullyAccess_CurrentStage(t *testing.T) {
 		path string
 		want int
 	}{
-		// Chat routes are not wired in this stage yet, but guests still must not get successful access.
-		{path: "/api/v1/chats", want: http.StatusNotFound},
-		{path: "/api/v1/chats/1/messages", want: http.StatusNotFound},
+		// Chat routes are now wired (C03) - guests should get 401 (Unauthorized)
+		{path: "/api/v1/chats", want: http.StatusUnauthorized},
+		{path: "/api/v1/chats/1/messages", want: http.StatusUnauthorized},
 		// /ws is now wired - guests should get 401 (unauthorized), not 404
 		{path: "/ws", want: http.StatusUnauthorized},
 	}
