@@ -159,9 +159,9 @@ For quick testing and QA, the following user is available in the default seed da
 
 Deep dive into the project's blueprints:
 
-- 📖 **[docs/requirements.md](docs/requirements.md)**: The ultimate source of truth.
+- 📖 **[docs/requirements.md](docs/requirements.md)**: The basic requirements document, source of truth for what the project should do.
 - 📐 **[docs/SDS.md](docs/SDS.md)**: Detailed technical specifications.
-- 📋 **[docs/audit.md](docs/audit.md)**: Success criteria and verification gate.
+- 📋 **[docs/audit.md](docs/audit.md)**: Success criteria and verification gate source of truth.
 - 🤖 **[AGENTS.md](AGENTS.md)**: Essential guide for AI coding assistants.
 - 🏗️ **[architecture.md](architecture.md)**: High-level structural overview.
 
