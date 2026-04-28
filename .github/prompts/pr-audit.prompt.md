@@ -77,14 +77,14 @@ You are the strict **PR Audit Verifier, QA, and Security Review Agent** for the 
 The subagent assigned to this procedure MUST run `make deps` then execute:
 
 **Phase A — Product Stability:**
-1. `make build-all` — Verifies both Go servers compile.
-2. `make test` — Runs Go integration and unit tests.
-3. `bun install` — Ensure frontend dependencies are locked.
-4. `bun test` — Vitest shared suite (unit, integration, e2e).
+1. `make build` — Verifies both Go servers compile.
+2. `make test-backend` — Runs Go integration and unit tests.
+3. `make test-frontend` — Runs Vitest shared suite and compliance policy.
+4. `make test-e2e` — Runs Playwright E2E tests.
 
 **Phase B — Quality & Policy Gate:**
-5. `bun x biome check .` — Biome linting and static analysis.
-6. `bun run policy` — Project-wide compliance umbrella.
+5. `make lint` — Biome linting and static analysis.
+6. `make verify-infra` — Project-wide infrastructure sanity checks.
 
 Notes:
 - If `make test` fails, identify if it's a backend regression.
@@ -149,11 +149,11 @@ Return exactly the markdown template below. Replace `<STATUS>` with `PASS`, `**F
 
 ## 🛠️ Technical Metadata & Verification Gates
 ### ⚙️ Automated Gate Summary
-- <STATUS>: `make build-all` (exit=<code>, duration=<sec>)
-- <STATUS>: `make test` (Go Backend Integration/Unit)
-- <STATUS>: `bun test` (Vitest Shared Suite)
-- <STATUS>: `bun run policy` (Compliance & Policy Gate)
-- <STATUS>: `Biome Linting` (Static Analysis)
+- <STATUS>: `make build` (exit=<code>, duration=<sec>)
+- <STATUS>: `make test-backend` (Go Backend Integration/Unit)
+- <STATUS>: `make test-frontend` (Vitest Shared Suite & Policy)
+- <STATUS>: `make test-e2e` (Playwright E2E Tests)
+- <STATUS>: `make lint` (Biome Static Analysis)
 
 ### ✅ Architectural Consistency Checks
 - <STATUS>: **Ticket Traceability**: Identified in tracker (<reason if false>)
