@@ -25,8 +25,6 @@ The current codebase is a Go application with:
 
 The current implementation has advanced significantly toward the target state. Remaining gaps include:
 
-- comments are still fetched and rendered in the home feed (B02 pending)
-- there is no persistence model for private messages (C02 pending)
 - there is no presence model for online or offline status (C04 pending)
 - chat history and roster APIs are not yet implemented (C03, C05 pending)
 - post detail, create, and edit flows are still using placeholder SPA views (B03, B04 pending)

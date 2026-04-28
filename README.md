@@ -14,8 +14,8 @@ A powerhouse, production-grade **Real-Time Single-Page Application (SPA)**. Buil
 The project is currently in **Active Development (Wave 3)**.
 
 - **Foundations (Wave 1)**: ✅ Complete
-- **Auth & Core Forum (Wave 2)**: 🏗️ In Progress (Feed & Shell ready)
-- **Real-Time Chat (Wave 3)**: 📅 Upcoming
+- **Auth & Core Forum (Wave 2)**: ✅ Complete
+- **Real-Time Chat (Wave 3)**: 🏗️ In Progress (Proxy ready, Backend started)
 - **Bonus Features**: ✅ User Profiles (A07) implemented ahead of schedule.
 
 Check the [Ticket Tracker](docs/ticket-tracker.md) for detailed progress.

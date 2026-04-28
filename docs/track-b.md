@@ -38,7 +38,7 @@ Verification Gate:
 - opening a post uses SPA navigation instead of full document navigation
 
 ### B02 - Remove Feed Comment Rendering
-Source: RTF-11 | Phase: P1 | Status: Done
+Source: RTF-11 | Phase: P1
 Depends on: B01
 Blocks: D05
 

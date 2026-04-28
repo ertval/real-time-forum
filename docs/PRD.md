@@ -18,12 +18,9 @@ The current project already supports:
 
 The current project does not yet satisfy the target exercise because:
 
-- it is a multi-page application, not a SPA
-- guests can still access parts of the forum
-- registration is missing age, gender, first name, and last name
-- comments are rendered in the feed instead of only on post detail
-- logout is not consistently reachable from every screen
-- there is no private messaging, presence tracking, or WebSocket layer
+- post detail, create, and edit screens are not fully functional in the SPA (B03, B04 pending)
+- there is no presence tracking or full roster integration (C04, C05 pending)
+- private messaging delivery and history loading are not yet implemented (C06, D04 pending)
 
 ## 3. Product Goal
 
