@@ -1,4 +1,4 @@
-// SPA/features/profile/profile.views.js
+import { escapeHTML } from '../../core/utils/html.js';
 
 export function renderProfileView(userID) {
 	return `
@@ -27,22 +27,22 @@ export function renderProfileView(userID) {
 export function renderProfileContent(profile) {
 	return `
 		<div class="profile-info-header">
-			<h1 class="profile-name">${profile.first_name} ${profile.last_name}</h1>
-			<p class="profile-username">@${profile.username}</p>
+			<h1 class="profile-name">${escapeHTML(profile.first_name)} ${escapeHTML(profile.last_name)}</h1>
+			<p class="profile-username">@${escapeHTML(profile.username)}</p>
 		</div>
 		
 		<div class="profile-details-grid">
 			<div class="profile-stat-box glass-panel-subtle">
 				<span class="stat-label">Age</span>
-				<span class="stat-value">${profile.age}</span>
+				<span class="stat-value">${escapeHTML(profile.age)}</span>
 			</div>
 			<div class="profile-stat-box glass-panel-subtle">
 				<span class="stat-label">Gender</span>
-				<span class="stat-value">${capitalize(profile.gender)}</span>
+				<span class="stat-value">${escapeHTML(capitalize(profile.gender))}</span>
 			</div>
 			<div class="profile-stat-box glass-panel-subtle">
 				<span class="stat-label">Member ID</span>
-				<span class="stat-value">#${profile.user_id}</span>
+				<span class="stat-value">#${escapeHTML(profile.user_id)}</span>
 			</div>
 		</div>
 	`;
@@ -50,7 +50,7 @@ export function renderProfileContent(profile) {
 
 export function renderProfileAvatar(profile) {
 	const avatarInitial = (profile.username || 'U')[0].toUpperCase();
-	return `<div class="avatar-letter">${avatarInitial}</div>`;
+	return `<div class="avatar-letter">${escapeHTML(avatarInitial)}</div>`;
 }
 
 function capitalize(str) {

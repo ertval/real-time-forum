@@ -34,4 +34,17 @@ describe('Profile views', () => {
 		const html = renderProfileAvatar({});
 		expect(html).toContain('U');
 	});
+
+	test('renderProfileContent escapes HTML to prevent XSS', () => {
+		const maliciousProfile = {
+			...mockProfile,
+			first_name: '<script>alert("xss")</script>',
+			last_name: '<b>Doe</b>',
+		};
+		const html = renderProfileContent(maliciousProfile);
+		expect(html).not.toContain('<script>');
+		expect(html).toContain('&lt;script&gt;');
+		expect(html).not.toContain('<b>');
+		expect(html).toContain('&lt;b&gt;');
+	});
 });
