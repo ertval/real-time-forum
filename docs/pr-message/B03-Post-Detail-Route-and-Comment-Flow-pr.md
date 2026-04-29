@@ -1,8 +1,7 @@
 # B03: Post Detail Route and Comment Flow
+<!-- Filename: docs/pr-message/B03-Post-Detail-Route-and-Comment-Flow-pr.md -->
 
-Final Verdict: PASS
-
-This PR closes ticket B03 by moving post detail and comment behavior fully into the SPA. The forum now uses the canonical `/posts/:id` route to render post detail inside the authenticated shell, while comments are fetched, submitted, and image-uploaded only from that route.
+This PR implements and closes ticket B03 by introducing a dedicated post-detail route and isolating comment behavior to that route, completing the separation initiated in B02 and aligning the SPA with the forum interaction model. The forum now uses the canonical `/posts/:id` route to render post detail inside the authenticated shell, while comments are fetched, submitted, and image-uploaded only from that route.
 
 ## Summary of Changes
 
@@ -16,12 +15,17 @@ This PR closes ticket B03 by moving post detail and comment behavior fully into 
 - Added `getPostById(fetchRef, postId)` and `getPostComments(fetchRef, postId)` helpers for independent post and comment loading.
 - Added loading and error states for post-detail initialization.
 
-### 3. Comment Flow Preservation
+### 3. API Layer
+- **Post and comment endpoints used**: `/api/v1/posts/:id` and `/api/v1/posts/:id/comments`
+- **Comment submission endpoint**: `POST /api/v1/posts/:id/comments`
+- **Multipart upload preserved**: image upload handled via existing API contract
+
+### 4. Comment Flow Preservation
 - Implemented comment rendering only inside the post-detail route.
 - Implemented comment submission with post-submit refresh so the new comment appears immediately in the UI.
 - Preserved comment image upload behavior by reusing the existing image picker and multipart request path.
 
-### 4. Feed and Post-Detail Separation
+### 5. Feed and Post-Detail Separation
 - Kept the feed limited to post-only data and SPA navigation into post detail.
 - Confirmed comments are not fetched or rendered from the feed path.
 - Isolated all `/posts/:id/comments` traffic to the post-detail screen.
@@ -51,10 +55,9 @@ Evidence:
 ## Testing & Validation Verified
 
 ### Automated Test Suite
-- [x] `bun test SPA/tests/unit/features/post/post.page.test.js SPA/tests/unit/core/app/create-app.test.js SPA/tests/unit/core/router/routes.test.js SPA/tests/integration/frontend_behavior.test.mjs`
-
-Automated checks status:
-- [x] All PASS
+- [x] `make test` — Backend tests passing
+- [x] `bun run policy` — Frontend tests and lint passing
+- [x] `bun x biome check .` — No lint or format issues
 
 ### QA Checklist
 - [x] Verified feed navigation uses the SPA post-detail route `/posts/:id`.
@@ -63,7 +66,7 @@ Automated checks status:
 - [x] Verified comment submission refreshes the comment list after success.
 - [x] Verified image-only comment submission works through the shared picker flow.
 
-### Manual Verification To Run In Browser
+### Manual E2E Verification
 - [ ] Open DevTools Network on the feed route and confirm there are no `/comments` requests.
 - [ ] Open a post-detail route and confirm `/api/v1/posts/:id/comments` appears there.
 - [ ] Submit a text comment and confirm the list updates without full page reload.
@@ -96,3 +99,4 @@ Automated checks status:
 - `docs/ticket-tracker.md`
 - `docs/track-b.md`
 - `docs/PRD.md`
+- `docs/SDS.md`
