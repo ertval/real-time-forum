@@ -3,11 +3,8 @@
 import { renderActivityView } from '../../features/activity/activity.views.js';
 import { renderLoginView, renderRegisterView } from '../../features/auth/auth.views.js';
 import { renderFeedView } from '../../features/feed/feed.views.js';
-import {
-	renderCreatePostView,
-	renderEditPostView,
-	renderPostDetailView,
-} from '../../features/post/post.views.js';
+import { renderCreatePostView, renderEditPostView } from '../../features/post/post.views.js';
+import { renderPostDetailView } from '../../features/post/post-detail.views.js';
 import { escapeHTML } from '../utils/html.js';
 
 export function renderTemplate(match) {
@@ -22,8 +19,7 @@ export function renderTemplate(match) {
 	}
 
 	if (id === 'post-detail') {
-		const postID = escapeHTML(match.params.id || '');
-		return renderPostDetailView(postID);
+		return renderPostDetailView({ id: escapeHTML(match.params.id || '') });
 	}
 
 	if (id === 'edit-post') {
