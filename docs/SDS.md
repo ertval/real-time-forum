@@ -28,8 +28,8 @@ The current implementation is not yet suitable for the target state because:
 - the frontend serves multiple templates instead of one SPA shell
 - public read routes still support unauthenticated access
 - registration persists only username, email, and password
-- comments are fetched and rendered in the home feed
-- there is no WebSocket endpoint
+- comments are not rendered in the feed; they are fetched and displayed only in the post-detail route (`/posts/:id`)
+- WebSocket support exists for real-time features such as chat and presence
 - there is no persistence model for private messages
 - there is no presence model for online or offline status
 

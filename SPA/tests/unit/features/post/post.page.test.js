@@ -1,3 +1,4 @@
+// SPA/tests/unit/features/post/post.page.test.js
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 var createPostComment;
