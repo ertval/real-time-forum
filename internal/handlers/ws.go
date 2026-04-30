@@ -53,7 +53,21 @@ func (h *WsHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, _ := h.hub.Add(session.UserID, conn)
+	client, firstConnection := h.hub.Add(session.UserID, conn)
+
+	// Enqueue presence messages before starting goroutines. The Send channel is
+	// buffered so this is safe. Doing it here — rather than after launching
+	// readPump — eliminates a race where readPump's defer (Remove + offline
+	// broadcast) could fire before the online broadcast is enqueued, leaving
+	// other clients with a stale "online" event for a user who has already gone.
+	//
+	// Every new connection receives a snapshot so it knows who is online, even
+	// when the same user opens a second tab. The presence.update broadcast only
+	// fires on an offline→online state transition (first connection).
+	h.hub.SendSnapshotToClient(client)
+	if firstConnection {
+		h.hub.BroadcastPresenceUpdate(session.UserID, true)
+	}
 
 	go h.readPump(session.UserID, client)
 	go h.writePump(client)
@@ -61,12 +75,15 @@ func (h *WsHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 func (h *WsHandler) readPump(userID int64, c *ws.Client) {
 	defer func() {
-		h.hub.Remove(userID, c)
+		remaining := h.hub.Remove(userID, c)
+		if remaining == 0 {
+			h.hub.BroadcastPresenceUpdate(userID, false)
+		}
 		close(c.Send)
 		c.Conn.Close()
 	}()
 
-	c.Conn.SetReadLimit(512)
+	c.Conn.SetReadLimit(4096)
 	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	c.Conn.SetPongHandler(func(string) error {
 		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
