@@ -58,10 +58,15 @@ func CreateMessage(ctx context.Context, database *sql.DB, req CreateMessageReque
 }
 
 // GetMessageHistory returns up to 10 messages exchanged between two users,
-// ordered oldest-first (render-ready). Pass beforeID > 0 to paginate backwards
-// through history; pass 0 to get the latest 10.
-func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, beforeID int64) ([]PrivateMessage, error) {
-	const limit = 10
+// ordered oldest-first (render-ready), and a hasMore flag that is true when
+// older messages exist beyond this page. Pass beforeID > 0 to paginate
+// backwards through history; pass 0 to get the latest 10.
+//
+// The function fetches 11 rows internally: if 11 arrive, the 11th is discarded
+// and hasMore is set to true. This avoids a separate COUNT query.
+func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, beforeID int64) ([]PrivateMessage, bool, error) {
+	const pageSize = 10
+	const fetchLimit = pageSize + 1 // fetch one extra to detect a next page
 
 	var rows *sql.Rows
 	var err error
@@ -75,7 +80,7 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 			 WHERE sender_id = ? AND recipient_id = ? AND id < ?
 			 ORDER BY id DESC
 			 LIMIT ?`,
-			userA, userB, beforeID, userB, userA, beforeID, limit,
+			userA, userB, beforeID, userB, userA, beforeID, fetchLimit,
 		)
 	} else {
 		rows, err = database.QueryContext(ctx,
@@ -86,11 +91,11 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 			 WHERE sender_id = ? AND recipient_id = ?
 			 ORDER BY id DESC
 			 LIMIT ?`,
-			userA, userB, userB, userA, limit,
+			userA, userB, userB, userA, fetchLimit,
 		)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get message history: %w", err)
+		return nil, false, fmt.Errorf("get message history: %w", err)
 	}
 	defer rows.Close()
 
@@ -98,18 +103,24 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 	for rows.Next() {
 		var m PrivateMessage
 		if err := rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Body, &m.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scan message: %w", err)
+			return nil, false, fmt.Errorf("scan message: %w", err)
 		}
 		msgs = append(msgs, m)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
+		return nil, false, fmt.Errorf("rows error: %w", err)
 	}
 
-	// Reverse to chronological order (oldest first)
+	// If the extra sentinel row arrived, there are older messages beyond this page.
+	hasMore := len(msgs) == fetchLimit
+	if hasMore {
+		msgs = msgs[:pageSize]
+	}
+
+	// Reverse to chronological order (oldest first).
 	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
 		msgs[i], msgs[j] = msgs[j], msgs[i]
 	}
 
-	return msgs, nil
+	return msgs, hasMore, nil
 }

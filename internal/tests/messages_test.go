@@ -140,7 +140,7 @@ func TestGetMessageHistory_BothDirections(t *testing.T) {
 	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{bobID, aliceID, "hey"})
 	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "how are you"})
 
-	msgs, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
+	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if err != nil {
 		t.Fatalf("GetMessageHistory: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestGetMessageHistory_LimitsTen(t *testing.T) {
 		db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "msg"})
 	}
 
-	msgs, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
+	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if err != nil {
 		t.Fatalf("GetMessageHistory: %v", err)
 	}
@@ -181,12 +181,12 @@ func TestGetMessageHistory_BeforeIDPagination(t *testing.T) {
 		db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "msg"})
 	}
 
-	latest, _ := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
+	latest, _, _ := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if len(latest) != 10 {
 		t.Fatalf("expected 10 latest, got %d", len(latest))
 	}
 
-	older, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, latest[0].ID)
+	older, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, latest[0].ID)
 	if err != nil {
 		t.Fatalf("GetMessageHistory with beforeID: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestGetMessageHistory_LimitsTenLatest(t *testing.T) {
 		lastID = msg.ID
 	}
 
-	msgs, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
+	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if err != nil {
 		t.Fatalf("GetMessageHistory: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestGetMessageHistory_ConversationIsolation(t *testing.T) {
 	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, charlieID, "alice to charlie"})
 	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{charlieID, bobID, "charlie to bob"})
 
-	msgs, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
+	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if err != nil {
 		t.Fatalf("GetMessageHistory: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestGetMessageHistory_EmptyConversation(t *testing.T) {
 	ctx := context.Background()
 	aliceID, bobID := seedTwoUsers(t, sqlDB)
 
-	msgs, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
+	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if err != nil {
 		t.Fatalf("GetMessageHistory: %v", err)
 	}

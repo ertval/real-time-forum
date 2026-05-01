@@ -72,7 +72,7 @@ func (h *ChatsHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	messages, err := db.GetMessageHistory(r.Context(), h.conn, userID, recipientID, beforeID)
+	messages, hasMore, err := db.GetMessageHistory(r.Context(), h.conn, userID, recipientID, beforeID)
 	if err != nil {
 		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "failed to retrieve messages", http.StatusInternalServerError))
 		return
@@ -91,17 +91,19 @@ func (h *ChatsHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
 
 		users, err := db.GetUsersByIDs(r.Context(), h.conn, senderIDs)
 		if err != nil {
-			for senderID := range uniqueSenders {
+			WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "failed to retrieve user info", http.StatusInternalServerError))
+			return
+		}
+		for _, user := range users {
+			usersMap[user.ID] = user.Username
+		}
+		// Graceful fallback for orphaned senders (user deleted after sending).
+		for senderID := range uniqueSenders {
+			if _, found := usersMap[senderID]; !found {
 				usersMap[senderID] = "unknown"
-			}
-		} else {
-			for _, user := range users {
-				usersMap[user.ID] = user.Username
 			}
 		}
 	}
-
-	hasMore := len(messages) == 10
 
 	messagesData := make([]map[string]any, len(messages))
 	for i, msg := range messages {
