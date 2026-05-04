@@ -2,9 +2,18 @@
 
 export function renderPostDetailView(postID) {
 	return `
-		<section data-screen="post-detail" aria-labelledby="screen-post-title">
-			<h1 id="screen-post-title">Post Detail</h1>
-			<p data-post-id="${postID}">Viewing post ${postID}</p>
+		<section data-screen="post-detail" data-post-id="${postID}">
+			<div class="post-detail-container">
+				<div id="post-content" class="post-content">
+					<p>Loading post details...</p>
+				</div>
+				<div id="comments-section" class="comments-section">
+					<h3>Comments</h3>
+					<div id="comments-list">
+						<p>Loading comments...</p>
+					</div>
+				</div>
+			</div>
 		</section>
 	`;
 }

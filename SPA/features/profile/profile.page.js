@@ -19,6 +19,73 @@ async function loadProfile(fetchRef, userID) {
 	return payload.data ?? payload;
 }
 
+function fillProfileFields(contentEl, profile) {
+	if (!contentEl || !profile) return;
+	contentEl.innerHTML = renderProfileContent(profile);
+
+	const nameEl = contentEl.querySelector('.profile-name');
+	if (nameEl) {
+		nameEl.textContent = `${profile.first_name || ''} ${profile.last_name || ''}`;
+	}
+
+	const userEl = contentEl.querySelector('.profile-username');
+	if (userEl) {
+		userEl.textContent = `@${profile.username || ''}`;
+	}
+
+	const ageEl = contentEl.querySelector('[data-field="age"]');
+	if (ageEl) ageEl.textContent = String(profile.age || '');
+
+	const genderEl = contentEl.querySelector('[data-field="gender"]');
+	if (genderEl) genderEl.textContent = profile.gender || '';
+
+	const idEl = contentEl.querySelector('[data-field="id"]');
+	if (idEl) idEl.textContent = `#${profile.user_id || ''}`;
+
+	contentEl.classList.remove('skeleton-content');
+}
+
+function updateAvatar(avatarEl, profile) {
+	if (!avatarEl || !profile) return;
+	avatarEl.innerHTML = renderProfileAvatar(profile);
+	avatarEl.classList.remove('skeleton');
+
+	const colors = [
+		'#FF6B6B',
+		'#4ECDC4',
+		'#45B7D1',
+		'#96CEB4',
+		'#FFEEAD',
+		'#D4A5A5',
+		'#9B59B6',
+		'#3498DB',
+	];
+	const colorIndex = (profile.username || 'U').charCodeAt(0) % colors.length;
+	avatarEl.style.background = `linear-gradient(135deg, ${colors[colorIndex]}, ${colors[(colorIndex + 1) % colors.length]})`;
+}
+
+async function renderProfileData(fetchRef, userID, contentEl, avatarEl) {
+	const profile = await loadProfile(fetchRef, userID);
+
+	if (!profile) {
+		if (contentEl) {
+			contentEl.innerHTML = `
+				<div class="profile-error">
+					<h3>User not found</h3>
+					<p>The profile you are looking for does not exist or has been removed.</p>
+					<button class="auth-button" onclick="window.history.back()">Go Back</button>
+				</div>
+			`;
+			contentEl.classList.remove('skeleton-content');
+		}
+		if (avatarEl) avatarEl.classList.remove('skeleton');
+		return;
+	}
+
+	fillProfileFields(contentEl, profile);
+	updateAvatar(avatarEl, profile);
+}
+
 export function initProfilePage(options = {}) {
 	const windowRef = options.windowRef ?? (typeof window !== 'undefined' ? window : null);
 	const documentRef = options.documentRef ?? (typeof document !== 'undefined' ? document : null);
@@ -52,44 +119,7 @@ export function initProfilePage(options = {}) {
 		return null;
 	}
 
-	void (async () => {
-		const profile = await loadProfile(fetchRef, userID);
-
-		if (!profile) {
-			contentEl.innerHTML = `
-				<div class="profile-error">
-					<h3>User not found</h3>
-					<p>The profile you are looking for does not exist or has been removed.</p>
-					<button class="auth-button" onclick="window.history.back()">Go Back</button>
-				</div>
-			`;
-			contentEl.classList.remove('skeleton-content');
-			if (avatarEl) avatarEl.classList.remove('skeleton');
-			return;
-		}
-
-		contentEl.innerHTML = renderProfileContent(profile);
-		contentEl.classList.remove('skeleton-content');
-
-		if (avatarEl) {
-			avatarEl.innerHTML = renderProfileAvatar(profile);
-			avatarEl.classList.remove('skeleton');
-
-			// Optional: Generate a color based on username for the avatar
-			const colors = [
-				'#FF6B6B',
-				'#4ECDC4',
-				'#45B7D1',
-				'#96CEB4',
-				'#FFEEAD',
-				'#D4A5A5',
-				'#9B59B6',
-				'#3498DB',
-			];
-			const colorIndex = profile.username.charCodeAt(0) % colors.length;
-			avatarEl.style.background = `linear-gradient(135deg, ${colors[colorIndex]}, ${colors[(colorIndex + 1) % colors.length]})`;
-		}
-	})();
+	void renderProfileData(fetchRef, userID, contentEl, avatarEl);
 
 	return { root };
 }
