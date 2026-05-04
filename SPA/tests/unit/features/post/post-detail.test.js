@@ -44,9 +44,6 @@ describe('initPostDetailPage', () => {
 		const result = initPostDetailPage(options);
 		expect(result).not.toBeNull();
 		expect(result.root).toBe(rootMock);
-		expect(rootMock.setAttribute).toHaveBeenCalledWith(
-			'data-post-detail-bound',
-			'true',
-		);
+		expect(rootMock.setAttribute).toHaveBeenCalledWith('data-post-detail-bound', 'true');
 	});
 });
