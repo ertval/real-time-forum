@@ -2,6 +2,7 @@
 
 import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
 import { initFeedPage } from '../../features/feed/feed.page.js';
+import { initPostDetailPage } from '../../features/post/post-detail.page.js';
 import { initProfilePage } from '../../features/profile/profile.page.js';
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
@@ -162,6 +163,8 @@ export function createApp(options = {}) {
 			initFeedPage({ windowRef, documentRef, fetchRef });
 		} else if (match?.route?.id === 'profile') {
 			initProfilePage({ windowRef, documentRef, fetchRef });
+		} else if (match?.route?.id === 'post-detail') {
+			initPostDetailPage({ windowRef, documentRef, fetchRef });
 		}
 	}
 

@@ -33,6 +33,8 @@ build-frontend:
 
 build: build-backend build-frontend
 
+build-all: build
+
 run-backend: build-backend
 	@echo "🚀 Starting backend server..."
 	@./$(BACKEND_BIN)
