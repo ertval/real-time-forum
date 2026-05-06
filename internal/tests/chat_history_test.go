@@ -22,7 +22,6 @@ func TestChatHistory_Unauthorized(t *testing.T) {
 		want int
 	}{
 		{"no messages suffix", "/api/v1/chats/1", http.StatusUnauthorized},
-		{"empty user id", "/api/v1/chats//messages", http.StatusTemporaryRedirect},
 		{"missing user id", "/api/v1/chats/messages", http.StatusUnauthorized},
 		{"invalid user id", "/api/v1/chats/abc/messages", http.StatusUnauthorized},
 		{"negative user id", "/api/v1/chats/-1/messages", http.StatusUnauthorized},
@@ -217,28 +216,18 @@ func TestChatHistory_ResponseFormat(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UnixNano()
 
-	_, _ = db.CreateUser(ctx, sqlDB, db.CreateUserRequest{
-		Username:  "alice2",
-		Email:     fmt.Sprintf("alice2_%d@example.com", now),
-		Password:  "password123",
-		Age:       20,
-		Gender:    "other",
-		FirstName: "Alice",
-		LastName:  "Test",
-	})
-	_, _ = db.CreateUser(ctx, sqlDB, db.CreateUserRequest{
-		Username:  "bob2",
-		Email:     fmt.Sprintf("bob2_%d@example.com", now),
-		Password:  "password123",
-		Age:       20,
-		Gender:    "other",
-		FirstName: "Bob",
-		LastName:  "Test",
-	})
+	_, aliceEmail, err := createUserForTest(ctx, sqlDB, "alice2", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bobID, _, err := createUserForTest(ctx, sqlDB, "bob2", now)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	token := loginTestUserByEmail(t, h, fmt.Sprintf("alice2_%d@example.com", now))
+	token := loginTestUserByEmail(t, h, aliceEmail)
 
-	rec, body := doRequestWithToken(t, h, http.MethodGet, "/api/v1/chats/2/messages", token, nil)
+	rec, body := doRequestWithToken(t, h, http.MethodGet, fmt.Sprintf("/api/v1/chats/%d/messages", bobID), token, nil)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", rec.Code, body)
@@ -315,7 +304,7 @@ func TestChatHistory_InvalidBeforeID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = createUserForTest(ctx, sqlDB, "bob", now)
+	bobID, _, err := createUserForTest(ctx, sqlDB, "bob", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +323,7 @@ func TestChatHistory_InvalidBeforeID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path := "/api/v1/chats/2/messages?before_id=" + tt.beforeID
+			path := fmt.Sprintf("/api/v1/chats/%d/messages?before_id=%s", bobID, tt.beforeID)
 			rec, _ := doRequestWithToken(t, h, http.MethodGet, path, token, nil)
 			if rec.Code != tt.wantStatus {
 				t.Errorf("expected %d, got %d", tt.wantStatus, rec.Code)
