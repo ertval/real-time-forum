@@ -16,11 +16,15 @@ Implements `GET /api/v1/chats/{userID}/messages` — the chat history endpoint t
 - **`GetMessageHistory` return signature**: changed from `([]PrivateMessage, error)` to `([]PrivateMessage, bool, error)` — the bool is `hasMore`, computed from the sentinel row; callers no longer need to infer it from `len`
 
 ### 3. Router (`internal/router/router.go`)
-- Routes `/api/v1/chats` and `/api/v1/chats/` registered, auth-gated (401 for unauthenticated)
+- Route `/api/v1/chats/` registered, auth-gated (401 for unauthenticated). The
+  `/api/v1/chats` collection route belongs to C05 (chat roster) and is intentionally
+  not registered here.
 
 ### 4. Test Updates
-- `forum_auth_access_test.go`: chat routes now expect 401 instead of 404
+- `forum_auth_access_test.go`: `/api/v1/chats/{userID}/messages` now expects 401 instead of 404
 - `messages_test.go`: all `GetMessageHistory` call sites updated to the new three-value return
+- `chat_history_test.go`: hard-coded user IDs replaced with returned IDs to keep tests
+  resilient against changes in test-user ordering
 
 ## Verification Gate Satisfaction
 
