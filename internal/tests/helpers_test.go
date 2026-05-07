@@ -103,10 +103,19 @@ func setupTestDB(t *testing.T) *sql.DB {
 // newTestAPI builds the HTTP handler (router + middleware) using an in-memory DB.
 func newTestAPI(t *testing.T) (http.Handler, *sql.DB) {
 	t.Helper()
+	h, db, _ := newTestAPIWithHub(t)
+	return h, db
+}
+
+// newTestAPIWithHub is the same as newTestAPI but also exposes the WebSocket Hub,
+// so tests that exercise presence-aware endpoints (roster, etc.) can simulate
+// online users via hub.Add without spinning up a real WebSocket.
+func newTestAPIWithHub(t *testing.T) (http.Handler, *sql.DB, *ws.Hub) {
+	t.Helper()
 	db := setupTestDB(t)
 	hub := ws.NewHub()
 	h := router.NewRouter(db, hub)
-	return h, db
+	return h, db, hub
 }
 
 // small helper to perform a request and return recorder + body bytes.
