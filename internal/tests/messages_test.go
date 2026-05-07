@@ -136,9 +136,9 @@ func TestGetMessageHistory_BothDirections(t *testing.T) {
 	ctx := context.Background()
 	aliceID, bobID := seedTwoUsers(t, sqlDB)
 
-	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "hi"})
-	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{bobID, aliceID, "hey"})
-	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "how are you"})
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "hi"})
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: bobID, RecipientID: aliceID, Body: "hey"})
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "how are you"})
 
 	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if err != nil {
@@ -159,7 +159,7 @@ func TestGetMessageHistory_LimitsTen(t *testing.T) {
 	aliceID, bobID := seedTwoUsers(t, sqlDB)
 
 	for i := 0; i < 15; i++ {
-		db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "msg"})
+		db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "msg"})
 	}
 
 	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
@@ -178,7 +178,7 @@ func TestGetMessageHistory_BeforeIDPagination(t *testing.T) {
 	aliceID, bobID := seedTwoUsers(t, sqlDB)
 
 	for i := 0; i < 15; i++ {
-		db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "msg"})
+		db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "msg"})
 	}
 
 	latest, _, _ := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
@@ -208,7 +208,7 @@ func TestGetMessageHistory_LimitsTenLatest(t *testing.T) {
 
 	var lastID int64
 	for i := 0; i < 15; i++ {
-		msg, _ := db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "msg"})
+		msg, _ := db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "msg"})
 		lastID = msg.ID
 	}
 
@@ -243,9 +243,9 @@ func TestGetMessageHistory_ConversationIsolation(t *testing.T) {
 		t.Fatalf("create charlie: %v", err)
 	}
 
-	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, bobID, "alice to bob"})
-	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{aliceID, charlieID, "alice to charlie"})
-	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{charlieID, bobID, "charlie to bob"})
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "alice to bob"})
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: charlieID, Body: "alice to charlie"})
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: charlieID, RecipientID: bobID, Body: "charlie to bob"})
 
 	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
 	if err != nil {
