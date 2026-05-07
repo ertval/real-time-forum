@@ -3,3 +3,4 @@
 @import "./loading.css";
 @import "../../features/auth/auth.css";
 @import "../../features/shell/shell.css";
+@import "../../features/chat/chat.roster.css";
