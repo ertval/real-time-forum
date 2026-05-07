@@ -6,15 +6,15 @@ D01 is **frontend-only**. The backend (C05) is already implemented and wired —
 
 ## 1. Source-of-Truth Review
 
-| Doc | Constraint relevant to D01 |
-|---|---|
-| `docs/PRD.md:129-132,180` | Roster visible at all times for authenticated users; lists all other users; shows online/offline; presence updates without refresh (D04 wires the live update — D01 only handles initial load). |
-| `docs/SDS.md:203-227` | Endpoint contract: `GET /api/v1/chats` returns `{data:[{user_id,username,is_online,last_message_at,last_message_preview,last_sender_id}]}`; `last_*` fields nullable. |
-| `docs/SDS.md:229-232` | Sorting: history-having users first by `last_message_at DESC`, then no-history users by `username ASC`. **Backend already orders** — frontend must render in array order, never re-sort. |
-| `docs/SDS.md:475-484` | Roster visible on every authenticated route; selecting a user is a separable behavior (D02). |
-| `docs/audit.md:45-51` | Auditor will confirm: section shows online users; users with messages are sorted "discord-style"; users with no messages sorted alphabetically. |
-| `docs/requirements.md:51-56` | Section to show online/offline users; only-online send constraint is D02's concern, not D01's. |
-| `AGENTS.md` | Vanilla JS ES2026+, ES modules, event delegation, vertical-feature, Vitest tests in `SPA/tests/`, no new deps, HttpOnly cookie session via `credentials:'include'`. |
+Constraints relevant to D01:
+
+- **`docs/PRD.md:129-132,180`** — Roster visible at all times for authenticated users; lists all other users; shows online/offline; presence updates without refresh (D04 wires the live update — D01 only handles initial load).
+- **`docs/SDS.md:203-227`** — Endpoint contract: `GET /api/v1/chats` returns `{data:[{user_id,username,is_online,last_message_at,last_message_preview,last_sender_id}]}`; `last_*` fields nullable.
+- **`docs/SDS.md:229-232`** — Sorting: history-having users first by `last_message_at DESC`, then no-history users by `username ASC`. **Backend already orders** — frontend must render in array order, never re-sort.
+- **`docs/SDS.md:475-484`** — Roster visible on every authenticated route; selecting a user is a separable behavior (D02).
+- **`docs/audit.md:45-51`** — Auditor will confirm: section shows online users; users with messages are sorted "discord-style"; users with no messages sorted alphabetically.
+- **`docs/requirements.md:51-56`** — Section to show online/offline users; only-online send constraint is D02's concern, not D01's.
+- **`AGENTS.md`** — Vanilla JS ES2026+, ES modules, event delegation, vertical-feature, Vitest tests in `SPA/tests/`, no new deps, HttpOnly cookie session via `credentials:'include'`.
 
 D01 explicitly does **not** depend on C04 (presence broadcast) or D04 (live WS wire-up). It performs a single initial fetch on auth-shell mount. Live presence updates are D04's job.
 
@@ -40,9 +40,9 @@ Hook into `runRouteInitializer` in `SPA/core/app/create-app.js:159-163` so that 
     "user_id": 12,
     "username": "maria",
     "is_online": true,
-    "last_message_at": "2026-04-09T14:20:00Z" | null,
-    "last_message_preview": "see you soon" | null,
-    "last_sender_id": 7 | null
+    "last_message_at": "2026-04-09T14:20:00Z" or null,
+    "last_message_preview": "see you soon" or null,
+    "last_sender_id": 7 or null
   }
   ```
 - **Order**: backend already sorts. Frontend must render in received order.
@@ -63,24 +63,20 @@ Hook into `runRouteInitializer` in `SPA/core/app/create-app.js:159-163` so that 
 
 ### Create
 
-| Path | Purpose |
-|---|---|
-| `SPA/features/chat/chat.roster.api.js` | `fetchRoster(fetchRef) → Promise<RosterEntry[]>`. Calls `GET /api/v1/chats`. Returns `[]` on non-OK. |
-| `SPA/features/chat/chat.roster.views.js` | Pure render: `renderRosterItem`, `renderRosterList`. Escape via existing helper. |
-| `SPA/features/chat/chat.roster.page.js` | Initializer: `initChatRoster({windowRef, documentRef, fetchRef})`. Guards via `data-roster-bound`. Delegated `click` + `keydown` listener emitting `chat:user-selected` CustomEvent. |
-| `SPA/features/chat/chat.roster.css` | Roster row styling. |
-| `SPA/tests/unit/features/chat/chat.roster.api.test.js` | Fetch happy + non-OK + envelope unwrap. |
-| `SPA/tests/unit/features/chat/chat.roster.views.test.js` | Pure render + escape tests. |
-| `SPA/tests/unit/features/chat/chat.roster.page.test.js` | Init / fetch / paint / event-emission tests. |
+- **`SPA/features/chat/chat.roster.api.js`** — `fetchRoster(fetchRef) → Promise<RosterEntry[]>`. Calls `GET /api/v1/chats`. Returns `[]` on non-OK.
+- **`SPA/features/chat/chat.roster.views.js`** — Pure render: `renderRosterItem`, `renderRosterList`. Escape via existing helper.
+- **`SPA/features/chat/chat.roster.page.js`** — Initializer: `initChatRoster({windowRef, documentRef, fetchRef})`. Guards via `data-roster-bound`. Delegated `click` + `keydown` listener emitting `chat:user-selected` CustomEvent.
+- **`SPA/features/chat/chat.roster.css`** — Roster row styling.
+- **`SPA/tests/unit/features/chat/chat.roster.api.test.js`** — Fetch happy + non-OK + envelope unwrap.
+- **`SPA/tests/unit/features/chat/chat.roster.views.test.js`** — Pure render + escape tests.
+- **`SPA/tests/unit/features/chat/chat.roster.page.test.js`** — Init / fetch / paint / event-emission tests.
 
 ### Modify
 
-| Path | Change |
-|---|---|
-| `SPA/core/app/create-app.js` | Import `initChatRoster`; in `runRouteInitializer`, invoke when `match.route.access === 'protected'`. |
-| `SPA/features/shell/shell.views.js` | (Optional) tidy `#roster-list` placeholder; minimal change to preserve mount. |
-| `SPA/index.html` | Load `chat.roster.css` (mirror `auth.css`/`shell.css`). |
-| `docs/ticket-tracker.md` | Mark D01 `[x]` after gate; flag C05 already-shipped status. |
+- **`SPA/core/app/create-app.js`** — Import `initChatRoster`; in `runRouteInitializer`, invoke when `match.route.access === 'protected'`.
+- **`SPA/features/shell/shell.views.js`** — (Optional) tidy `#roster-list` placeholder; minimal change to preserve mount.
+- **`SPA/index.html`** — Load `chat.roster.css` (mirror `auth.css`/`shell.css`).
+- **`docs/ticket-tracker.md`** — Mark D01 done after gate; flag C05 already-shipped status.
 
 ## 4. API Contract (verified)
 
@@ -149,20 +145,18 @@ Check `data-roster-bound="true"` on `[data-chat-roster]`. Set on first run.
 
 ## 6. Verification Checklist
 
-| Gate item | How verified |
-|---|---|
-| Roster visible on authenticated routes | DOM present on every protected route; survives navigation. |
-| Presence state shown per user | `data-roster-online` + visible indicator + `aria-label`. |
-| Roster order matches backend | DOM order === response `data[]` order; no client sort. |
-| All rostered users selectable | Online and offline rows both dispatch `chat:user-selected`. |
-| No new deps | `package.json` and `go.mod` unchanged. |
-| Vanilla JS ES2026+ | ES module syntax, no frameworks. |
-| Event delegation | Single listener on `[data-chat-roster]`. |
-| Feature-vertical layout | All new code under `SPA/features/chat/`. |
-| HttpOnly session preserved | `credentials:'include'`; no localStorage. |
-| Vitest tests pass | `bun run policy` green. |
-| `make test` green | Backend unaffected. |
-| Biome clean | `bun x biome check SPA/features/chat SPA/tests/unit/features/chat`. |
+- **Roster visible on authenticated routes** — DOM present on every protected route; survives navigation.
+- **Presence state shown per user** — `data-roster-online` + visible indicator + `aria-label`.
+- **Roster order matches backend** — DOM order equals response `data[]` order; no client sort.
+- **All rostered users selectable** — Online and offline rows both dispatch `chat:user-selected`.
+- **No new deps** — `package.json` and `go.mod` unchanged.
+- **Vanilla JS ES2026+** — ES module syntax, no frameworks.
+- **Event delegation** — Single listener on `[data-chat-roster]`.
+- **Feature-vertical layout** — All new code under `SPA/features/chat/`.
+- **HttpOnly session preserved** — `credentials:'include'`; no localStorage.
+- **Vitest tests pass** — `bun run policy` green.
+- **`make test` green** — Backend unaffected.
+- **Biome clean** — `bun x biome check SPA/features/chat SPA/tests/unit/features/chat`.
 
 ## 7. Test Plan
 
