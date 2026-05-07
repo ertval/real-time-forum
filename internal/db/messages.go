@@ -57,11 +57,92 @@ func CreateMessage(ctx context.Context, database *sql.DB, req CreateMessageReque
 	return msg, nil
 }
 
+// RosterEntry is a row of the chat roster: a user (other than the caller) plus
+// the metadata needed to render and sort the persistent chat list. The
+// last-message fields are zero-valued when the pair has no message history.
+type RosterEntry struct {
+	UserID             int64
+	Username           string
+	LastMessageAt      string
+	LastMessagePreview string
+	LastSenderID       int64
+}
+
+// rosterPreviewMaxChars caps the size of the last-message preview returned in
+// the roster payload. SQLite's substr() operates on Unicode codepoints when
+// applied to TEXT, so this cannot split a multi-byte character. A bound here
+// keeps the roster response small even when individual DM bodies are large.
+const rosterPreviewMaxChars = 200
+
+// GetChatRoster returns one entry per user other than viewerID, with the most
+// recent message between viewerID and that user attached when one exists.
+//
+// Ordering: users with history first, by last_message_at DESC (with msg id as a
+// deterministic tiebreak when timestamps collide at second-resolution); users
+// without history follow, sorted by username ASC (case-insensitive).
+//
+// One query, one window-function pass — no per-user N+1.
+func GetChatRoster(ctx context.Context, database *sql.DB, viewerID int64) ([]RosterEntry, error) {
+	rows, err := database.QueryContext(ctx, `
+		WITH pair_msgs AS (
+			SELECT
+				CASE WHEN sender_id = ?1 THEN recipient_id ELSE sender_id END AS other_id,
+				id, sender_id, body, created_at,
+				ROW_NUMBER() OVER (
+					PARTITION BY CASE WHEN sender_id = ?1 THEN recipient_id ELSE sender_id END
+					ORDER BY id DESC
+				) AS rn
+			FROM private_messages
+			WHERE sender_id = ?1 OR recipient_id = ?1
+		),
+		latest AS (
+			SELECT other_id, id AS msg_id, sender_id, body, created_at
+			FROM pair_msgs WHERE rn = 1
+		)
+		SELECT
+			u.id,
+			u.username,
+			COALESCE(l.created_at, '')          AS last_message_at,
+			COALESCE(SUBSTR(l.body, 1, ?2), '') AS last_message_preview,
+			COALESCE(l.sender_id, 0)            AS last_sender_id
+		FROM users u
+		LEFT JOIN latest l ON l.other_id = u.id
+		WHERE u.id <> ?1
+		ORDER BY
+			CASE WHEN l.created_at IS NULL THEN 1 ELSE 0 END,
+			l.created_at DESC,
+			l.msg_id DESC,
+			LOWER(u.username) ASC
+	`, viewerID, rosterPreviewMaxChars)
+	if err != nil {
+		return nil, fmt.Errorf("get chat roster: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []RosterEntry
+	for rows.Next() {
+		var e RosterEntry
+		if err := rows.Scan(&e.UserID, &e.Username, &e.LastMessageAt, &e.LastMessagePreview, &e.LastSenderID); err != nil {
+			return nil, fmt.Errorf("scan roster row: %w", err)
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("roster rows: %w", err)
+	}
+	return entries, nil
+}
+
 // GetMessageHistory returns up to 10 messages exchanged between two users,
-// ordered oldest-first (render-ready). Pass beforeID > 0 to paginate backwards
-// through history; pass 0 to get the latest 10.
-func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, beforeID int64) ([]PrivateMessage, error) {
-	const limit = 10
+// ordered oldest-first (render-ready), and a hasMore flag that is true when
+// older messages exist beyond this page. Pass beforeID > 0 to paginate
+// backwards through history; pass 0 to get the latest 10.
+//
+// The function fetches 11 rows internally: if 11 arrive, the 11th is discarded
+// and hasMore is set to true. This avoids a separate COUNT query.
+func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, beforeID int64) ([]PrivateMessage, bool, error) {
+	const pageSize = 10
+	const fetchLimit = pageSize + 1 // fetch one extra to detect a next page
 
 	var rows *sql.Rows
 	var err error
@@ -75,7 +156,7 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 			 WHERE sender_id = ? AND recipient_id = ? AND id < ?
 			 ORDER BY id DESC
 			 LIMIT ?`,
-			userA, userB, beforeID, userB, userA, beforeID, limit,
+			userA, userB, beforeID, userB, userA, beforeID, fetchLimit,
 		)
 	} else {
 		rows, err = database.QueryContext(ctx,
@@ -86,11 +167,11 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 			 WHERE sender_id = ? AND recipient_id = ?
 			 ORDER BY id DESC
 			 LIMIT ?`,
-			userA, userB, userB, userA, limit,
+			userA, userB, userB, userA, fetchLimit,
 		)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get message history: %w", err)
+		return nil, false, fmt.Errorf("get message history: %w", err)
 	}
 	defer rows.Close()
 
@@ -98,18 +179,24 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 	for rows.Next() {
 		var m PrivateMessage
 		if err := rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Body, &m.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scan message: %w", err)
+			return nil, false, fmt.Errorf("scan message: %w", err)
 		}
 		msgs = append(msgs, m)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
+		return nil, false, fmt.Errorf("rows error: %w", err)
 	}
 
-	// Reverse to chronological order (oldest first)
+	// If the extra sentinel row arrived, there are older messages beyond this page.
+	hasMore := len(msgs) == fetchLimit
+	if hasMore {
+		msgs = msgs[:pageSize]
+	}
+
+	// Reverse to chronological order (oldest first).
 	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
 		msgs[i], msgs[j] = msgs[j], msgs[i]
 	}
 
-	return msgs, nil
+	return msgs, hasMore, nil
 }
