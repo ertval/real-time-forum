@@ -1,6 +1,7 @@
 // SPA/core/app/create-app.js
 
 import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
+import { initChatRoster } from '../../features/chat/chat.roster.page.js';
 import { initFeedPage } from '../../features/feed/feed.page.js';
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
@@ -157,6 +158,10 @@ export function createApp(options = {}) {
 	}
 
 	function runRouteInitializer(match) {
+		if (match?.route?.access === 'protected') {
+			initChatRoster({ windowRef, documentRef, fetchRef });
+		}
+
 		if (match?.route?.id === 'feed') {
 			initFeedPage({ windowRef, documentRef, fetchRef });
 		}
