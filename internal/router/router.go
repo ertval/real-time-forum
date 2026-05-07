@@ -278,7 +278,14 @@ func NewRouter(database *sql.DB, hub *ws.Hub) http.Handler {
 	/*-------------------------
 	  CHATS
 	-------------------------*/
-	chats := handlers.NewChatsHandler(database)
+	chats := handlers.NewChatsHandler(database, hub)
+	mux.Handle(
+		apiPrefix+"/chats",
+		middleware.AllowMethods(
+			auth(http.HandlerFunc(chats.HandleChatRoster)),
+			http.MethodGet,
+		),
+	)
 	mux.Handle(
 		apiPrefix+"/chats/",
 		middleware.AllowMethods(

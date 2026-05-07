@@ -9,14 +9,66 @@ import (
 
 	"forum/internal/db"
 	"forum/internal/middleware"
+	"forum/internal/ws"
 )
 
 type ChatsHandler struct {
 	conn *sql.DB
+	hub  *ws.Hub
 }
 
-func NewChatsHandler(database *sql.DB) *ChatsHandler {
-	return &ChatsHandler{conn: database}
+func NewChatsHandler(database *sql.DB, hub *ws.Hub) *ChatsHandler {
+	return &ChatsHandler{conn: database, hub: hub}
+}
+
+/*--------------------------
+  HANDLE CHAT ROSTER
+--------------------------*/
+
+// rosterResponseEntry is the JSON shape for a single roster row.
+// Last-message fields are pointers so they can be encoded as `null` for users
+// without history, matching SDS § 5.3.
+type rosterResponseEntry struct {
+	UserID             int64   `json:"user_id"`
+	Username           string  `json:"username"`
+	IsOnline           bool    `json:"is_online"`
+	LastMessageAt      *string `json:"last_message_at"`
+	LastMessagePreview *string `json:"last_message_preview"`
+	LastSenderID       *int64  `json:"last_sender_id"`
+}
+
+func (h *ChatsHandler) HandleChatRoster(w http.ResponseWriter, r *http.Request) {
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil || userID == 0 {
+		WriteError(w, r, NewError("UNAUTHORIZED", "user not authenticated", http.StatusUnauthorized))
+		return
+	}
+
+	entries, err := db.GetChatRoster(r.Context(), h.conn, userID)
+	if err != nil {
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "failed to load roster", http.StatusInternalServerError))
+		return
+	}
+
+	roster := make([]rosterResponseEntry, len(entries))
+	for i, e := range entries {
+		row := rosterResponseEntry{
+			UserID:   e.UserID,
+			Username: e.Username,
+			IsOnline: h.hub.IsUserOnline(e.UserID),
+		}
+		if e.LastMessageAt != "" {
+			at := e.LastMessageAt
+			preview := e.LastMessagePreview
+			sender := e.LastSenderID
+			row.LastMessageAt = &at
+			row.LastMessagePreview = &preview
+			row.LastSenderID = &sender
+		}
+		roster[i] = row
+	}
+
+	WriteOK(w, roster, nil)
 }
 
 /*--------------------------
