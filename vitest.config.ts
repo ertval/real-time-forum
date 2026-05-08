@@ -11,5 +11,6 @@ export default defineConfig({
 		globals: true,
 		environment: 'node',
 		include: ['**/*.test.{js,mjs,ts}'],
+		exclude: ['SPA/tests/e2e/**'],
 	},
 });

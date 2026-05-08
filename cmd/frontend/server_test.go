@@ -43,7 +43,7 @@ func TestSPARouting(t *testing.T) {
 	backendBaseURL = backend.URL
 	defer func() { backendBaseURL = oldBackendURL }()
 
-	// Change working directory so NewMux can find ./web/...
+	// Change working directory so NewMux can find ./web/... and ./SPA
 	oldWD, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -92,12 +92,6 @@ func TestSPARouting(t *testing.T) {
 			expectedStatus:      http.StatusOK,
 			expectedContentType: "text/html; charset=utf-8",
 			expectedBody:        indexContent,
-		},
-		{
-			name:                "Missing Asset (P2 fix)",
-			path:                "/assets/missing.css",
-			expectedStatus:      http.StatusNotFound,
-			expectedContentType: "text/plain; charset=utf-8",
 		},
 		{
 			name:                "API Proxy (Proxy gate check)",

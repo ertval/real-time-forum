@@ -5,10 +5,16 @@ import { renderLoginView, renderRegisterView } from '../../features/auth/auth.vi
 import { renderFeedView } from '../../features/feed/feed.views.js';
 import { renderCreatePostView, renderEditPostView } from '../../features/post/post.views.js';
 import { renderPostDetailView } from '../../features/post/post-detail.views.js';
+import { renderProfileView } from '../../features/profile/profile.views.js';
 import { escapeHTML } from '../utils/html.js';
 
 export function renderTemplate(match) {
 	const { id, title } = match.route;
+
+	if (id === 'profile') {
+		const userID = escapeHTML(match.params.id || '');
+		return renderProfileView(userID);
+	}
 
 	if (id === 'login') {
 		return renderLoginView();

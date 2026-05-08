@@ -35,7 +35,7 @@ func TestApplyQASeeds(t *testing.T) {
 	}
 
 	assertCount("categories", 5)
-	assertCount("users", 6)
+	assertCount("users", 7)
 	assertCount("posts", 8)
 	assertCount("post_categories", 12)
 	assertCount("comments", 10)

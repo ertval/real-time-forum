@@ -8,7 +8,9 @@ export function renderPostDetailView(post = {}) {
 	const postID = post.id ?? '';
 	const title = post.title ? escapeHTML(post.title) : 'Post Detail';
 	const body = post.body ? escapeHTML(post.body) : '';
-	const author = escapeHTML(resolveUsername(post));
+	const authorID = escapeHTML(post.author_id || post.user_id || '');
+	const authorName = escapeHTML(resolveUsername(post));
+	const authorMarkup = `<a data-link class="profile-link" href="/profile/${authorID}">${authorName}</a>`;
 	const createdAt = formatCreatedAt(post.created_at);
 	const createdAtMarkup = createdAt
 		? `<time class="post-detail-date" datetime="${escapeHTML(post.created_at)}">${escapeHTML(createdAt)}</time>`
@@ -21,7 +23,7 @@ export function renderPostDetailView(post = {}) {
 					${renderCategories(post.categories)}
 					<h1 id="screen-post-title" class="post-detail-title">${title}</h1>
 					<div class="post-detail-meta">
-						<p class="muted">Author: ${author}</p>
+						<p class="muted">Author: ${authorMarkup}</p>
 						${createdAtMarkup}
 					</div>
 				</header>

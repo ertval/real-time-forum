@@ -17,7 +17,9 @@ function renderCommentsMarkup(comments) {
 	return comments
 		.map((comment) => {
 			const body = comment.body ? escapeHTML(comment.body) : '';
-			const author = escapeHTML(resolveUsername(comment));
+			const authorID = escapeHTML(comment.author_id || comment.user_id || '');
+			const authorName = escapeHTML(resolveUsername(comment));
+			const author = `<a data-link class="profile-link" href="/profile/${authorID}">${authorName}</a>`;
 			const createdAt = formatCreatedAt(comment.created_at);
 			const createdAtMarkup = createdAt
 				? `<time class="comment-date" datetime="${escapeHTML(comment.created_at)}">${escapeHTML(createdAt)}</time>`
