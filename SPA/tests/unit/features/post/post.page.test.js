@@ -19,7 +19,7 @@ vi.mock('../../../../features/post/post.api.js', () => {
 	};
 });
 
-vi.mock('../../../../../web/static/js/image-picker.js', () => {
+vi.mock('../../../../core/shared/image-picker.js', () => {
 	setupImagePicker = vi.fn();
 
 	return {
