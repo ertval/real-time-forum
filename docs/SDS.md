@@ -23,15 +23,12 @@ The current codebase is a Go application with:
 - REST endpoints for posts, comments, reactions, drafts, notifications, and activity
 - polling-based notifications
 
-The current implementation is not yet suitable for the target state because:
+The current implementation has advanced significantly toward the target state. Remaining gaps include:
 
-- the frontend serves multiple templates instead of one SPA shell
-- public read routes still support unauthenticated access
-- registration persists only username, email, and password
-- comments are not rendered in the feed; they are fetched and displayed only in the post-detail route (`/posts/:id`)
-- WebSocket support exists for real-time features such as chat and presence
-- there is no persistence model for private messages
-- there is no presence model for online or offline status
+- the chat roster API is not yet implemented (C05 pending)
+- realtime DM send and delivery is not yet implemented (C06 pending)
+- post create and edit flows are still placeholder SPA views (B04 pending)
+- chat roster, conversation panel, and browser WebSocket integration on the frontend are pending (D01, D02, D04 pending)
 
 ## 3. Target Architecture
 
@@ -531,7 +528,17 @@ On application load:
 | :--- | :--- | :--- |
 | **Unit** | Isolated component and helper logic tests. | `SPA/tests/unit/` |
 | **Integration** | Feature-level interaction tests (e.g., Auth + Feed). | `SPA/tests/integration/` |
-| **E2E** | Multi-step user journey verification. | `SPA/tests/e2e/` |
+| **E2E** | Multi-step user journey verification using Playwright. | `SPA/tests/e2e/` |
+
+### 10.2.2 E2E Automation (Playwright)
+
+E2E tests use Playwright to verify the full stack (Frontend + Backend) in a real headless browser:
+- Direct navigation and SPA routing fallback.
+- Auth gating and redirection flows.
+- Multi-step user journeys (Login -> Post -> Logout).
+- Infrastructure sanity checks (Process management, Proxying).
+
+Run with `make test-e2e`.
 
 ## 10.3 Regression Coverage
 
@@ -564,3 +571,18 @@ The main critical path is:
 2. data-model and auth updates
 3. WebSocket and direct-message backend
 4. persistent chat UI and history loading
+
+## 12. Development and QA Tools
+
+### 12.1 Test Credentials
+
+For local development and manual QA, a test user is included in the database seed (`internal/db/seeds/10_users.sql`).
+
+| Credential | Value |
+|:--- |:--- |
+| **Nickname** | `tester` |
+| **Email** | `tester@example.com` |
+| **Password** | `password` |
+
+These credentials can be used to log in immediately after running `make seed-qa`.
+

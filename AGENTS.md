@@ -105,7 +105,7 @@ Only these Go packages are permitted:
 - **Tests** (`internal/tests/`):
   - **Integration Tests**: Using `httptest` with in-memory SQLite to validate API behavior.
   - **Unit Tests**: Co-located with source code (`_test.go`) in backend subpackages.
-  - **E2E Tests**: High-level tests simulating full user journeys using Vitest.
+  - **E2E Tests**: High-level tests simulating full user journeys using Playwright.
 
 ### Test Architecture
 
@@ -115,7 +115,7 @@ The project follows a tiered testing strategy to ensure reliability across the s
 | :--- | :--- | :--- | :--- |
 | **Unit** | Test individual functions/logic in isolation. | Go `testing`, Vitest | `.../*.go`, `SPA/tests/unit/` |
 | **Integration** | Test component interactions, database cycles, and API contracts. | Go `httptest`, Vitest | `internal/tests/`, `SPA/tests/integration/` |
-| **E2E** | Test full user journeys in a browser-like environment. | Vitest | `SPA/tests/e2e/` |
+| **E2E** | Test full user journeys in a real headless browser. | Playwright | `SPA/tests/e2e/` |
 
 ### JavaScript Frontend
 
@@ -171,11 +171,13 @@ See `docs/SDS.md` section 5.5 for full event schemas.
 ## Build & Run
 
 ```bash
-make deps          # go mod tidy
-make build-all     # build both servers
-make run-all       # start backend (8080) + frontend (3000)
-make test          # go test ./... -v
-make stop-all      # kill both servers
+make deps          # install all deps & playwright browsers
+make build         # build both servers
+make run           # start backend (8080) + frontend (3000)
+make test          # run all tests (Go, Vitest, Playwright)
+make test-e2e      # run only playwright tests
+make verify-infra  # run infrastructure sanity checks
+make stop          # kill both servers
 ```
 
 Individual targets: `build-backend`, `build-frontend`, `run-backend`, `run-frontend`.

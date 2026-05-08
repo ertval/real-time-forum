@@ -9,6 +9,19 @@ A powerhouse, production-grade **Real-Time Single-Page Application (SPA)**. Buil
 
 ---
 
+## 🚦 Project Status
+
+The project is currently in **Active Development (Wave 3)**.
+
+- **Foundations (Wave 1)**: ✅ Complete
+- **Auth & Core Forum (Wave 2)**: ✅ Complete
+- **Real-Time Chat (Wave 3)**: 🏗️ In Progress (Proxy ready, Backend started)
+- **Bonus Features**: ✅ User Profiles (A07) implemented ahead of schedule.
+
+Check the [Ticket Tracker](docs/ticket-tracker.md) for detailed progress.
+
+---
+
 ## ✨ Key Features
 
 ### 🔐 Secure Authentication
@@ -80,16 +93,32 @@ A powerhouse, production-grade **Real-Time Single-Page Application (SPA)**. Buil
 make deps
 
 # 2. Launch both servers (Backend & Frontend)
-make run-all
+make run
+
+# 3. Verify Infrastructure (Sanity Checks)
+make verify-infra
 ```
 🔗 **Access the Forum**: [http://localhost:3000](http://localhost:3000)
 
 ### 🧪 Quality Control
 ```bash
-make test          # Run the full suite (Go + Vitest)
+make test          # Run the full suite (Go + Vitest + Playwright)
+make test-e2e      # Run only Playwright E2E tests
 make lint          # Execute Biome static analysis
-make lint:fix      # Fix Biome static analysis
-make format        # Standardize code formatting
+make format        # Standardize code formatting (Backend + Frontend)
+make format-frontend # Fix Biome static analysis issues
+
+### 🧪 Testing Tiers
+
+The project follows a rigorous three-tier validation strategy:
+
+| Tier | Purpose | Tools |
+|:--- |:--- |:--- |
+| **Unit** | Isolated component & helper logic | Vitest (JSDOM/Node) |
+| **Integration** | Feature interactions & API contracts | Go `httptest` + Vitest |
+| **E2E** | Full multi-step user journeys | Playwright (Headless Chrome) |
+
+**Note**: Playwright browsers are automatically installed during `make deps`. If you encounter issues, run `bun x playwright install chromium`.
 ```
 
 ### 🌱 Database Seeding
@@ -115,6 +144,14 @@ Important notes:
 - The seed runner resets QA-owned tables and recreates the same users, posts, comments, reactions, and notifications each time.
 - Bootstrap categories are not treated as QA sample data and are preserved separately.
 - Do not reseed a database that is actively being used by a running backend process.
+ 
+
+### 🧪 Test Credentials
+For quick testing and QA, the following user is available in the default seed data:
+
+| Role | Nickname / Email | Password |
+|:--- |:--- |:--- |
+| **Test User** | `tester` / `tester@example.com` | `password` |
 
 ---
 
@@ -122,9 +159,9 @@ Important notes:
 
 Deep dive into the project's blueprints:
 
-- 📖 **[docs/requirements.md](docs/requirements.md)**: The ultimate source of truth.
+- 📖 **[docs/requirements.md](docs/requirements.md)**: The basic requirements document, source of truth for what the project should do.
 - 📐 **[docs/SDS.md](docs/SDS.md)**: Detailed technical specifications.
-- 📋 **[docs/audit.md](docs/audit.md)**: Success criteria and verification gate.
+- 📋 **[docs/audit.md](docs/audit.md)**: Success criteria and verification gate source of truth.
 - 🤖 **[AGENTS.md](AGENTS.md)**: Essential guide for AI coding assistants.
 - 🏗️ **[architecture.md](architecture.md)**: High-level structural overview.
 

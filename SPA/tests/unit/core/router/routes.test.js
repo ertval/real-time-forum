@@ -15,5 +15,7 @@ describe('SPA routing module', () => {
 		expect(matchRoute('/post/7')?.params.id).toBe('7');
 		expect(matchRoute('/edit-post/15')?.params.id).toBe('15');
 		expect(matchRoute('/does-not-exist')).toBeNull();
+		// Regression: A03 Malformed URI should not crash
+		expect(matchRoute('/post/%E0%A4%A')).toBeNull();
 	});
 });

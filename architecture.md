@@ -1,8 +1,8 @@
 # Forum Project --- Architecture Overview
 
 This document reflects the current architecture of the Forum project,
-including authentication (Google & GitHub), image uploads, reactions,
-real-time notifications, and the My Activity dashboard.
+including extended user profiles, image uploads, reactions,
+real-time notifications, and private messaging via WebSockets.
 
 ------------------------------------------------------------------------
 
@@ -65,8 +65,8 @@ Characteristics:
 - Pure Vanilla JavaScript (ES2026+)
 - No frontend framework (React, Vue, etc.)
 - Modular ES modules
-- Feature slices are implemented for auth/feed/post/activity/shell routes
-- API/state/chat/profile areas are scaffolded for upcoming tickets
+- Feature slices are implemented for auth, feed, post, activity, shell, and profile routes
+- Chat and messaging areas are in active development
 - Client-side Routing
 - Vitest for testing suite (Unit, Integration, E2E)
 
@@ -77,8 +77,7 @@ Characteristics:
 Supported authentication methods:
 
 -   Email / Password
--   Google OAuth
--   GitHub OAuth
+-   Google & GitHub OAuth (Legacy/Retained - Auth gating primary focus)
 
 Authentication design:
 
@@ -155,6 +154,8 @@ Core tables:
 -   categories
 -   reactions
 -   notifications
+-   private_messages
+-   oauth_users
 
 Constraints:
 

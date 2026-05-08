@@ -33,6 +33,12 @@ const ROUTE_DEFINITIONS = [
 		access: 'protected',
 		title: 'Activity',
 	},
+	{
+		id: 'profile',
+		path: '/profile/:id',
+		access: 'protected',
+		title: 'User Profile',
+	},
 ];
 
 const COMPILED_ROUTES = ROUTE_DEFINITIONS.map((route) => ({

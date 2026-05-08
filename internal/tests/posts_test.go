@@ -141,10 +141,10 @@ func TestAPIPostGet_ReactionCounts(t *testing.T) {
 	postID, _ := res.LastInsertId()
 
 	_, err = db.Exec(`
-		INSERT INTO users (username, email, password_hash, is_active, created_at, updated_at)
+		INSERT INTO users (username, email, password_hash, first_name, last_name, age, gender, is_active, created_at, updated_at)
 		VALUES
-			('react_get_u1', 'react_get_u1@example.com', 'x', 1, datetime('now'), datetime('now')),
-			('react_get_u2', 'react_get_u2@example.com', 'x', 1, datetime('now'), datetime('now'))
+			('react_get_u1', 'react_get_u1@example.com', 'x', 'FN1', 'LN1', 20, 'Other', 1, datetime('now'), datetime('now')),
+			('react_get_u2', 'react_get_u2@example.com', 'x', 'FN2', 'LN2', 21, 'Other', 1, datetime('now'), datetime('now'))
 	`)
 	if err != nil {
 		t.Fatalf("seed users: %v", err)
@@ -674,10 +674,10 @@ func TestAPIPostsList_AttachesReactionsCounts(t *testing.T) {
 
 	// Create two users for reactions
 	_, err = db.Exec(`
-		INSERT INTO users (username, email, password_hash, is_active, created_at, updated_at)
+		INSERT INTO users (username, email, password_hash, first_name, last_name, age, gender, is_active, created_at, updated_at)
 		VALUES
-			('react_u1', 'react1@example.com', 'x', 1, datetime('now'), datetime('now')),
-			('react_u2', 'react2@example.com', 'x', 1, datetime('now'), datetime('now'))
+			('react_u1', 'react1@example.com', 'x', 'FN1', 'LN1', 20, 'Other', 1, datetime('now'), datetime('now')),
+			('react_u2', 'react2@example.com', 'x', 'FN2', 'LN2', 21, 'Other', 1, datetime('now'), datetime('now'))
 	`)
 	if err != nil {
 		t.Fatalf("seed users: %v", err)

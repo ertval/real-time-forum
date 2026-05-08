@@ -6,6 +6,7 @@ import (
 	"forum/internal/middleware"
 	"log"
 	"net/http"
+	"strings"
 
 	repository "forum/internal/db"
 )
@@ -20,8 +21,15 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := resolveUserID(w, r)
-	if !ok {
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/users/"), "/")
+	if len(parts) == 0 || parts[0] == "" {
+		MethodNotAllowed(w, r)
+		return
+	}
+
+	userID, err := parsePositiveID(parts[0])
+	if err != nil {
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid user ID", http.StatusBadRequest))
 		return
 	}
 
@@ -36,7 +44,23 @@ func (u *UsersHandler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteOK(w, user, nil)
+	if len(parts) == 2 && parts[1] == "profile" {
+		profileData := map[string]any{
+			"user_id":    user.ID,
+			"username":   user.Username,
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
+			"age":        user.Age,
+			"gender":     user.Gender,
+		}
+		WriteOK(w, profileData, nil)
+		return
+	} else if len(parts) == 1 {
+		WriteOK(w, user, nil)
+		return
+	}
+
+	notFound(w, r)
 }
 
 /*-----------------------

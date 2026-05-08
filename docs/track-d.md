@@ -36,6 +36,7 @@ Work:
 - render the always-visible user roster in the authenticated shell
 - show online/offline state and last-message preview metadata
 - keep all rostered users selectable, including offline users
+- add links from rostered users to their profiles (/profile/:id) as defined in A07
 
 Verification Gate:
 - the roster is visible on authenticated routes
