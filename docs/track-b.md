@@ -57,7 +57,7 @@ Verification Gate:
 - feed loading no longer requests per-post comment lists
 
 ### B03 - Post Detail Route and Comment Flow
-Source: RTF-12 | Phase: P1
+Source: RTF-12 | Phase: P1 | Status: Done
 Depends on: B01
 Blocks: D05, B06, B07
 
@@ -65,6 +65,14 @@ Work:
 - move post detail into a SPA route
 - load comments only on post detail
 - preserve comment creation and comment image upload behavior
+
+Implementation Notes:
+- introduced the SPA route `/posts/:id` and booted it through the shared authenticated shell
+- implemented a dedicated post-detail view that renders full post content, metadata, categories, comment list, and comment form
+- added post-detail-only comment fetching so the feed remains fully decoupled from comments
+- implemented the comment submission flow with comment list refresh after successful post
+- preserved comment image upload behavior by reusing the existing image picker and multipart upload request path
+- ensured opening a post uses SPA navigation and route initialization without a full document reload
 
 Verification Gate:
 - opening a post renders the post-detail route inside the SPA

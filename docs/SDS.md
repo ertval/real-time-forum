@@ -25,9 +25,10 @@ The current codebase is a Go application with:
 
 The current implementation has advanced significantly toward the target state. Remaining gaps include:
 
-- there is no presence model for online or offline status (C04 pending)
-- chat history and roster APIs are not yet implemented (C03, C05 pending)
-- post detail, create, and edit flows are still using placeholder SPA views (B03, B04 pending)
+- the chat roster API is not yet implemented (C05 pending)
+- realtime DM send and delivery is not yet implemented (C06 pending)
+- post create and edit flows are still placeholder SPA views (B04 pending)
+- chat roster, conversation panel, and browser WebSocket integration on the frontend are pending (D01, D02, D04 pending)
 
 ## 3. Target Architecture
 
