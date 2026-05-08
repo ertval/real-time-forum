@@ -1,6 +1,6 @@
 import { escapeHTML } from '../../core/utils/html.js';
 
-function formatCreatedAt(iso) {
+export function formatCreatedAt(iso) {
 	if (!iso) {
 		return '';
 	}
@@ -22,11 +22,11 @@ function formatCreatedAt(iso) {
 	return `${year}-${month}-${day}, ${String(hours).padStart(2, '0')}:${minutes} ${suffix}`;
 }
 
-function resolveUsername(post) {
+export function resolveUsername(post) {
 	return post.username || post.author || (post.user_id ? `User ${post.user_id}` : 'User');
 }
 
-function renderCategories(categories = []) {
+export function renderCategories(categories = []) {
 	if (!Array.isArray(categories) || categories.length === 0) {
 		return '';
 	}

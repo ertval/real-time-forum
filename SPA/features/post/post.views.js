@@ -1,22 +1,6 @@
 // SPA/features/post/post.views.js
 
-export function renderPostDetailView(postID) {
-	return `
-		<section data-screen="post-detail" data-post-id="${postID}">
-			<div class="post-detail-container">
-				<div id="post-content" class="post-content">
-					<p>Loading post details...</p>
-				</div>
-				<div id="comments-section" class="comments-section">
-					<h3>Comments</h3>
-					<div id="comments-list">
-						<p>Loading comments...</p>
-					</div>
-				</div>
-			</div>
-		</section>
-	`;
-}
+export { renderPostDetailView } from './post-detail.views.js';
 
 export function renderEditPostView(postID) {
 	return `
