@@ -1,6 +1,6 @@
 // SPA/features/post/post-detail.views.js
 
-import { IMAGE_ACCEPT_ATTR } from '../../../web/static/js/utils.js';
+import { IMAGE_ACCEPT_ATTR } from '../../core/shared/utils.js';
 import { escapeHTML } from '../../core/utils/html.js';
 import { formatCreatedAt, renderCategories, resolveUsername } from './post-card.views.js';
 
