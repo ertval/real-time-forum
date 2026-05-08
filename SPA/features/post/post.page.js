@@ -1,7 +1,7 @@
 // SPA/features/post/post.page.js
 
-import { setupImagePicker } from '../../core/shared/image-picker.js';
 import { matchRoute } from '../../core/router/routes.js';
+import { setupImagePicker } from '../../core/shared/image-picker.js';
 import { escapeHTML } from '../../core/utils/html.js';
 import { createPostComment, getPostById, getPostComments } from './post.api.js';
 import { formatCreatedAt, resolveUsername } from './post-card.views.js';

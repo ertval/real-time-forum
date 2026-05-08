@@ -1,7 +1,7 @@
 // SPA/features/post/post.api.js
 
-import { buildImageRequestOptions } from '../../core/shared/utils.js';
 import { API_BASE } from '../../core/api/constants.js';
+import { buildImageRequestOptions } from '../../core/shared/utils.js';
 
 async function getNormalizedPayload(response) {
 	if (!response.ok) {
