@@ -5,7 +5,7 @@ import { describe, expect, test } from 'vitest';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const spaRoot = path.resolve(testDir, '../../../');
-const forbiddenImportFragment = '../../../web/static/';
+const forbiddenImportFragments = ['../../../web/static/', '/static/js/'];
 
 async function collectJavaScriptFiles(rootDir) {
 	const entries = await readdir(rootDir, { withFileTypes: true });
@@ -39,7 +39,7 @@ async function findForbiddenImports() {
 
 		for (const match of matches) {
 			const specifier = match[1] ?? '';
-			if (!specifier.includes(forbiddenImportFragment)) {
+			if (!forbiddenImportFragments.some((fragment) => specifier.includes(fragment))) {
 				continue;
 			}
 
@@ -53,9 +53,36 @@ async function findForbiddenImports() {
 	return offenders;
 }
 
+async function findDomContentLoadedUsage() {
+	const files = await collectJavaScriptFiles(spaRoot);
+	const offenders = [];
+	const lifecycleGuardRoots = [`${path.sep}core${path.sep}`, `${path.sep}features${path.sep}`];
+
+	for (const filePath of files) {
+		if (!lifecycleGuardRoots.some((fragment) => filePath.includes(fragment))) {
+			continue;
+		}
+
+		const source = await readFile(filePath, 'utf8');
+		if (!source.includes('DOMContentLoaded')) {
+			continue;
+		}
+
+		offenders.push(path.relative(spaRoot, filePath));
+	}
+
+	return offenders;
+}
+
 describe('SPA import boundaries', () => {
-	test('does not import browser-invalid modules from ../../../web/static/', async () => {
+	test('does not import browser-invalid modules from legacy static paths', async () => {
 		const offenders = await findForbiddenImports();
+
+		expect(offenders).toEqual([]);
+	});
+
+	test('does not reintroduce standalone DOMContentLoaded bootstrapping in SPA modules', async () => {
+		const offenders = await findDomContentLoadedUsage();
 
 		expect(offenders).toEqual([]);
 	});

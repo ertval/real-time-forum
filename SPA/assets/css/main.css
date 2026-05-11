@@ -2,5 +2,6 @@
 @import "./base.css";
 @import "./loading.css";
 @import "../../features/auth/auth.css";
+@import "../../features/post/post-forms.css";
 @import "../../features/shell/shell.css";
 @import "../../features/profile/profile.css";

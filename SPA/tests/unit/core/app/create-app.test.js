@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { createApp } from '../../../../core/app/create-app.js';
 import { matchRoute, normalizePathname } from '../../../../core/router/routes.js';
 import * as authHandlers from '../../../../features/auth/auth.handlers.js';
+import * as postPage from '../../../../features/post/post.page.js';
 import { createMockBrowser } from '../../helpers/browser-mock.js';
 
 afterEach(() => {
@@ -169,6 +170,31 @@ describe('SPA Application Engine', () => {
 		}
 	});
 
+	test('create/edit routes initialize through the SPA route lifecycle', async () => {
+		const initPostFormPage = vi.spyOn(postPage, 'initPostFormPage').mockResolvedValue(null);
+
+		for (const path of ['/create-post', '/edit-post/12']) {
+			const browser = createMockBrowser(path);
+			const app = createApp({
+				windowRef: browser.windowRef,
+				documentRef: browser.documentRef,
+				fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			});
+
+			await app.boot();
+		}
+
+		expect(initPostFormPage).toHaveBeenCalledTimes(2);
+		expect(initPostFormPage.mock.calls[0][0]).toEqual(
+			expect.objectContaining({
+				windowRef: expect.any(Object),
+				documentRef: expect.any(Object),
+				fetchRef: expect.any(Function),
+				navigate: expect.any(Function),
+			}),
+		);
+	});
+
 	test('authenticated routes render inside a shared shell with reserved chat regions', async () => {
 		const browser = createMockBrowser('/');
 		const app = createApp({
@@ -204,6 +230,26 @@ describe('SPA Application Engine', () => {
 		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
 		expect(browser.mainContent.innerHTML).toContain('data-chat-roster');
 		expect(browser.mainContent.innerHTML).toContain('data-chat-active');
+	});
+
+	test('create/edit navigation keeps the shell mounted and logout visible', async () => {
+		const browser = createMockBrowser('/create-post');
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+		});
+
+		await app.boot();
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="create-post"');
+
+		app.navigate('/edit-post/8');
+
+		expect(browser.mainContent.innerHTML).toContain('data-auth-shell');
+		expect(browser.mainContent.innerHTML).toContain('data-action="logout"');
+		expect(browser.mainContent.innerHTML).toContain('data-screen="edit-post"');
 	});
 
 	test('public routes render outside authenticated shell', async () => {
