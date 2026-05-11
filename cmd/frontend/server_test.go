@@ -10,6 +10,8 @@ import (
 )
 
 func TestSPARouting(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	// Setup test directories and files in a temporary workspace
 	tmpDir, err := os.MkdirTemp("", "frontend-test")
 	if err != nil {
