@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `19`
+- Done: `20`
 - Partially Implemented: `0`
-- Not Started: `18`
+- Not Started: `17`
 
 ---
 
@@ -128,7 +128,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 33 | [ ] | **C07** | C | Database Migration Strategy | C10, C02 | D07 |
+| 33 | [x] | **C07** | C | Database Migration Strategy ([PR](pr-message/C07-Database-Migration-Strategy-pr.md)) | C10, C02 | D07 |
 | 34 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A05, C01, C03, C04, C05, C06 | D07 |
 | 35 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A06, B02, B03, B04, B05, B06, B07, B08 | D07 |
 | 36 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |

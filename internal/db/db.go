@@ -2,6 +2,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -61,6 +62,21 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	if _, err := db.Exec(string(schema)); err != nil {
 		db.Close()
 		return nil, WrapError("apply schema", MapSQLError(err))
+	}
+
+	/*------------------------------------------------------------
+	  MIGRATE LEGACY DATABASES
+	  -----------------------
+	  forum_schema.sql uses CREATE TABLE IF NOT EXISTS, which is
+	  a no-op for tables that pre-date the current schema. Migrate
+	  adds any columns missing from existing tables so a database
+	  created by an older revision of the app keeps working after
+	  upgrade. No-op on fresh databases.
+	------------------------------------------------------------*/
+
+	if err := Migrate(context.Background(), db); err != nil {
+		db.Close()
+		return nil, err
 	}
 
 	/*-----------------
