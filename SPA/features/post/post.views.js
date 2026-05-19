@@ -10,9 +10,11 @@ function renderPostFormFields({
 	showDraftAction,
 	backHref,
 	backLabel,
+	postID,
 }) {
+	const postIDAttr = postID ? ` data-post-id="${postID}"` : '';
 	return `
-		<section class="post-editor post-editor--${mode}" data-screen="${mode}" aria-labelledby="screen-${mode}-title">
+		<section class="post-editor post-editor--${mode}" data-screen="${mode}"${postIDAttr} aria-labelledby="screen-${mode}-title">
 			<div class="post-editor__hero">
 				<p class="post-editor__eyebrow">${eyebrow}</p>
 				<div class="post-editor__hero-copy">
@@ -153,6 +155,7 @@ export function renderEditPostView(postID) {
 		showDraftAction: false,
 		backHref: '/activity',
 		backLabel: 'Back to activity',
+		postID,
 	});
 }
 
