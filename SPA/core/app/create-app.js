@@ -1,5 +1,6 @@
 // SPA/core/app/create-app.js
 
+import { initActivityPage } from '../../features/activity/activity.page.js';
 import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
 import { initFeedPage } from '../../features/feed/feed.page.js';
 import { initPostDetailPage, initPostFormPage } from '../../features/post/post.page.js';
@@ -176,6 +177,11 @@ export function createApp(options = {}) {
 
 		if (match?.route?.id === 'post-detail') {
 			void initPostDetailPage({ windowRef, documentRef, fetchRef });
+			return;
+		}
+
+		if (match?.route?.id === 'activity') {
+			initActivityPage({ windowRef, documentRef, fetchRef });
 		}
 	}
 

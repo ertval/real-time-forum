@@ -469,6 +469,30 @@ On application load:
 - fetch and render comments only in this route
 - comment creation remains here
 
+## 7.4.1 Activity Behavior
+
+- `/activity` renders inside the shared authenticated shell outlet
+- the SPA router (`SPA/core/router/routes.js`) matches the route and
+  `renderActivityView()` from `SPA/features/activity/activity.views.js`
+  is injected through the standard render-template flow
+- `runRouteInitializer` boots `initActivityPage()` from
+  `SPA/features/activity/activity.page.js`
+- activity data is loaded from `GET /api/v1/users/activity` with
+  `page`, `per_page`, and optional `status` query parameters
+- four collapsible sections are rendered: created posts, comments,
+  liked posts, disliked posts
+- created posts that belong to the current user expose owner-only
+  controls: status toggle (draft/published), edit (SPA navigation to
+  `/edit-post/:id?next=%2Factivity`), and delete
+- comments expose inline edit (reuses the shared image picker) and
+  delete
+- filter and pagination changes update history via
+  `history.replaceState` rather than full reload
+- mutations (status toggle, post delete, comment edit, comment delete)
+  trigger an in-place `refresh()` instead of a document navigation
+- the standalone `web/templates/activity.html` template and
+  `web/static/js/activity/*` scripts no longer exist
+
 ## 7.5 Chat UI Behavior
 
 - roster is visible on every authenticated route
@@ -517,6 +541,8 @@ On application load:
 - logout visible from every authenticated route
 - feed contains no comments
 - post detail contains comments
+- activity route mounts inside the shared shell and refreshes without
+  full reload on deep-link or back/forward navigation
 - chat roster sorting behavior
 - disabled composer for offline selected user
 - live message rendering on active chat
