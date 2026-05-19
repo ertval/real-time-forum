@@ -107,7 +107,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 26 | [ ] | **B05** | B | Activity View in the SPA | A03, A04, A05 | D05, D07 |
+| 26 | [x] | **B05** | B | Activity View in the SPA | A03, A04, A05 | D05, D07 |
 | 27 | [ ] | **B06** | B | Notification Behavior in the SPA | A04, B01, B03 | D05, D07 |
 | 28 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
 | 29 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
@@ -162,6 +162,20 @@ Completing **Waves 1–3** (tickets 1–25) delivers a fully functioning real-ti
 - **Comments isolated to post detail**: comment fetching no longer occurs in the feed and loads only from the post-detail initializer.
 - **Feed remains decoupled**: feed data flow stays post-only while preserving SPA navigation into post detail.
 - **Comment interactions preserved**: comment submission and comment image upload both work from the SPA post-detail screen.
+- **B05 — Activity in the SPA**: `/activity` is now a SPA feature slice
+  rendered inside the shared authenticated shell. The new module set
+  lives at `SPA/features/activity/` (`activity.api.js`,
+  `activity.views.js`, `activity.page.js`) and is wired through
+  `SPA/core/router/routes.js`, `SPA/core/router/render-template.js`, and
+  `SPA/core/app/create-app.js`. The legacy `web/templates/activity.html`
+  template and all `web/static/js/activity/*` scripts have been deleted.
+  Activity navigation and mutations (status toggle, delete post, edit
+  comment, delete comment) no longer rely on hard `window.location`
+  reloads — deep-link refresh, browser back/forward, and filter/pagination
+  state are all handled through SPA history APIs.
+- **Activity follow-up**: `web/static/css/activity.css` is now orphaned
+  legacy CSS — it is not loaded by the SPA bundle and may be ported into
+  the SPA stylesheet or removed in a subsequent cleanup ticket.
 
 ---
 
