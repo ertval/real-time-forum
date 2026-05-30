@@ -173,9 +173,13 @@ Completing **Waves 1–3** (tickets 1–25) delivers a fully functioning real-ti
   comment, delete comment) no longer rely on hard `window.location`
   reloads — deep-link refresh, browser back/forward, and filter/pagination
   state are all handled through SPA history APIs.
-- **Activity follow-up**: `web/static/css/activity.css` is now orphaned
-  legacy CSS — it is not loaded by the SPA bundle and may be ported into
-  the SPA stylesheet or removed in a subsequent cleanup ticket.
+- **Activity cleanup**: the orphaned legacy `web/static/css/activity.css` has
+  been deleted as part of B05 (it was not loaded by any template or the SPA
+  bundle).
+- **Create-post follow-up**: `web/static/js/create-post.js` still performs a
+  hard `window.location.href = '/activity'` navigation — a pre-existing B04
+  leak from the still-standalone create-post flow, tracked for the create-post
+  SPA migration.
 
 ---
 
