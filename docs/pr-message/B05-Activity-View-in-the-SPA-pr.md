@@ -55,23 +55,39 @@ page navigation, legacy activity scripts, and the legacy activity template.
 - **Standalone Activity Removal**: Activity no longer depends on standalone
   templates or legacy render flows; no Go route serves a legacy activity
   template, and no SPA module imports from `web/static/js/activity/*`.
+  - deleted `web/static/css/activity.css` (orphaned legacy styling, no longer
+    loaded by any template or the SPA bundle)
 - **Documentation Updates**: Updated `architecture.md`, `docs/SDS.md`,
   `docs/ticket-tracker.md`, and `docs/track-b.md` to reflect the SPA-based
-  Activity implementation, the removal of legacy infrastructure, and the
-  follow-up note for the orphan `web/static/css/activity.css`.
+  Activity implementation and the removal of legacy infrastructure.
+
+### Out-of-Scope Note
+- `SPA/features/post/post.views.js` received a one-line change (adding
+  `data-post-id` to the edit form) so the activity feature can resolve the
+  target post for inline edits. This lives in the post feature rather than the
+  activity slice, so it is called out explicitly here even though the ticket
+  title scopes to the activity migration.
 
 ## Verification Gate Satisfaction
 
 This PR fully satisfies the verification gate for ticket **B05**:
-> "activity is accessible inside the shared shell
-> activity data loads correctly
-> activity navigation no longer depends on a standalone template"
+> - activity is accessible inside the shared shell
+> - activity data loads correctly
+> - activity navigation no longer depends on a standalone template
+> - deep-link refresh on `/activity` is served by the SPA shell catch-all
+> - browser back/forward replays through the SPA router without a full
+>   document reload
+> - activity mutations refresh state without a full reload
 
 ## Testing & Validation Verified
 
 ### Automated Test Suite
-- [x] `npx vitest run` — 69/69 tests passing, including the `/activity`
+- [x] `npx vitest run` — 81/81 tests passing, including the `/activity`
   deep-link route coverage in `SPA/tests/unit/core/app/create-app.test.js`
+  and the new feature-slice unit suite
+  `SPA/tests/unit/features/activity/activity.page.test.js` (status toggle,
+  delete post, delete comment, refresh-on-mutation, error-state, and
+  data-action dispatch paths — 12 tests)
 - [x] `bun run policy` — Biome and Vitest frontend policy gate passing
 - [x] `bun x biome check SPA/features SPA/core` — clean
 - [x] SPA import-boundary policy tests
@@ -109,8 +125,11 @@ This PR fully satisfies the verification gate for ticket **B05**:
 - `SPA/core/app/create-app.js`
 - `SPA/core/router/routes.js`
 - `SPA/core/router/render-template.js`
+- `SPA/tests/unit/features/activity/activity.page.test.js` *(new — 12 tests)*
+- `SPA/features/post/post.views.js` *(one-line `data-post-id` addition)*
 - `web/templates/activity.html` *(deleted)*
 - `web/static/js/activity/*` *(deleted — 8 modules)*
+- `web/static/css/activity.css` *(deleted — orphaned legacy styling)*
 - `architecture.md`
 - `docs/SDS.md`
 - `docs/ticket-tracker.md`
@@ -118,6 +137,7 @@ This PR fully satisfies the verification gate for ticket **B05**:
 - `README.md`
 
 ## Follow-up Notes
-- `web/static/css/activity.css` is now orphaned legacy styling — it is not
-  loaded by the SPA bundle and can be safely ported into the SPA stylesheet or
-  removed in a future cleanup ticket. Out of scope for B05.
+- `web/static/js/create-post.js:319` still performs a hard
+  `window.location.href = '/activity'` navigation. This is a pre-existing B04
+  leak (the create-post flow is still a standalone, non-SPA template) and is
+  out of scope for B05 — tracked for the create-post SPA migration.
