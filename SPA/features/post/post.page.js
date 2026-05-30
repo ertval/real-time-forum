@@ -3,6 +3,7 @@
 import { matchRoute } from '../../core/router/routes.js';
 import { setupImagePicker } from '../../core/shared/image-picker.js';
 import { escapeHTML } from '../../core/utils/html.js';
+import { highlightCommentFromQuery } from './comment-highlight.js';
 import {
 	createPost,
 	createPostComment,
@@ -250,6 +251,9 @@ export async function initPostDetailPage(options = {}) {
 	bindCommentForm({ form: commentForm, fetchRef, postId, commentsContainer });
 
 	const comments = await reloadComments(fetchRef, postId, commentsContainer);
+
+	void highlightCommentFromQuery({ windowRef, documentRef, root: commentsContainer });
+
 	return { post, comments };
 }
 

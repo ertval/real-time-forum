@@ -122,11 +122,25 @@ Notifications triggered on:
 Architecture:
 
 -   notifications table
--   Polling mechanism (frontend)
--   Badge counter
--   Dropdown panel
--   Sound feedback
--   Mark-as-read endpoints
+-   Mark-as-read endpoints (`GET /api/v1/notifications`,
+    `PATCH /api/v1/notifications/{id}/read`,
+    `PATCH /api/v1/notifications/read-all`)
+
+Frontend (SPA feature slice `SPA/features/notification/`, mounted in the
+persistent authenticated shell):
+
+-   5s polling lifecycle started after authenticated boot/login and
+    stopped on logout or `401` (no duplicate intervals; survives
+    client-side route changes)
+-   unread badge counter and dropdown panel
+-   mark-one-read / mark-all-read with optimistic update reconciled by
+    the next poll
+-   click → mark-read → SPA-router navigation to
+    `/posts/{id}?highlight={comment_id|last}` (no full page reload),
+    with comment deep-link highlighting on the post detail view
+
+> Toast and sound feedback from the legacy notification UI are not part
+> of the SPA notification slice (out of scope for the B06 migration).
 
 ------------------------------------------------------------------------
 
