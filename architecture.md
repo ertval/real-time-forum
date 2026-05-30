@@ -66,6 +66,7 @@ Characteristics:
 - No frontend framework (React, Vue, etc.)
 - Modular ES modules
 - Feature slices are implemented for auth, feed, post, activity, shell, and profile routes
+- Each feature slice follows the `{feature}.api.js` / `{feature}.views.js` / `{feature}.page.js` separation (API client, view markup, page/controller lifecycle)
 - Chat and messaging areas are in active development
 - Client-side Routing
 - Vitest for testing suite (Unit, Integration, E2E)
@@ -131,14 +132,45 @@ Architecture:
 
 ## 8. My Activity Dashboard
 
-Aggregates:
+The Activity view is a SPA feature slice mounted at `/activity` inside the
+shared authenticated shell. It aggregates the user's forum activity in
+collapsible sections:
 
--   User posts
--   User comments
--   Reactions received
--   Notifications
+-   created posts (with owner-only status toggle, edit, delete actions)
+-   authored comments (with inline edit and delete)
+-   liked posts
+-   disliked posts
 
-Provides centralized user activity tracking and navigation.
+Implementation:
+
+-   `SPA/features/activity/activity.api.js` — REST client, query-state
+    helpers, and post/comment mutation calls
+-   `SPA/features/activity/activity.views.js` — view markup
+    (sections, post cards, comment entries, inline comment editor)
+-   `SPA/features/activity/activity.page.js` — page controller
+    (filters, pagination, owner/comment action dispatch, inline edit
+    lifecycle)
+
+Lifecycle:
+
+-   The SPA router matches `/activity` ([SPA/core/router/routes.js](SPA/core/router/routes.js))
+    and renders `renderActivityView()` into the shell outlet via
+    `renderTemplate` ([SPA/core/router/render-template.js](SPA/core/router/render-template.js))
+-   `runRouteInitializer` in
+    [SPA/core/app/create-app.js](SPA/core/app/create-app.js) invokes
+    `initActivityPage()` once the activity markup is mounted
+-   Filter changes (status, items-per-section) call
+    `history.replaceState`; pagination updates use SPA history APIs;
+    activity mutations re-fetch through `refresh()` instead of triggering
+    a full document reload
+
+Navigation:
+
+-   `/activity` is reached through SPA route transitions (e.g. the shell
+    nav `<a data-link href="/activity">`)
+-   Deep-link refresh on `/activity` is served by the SPA shell catch-all
+    in `cmd/frontend`
+-   Browser back/forward replays `popstate` through the SPA router
 
 ------------------------------------------------------------------------
 

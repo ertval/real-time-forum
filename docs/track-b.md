@@ -96,7 +96,7 @@ Verification Gate:
 - logout remains available while using these views
 
 ### B05 - Activity View in the SPA
-Source: RTF-14 | Phase: P1
+Source: RTF-14 | Phase: P1 | Status: Done
 Depends on: A03, A04, A05
 Blocks: D05, D07
 
@@ -105,10 +105,53 @@ Work:
 - preserve activity data loading
 - replace hard page navigation with SPA route transitions
 
+Implementation Notes:
+- added the SPA feature slice `SPA/features/activity/` with the standard
+  three-file separation:
+  - `activity.api.js` — REST client for `GET /api/v1/users/activity`,
+    plus mutation helpers for post status, post delete, comment edit,
+    and comment delete; also owns SPA-safe query-state helpers backed by
+    `history.replaceState`
+  - `activity.views.js` — markup for the activity screen, the four
+    collapsible sections (created posts, comments, liked posts, disliked
+    posts), the activity post card, the activity comment entry, and the
+    inline comment editor
+  - `activity.page.js` — page controller that binds section toggles,
+    filters (status, items-per-section), pagination, owner/comment
+    action dispatch via `data-action`, and the inline comment edit
+    lifecycle (reusing `SPA/core/shared/image-picker.js`)
+- wired the route through `SPA/core/router/routes.js`,
+  `SPA/core/router/render-template.js`, and `SPA/core/app/create-app.js`
+  so `/activity` renders inside the shared authenticated shell and is
+  initialized through the SPA route lifecycle
+- preserved the existing `/api/v1/users/activity` contract — no backend
+  changes
+- replaced legacy hard-reload patterns with SPA route transitions:
+  filter and pagination changes use `history.replaceState`; mutations
+  call an in-place `refresh()` instead of reloading the document; edit
+  links use the standard SPA `data-link` anchor pattern
+- deleted the legacy implementation:
+  - `web/templates/activity.html`
+  - `web/static/js/activity/activity-page.js`
+  - `web/static/js/activity/api-activity.js`
+  - `web/static/js/activity/bootstrap-activity.js`
+  - `web/static/js/activity/comments-activity.js`
+  - `web/static/js/activity/posts-activity.js`
+  - `web/static/js/activity/render-activity.js`
+  - `web/static/js/activity/sections-activity.js`
+  - `web/static/js/activity/state-activity.js`
+- follow-up: `web/static/css/activity.css` is now orphan legacy styling
+  (not loaded by the SPA bundle) and can be ported or removed in a later
+  cleanup pass — out of scope for B05
+
 Verification Gate:
 - activity is accessible inside the shared shell
 - activity data loads correctly
 - activity navigation no longer depends on a standalone template
+- deep-link refresh on `/activity` is served by the SPA shell catch-all
+- browser back/forward replays through the SPA router without a full
+  document reload
+- activity mutations refresh state without a full reload
 
 ### B06 - Notification Behavior in the SPA
 Source: RTF-29 | Phase: P2
