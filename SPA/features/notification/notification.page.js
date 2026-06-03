@@ -186,7 +186,10 @@ function bindNotificationCenter({ documentRef, fetchRef, elements, onUnauthorize
 		}
 	});
 
-	documentRef.addEventListener('click', (event) => {
+	// Bell and dropdown listeners live on nodes that are replaced when the shell
+	// is rebuilt, so they don't leak. The document listener does — it must be
+	// removed explicitly on teardown/re-bind (see teardown below).
+	const handleDocumentClick = (event) => {
 		const target = event.target;
 		const insideNotification =
 			target && typeof target.closest === 'function' && target.closest('[data-notification]');
@@ -194,12 +197,18 @@ function bindNotificationCenter({ documentRef, fetchRef, elements, onUnauthorize
 			return;
 		}
 		closeDropdown();
-	});
+	};
+
+	documentRef.addEventListener('click', handleDocumentClick);
 
 	// Establish a known closed state on mount (the markup starts hidden).
 	closeDropdown();
 
-	return { refresh, close: closeDropdown };
+	const teardown = () => {
+		documentRef.removeEventListener('click', handleDocumentClick);
+	};
+
+	return { refresh, close: closeDropdown, teardown };
 }
 
 export function createNotificationCenter(options = {}) {
@@ -248,6 +257,13 @@ export function createNotificationCenter(options = {}) {
 			clearIntervalRef(pollHandle);
 			pollHandle = null;
 		}
+
+		// Tear down the bound controller so its document-click listener is removed
+		// and the next start()/ensureMounted() re-binds cleanly instead of holding
+		// a reference to a detached dropdown.
+		controller?.teardown?.();
+		controller = null;
+		boundRoot = null;
 	};
 
 	const ensureMounted = () => {
@@ -271,6 +287,11 @@ export function createNotificationCenter(options = {}) {
 		if (!elements) {
 			return null;
 		}
+
+		// The shell was rebuilt: drop the previous controller's document-click
+		// listener before binding a new one so listeners don't accumulate per
+		// re-bind (e.g. across logout -> login cycles).
+		controller?.teardown?.();
 
 		root.setAttribute(NOTIFICATION_BOUND_ATTR, 'true');
 

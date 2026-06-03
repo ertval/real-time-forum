@@ -104,8 +104,17 @@ function createDocument({ withRoot = true } = {}) {
 			if (!documentListeners.has(type)) documentListeners.set(type, []);
 			documentListeners.get(type).push(handler);
 		},
+		removeEventListener(type, handler) {
+			const handlers = documentListeners.get(type);
+			if (!handlers) return;
+			const index = handlers.indexOf(handler);
+			if (index !== -1) handlers.splice(index, 1);
+		},
 		dispatch(type, event = {}) {
 			for (const handler of documentListeners.get(type) ?? []) handler(event);
+		},
+		listenerCount(type) {
+			return (documentListeners.get(type) ?? []).length;
 		},
 	};
 
@@ -307,6 +316,28 @@ describe('notification center runtime', () => {
 		expect(dom.badge).not.toBe(stale);
 		expect(dom.badge.textContent).toBe('2');
 		expect(stale.textContent).toBe('2'); // old node was set once, now detached/untouched
+
+		// The outside-click listener from the first session must not leak: stop()
+		// removes it, so after a re-bind there is exactly one document handler.
+		expect(dom.documentRef.listenerCount('click')).toBe(1);
+	});
+
+	test('does not accumulate document-click listeners across repeated re-binds', async () => {
+		const dom = createDocument();
+		const fetchRef = vi.fn(async () => notificationsResponse([], 0));
+		const timers = timerControls();
+
+		const center = createNotificationCenter({ documentRef: dom.documentRef, fetchRef, ...timers });
+
+		for (let i = 0; i < 3; i += 1) {
+			center.start();
+			await flush();
+			center.stop();
+			dom.swapRoot();
+		}
+
+		// stop() tears down each session's listener before the next bind.
+		expect(dom.documentRef.listenerCount('click')).toBe(0);
 	});
 });
 
