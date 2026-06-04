@@ -1,43 +1,49 @@
 // SPA/core/router/routes.js
 
 const ROUTE_DEFINITIONS = [
-	{ id: 'login', pattern: '/login', access: 'public-only', title: 'Login' },
+	{ id: 'login', path: '/login', access: 'public-only', title: 'Login' },
 	{
 		id: 'register',
-		pattern: '/register',
+		path: '/register',
 		access: 'public-only',
 		title: 'Register',
 	},
-	{ id: 'feed', pattern: '/', access: 'protected', title: 'Feed' },
+	{ id: 'feed', path: '/', access: 'protected', title: 'Feed' },
 	{
 		id: 'post-detail',
-		pattern: '/posts/:id',
+		path: '/posts/:id',
 		access: 'protected',
 		title: 'Post Detail',
 	},
 	{
 		id: 'create-post',
-		pattern: '/create-post',
+		path: '/create-post',
 		access: 'protected',
 		title: 'Create Post',
 	},
 	{
 		id: 'edit-post',
-		pattern: '/edit-post/:id',
+		path: '/edit-post/:id',
 		access: 'protected',
 		title: 'Edit Post',
 	},
 	{
 		id: 'activity',
-		pattern: '/activity',
+		path: '/activity',
 		access: 'protected',
 		title: 'Activity',
+	},
+	{
+		id: 'profile',
+		path: '/profile/:id',
+		access: 'protected',
+		title: 'User Profile',
 	},
 ];
 
 const COMPILED_ROUTES = ROUTE_DEFINITIONS.map((route) => ({
 	...route,
-	...compileRoutePattern(route.pattern),
+	...compileRoutePattern(route.path),
 }));
 
 function compileRoutePattern(pattern) {

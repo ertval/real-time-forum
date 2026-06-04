@@ -37,7 +37,7 @@
 
 ## 🛠️ Technical Metadata & Verification Gates
 ### ⚙️ Automated Gate Summary
-- PASS: `make build-all` (exit=0, duration=2sec)
+- PASS: `make build` (exit=0, duration=2sec)
 - PASS: `make test` (Go Backend Integration/Unit) (exit=0, duration=4sec)
 - PASS: `bun test` (Vitest Shared Suite) (exit=0, duration=1sec)
 - PASS: `bun run policy` (Compliance & Policy Gate) (exit=0, duration=2sec)

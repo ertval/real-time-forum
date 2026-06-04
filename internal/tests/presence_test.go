@@ -83,6 +83,8 @@ func readWSMessage(t *testing.T, conn *websocket.Conn) map[string]json.RawMessag
 ------------------------*/
 
 func TestPresence_SnapshotDeliveredOnConnect(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -148,6 +150,8 @@ func TestPresence_SnapshotDeliveredOnConnect(t *testing.T) {
 ------------------------*/
 
 func TestPresence_FirstConnectBroadcastsOnline(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -194,6 +198,8 @@ func TestPresence_FirstConnectBroadcastsOnline(t *testing.T) {
 }
 
 func TestPresence_SecondTabReceivesSnapshot(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -223,6 +229,8 @@ func TestPresence_SecondTabReceivesSnapshot(t *testing.T) {
 }
 
 func TestPresence_SecondTabDoesNotBroadcast(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -269,6 +277,8 @@ func TestPresence_SecondTabDoesNotBroadcast(t *testing.T) {
 }
 
 func TestPresence_LastDisconnectBroadcastsOffline(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -313,6 +323,8 @@ func TestPresence_LastDisconnectBroadcastsOffline(t *testing.T) {
 }
 
 func TestPresence_NonLastDisconnectDoesNotBroadcast(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -360,6 +372,8 @@ func TestPresence_NonLastDisconnectDoesNotBroadcast(t *testing.T) {
 ---------------------------*/
 
 func TestPresence_SnapshotContainsCorrectUserIDs(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -406,6 +420,8 @@ func TestPresence_SnapshotContainsCorrectUserIDs(t *testing.T) {
 }
 
 func TestPresence_OnlineBroadcastContainsCorrectUserID(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -443,6 +459,8 @@ func TestPresence_OnlineBroadcastContainsCorrectUserID(t *testing.T) {
 }
 
 func TestPresence_OfflineBroadcastContainsCorrectUserID(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -486,6 +504,8 @@ func TestPresence_OfflineBroadcastContainsCorrectUserID(t *testing.T) {
 }
 
 func TestPresence_SnapshotExcludesOfflineUsers(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -544,6 +564,8 @@ func TestPresence_SnapshotExcludesOfflineUsers(t *testing.T) {
 }
 
 func TestPresence_OfflineBroadcastReachesAllObservers(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -603,6 +625,8 @@ func TestPresence_OfflineBroadcastReachesAllObservers(t *testing.T) {
 }
 
 func TestPresence_ReconnectCycle(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 

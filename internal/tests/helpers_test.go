@@ -54,10 +54,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 		Username:  "testuser",
 		Email:     "test@example.com",
 		Password:  "password123",
-		Age:       20,
-		Gender:    "other",
 		FirstName: "Test",
 		LastName:  "User",
+		Age:       20,
+		Gender:    "other",
 	})
 	if err != nil {
 		t.Fatalf("failed to seed test user: %v", err)

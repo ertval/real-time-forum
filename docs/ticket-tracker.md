@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `18`
+- Done: `24`
 - Partially Implemented: `0`
-- Not Started: `19`
+- Not Started: `13`
 
 ---
 
@@ -61,12 +61,12 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup | None | A02 |
-| 2 | [x] | **A02** | A | Frontend Architecture & Directory Restructuring | A01 | A10, D09 |
-| 3 | [x] | **A10** | A | Single SPA Shell Entry | A02 | D09, A03 |
-| 4 | [x] | **C10** | C | User Profile Schema Extension | None | C11, C02, C07 |
-| 5 | [x] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager | None | C04, C05, C06, D04, C08 |
-| 6 | [x] | **A03** | A | SPA Boot and Client Routing | A10 | A04, D10, A05, B01, B05 |
+| 1 | [x] | **A01** | A | Infrastructure, CI/CD, and Dev Tools Setup ([PR](pr-message/A01-InfrastructureSetup-pr.md)) | None | A02 |
+| 2 | [x] | **A02** | A | Frontend Architecture & Directory Restructuring ([PR](pr-message/A02-FrontendArchitecture-pr.md)) | A01 | A10, D09 |
+| 3 | [x] | **A10** | A | Single SPA Shell Entry ([PR](pr-message/A10-Single-SPA-Shell-Entry-pr.md)) | A02 | D09, A03 |
+| 4 | [x] | **C10** | C | User Profile Schema Extension ([PR](pr-message/C10-UserProfileSchemaExtension-pr.md)) | None | C11, C02, C07 |
+| 5 | [x] | **C01** | C | Authenticated WebSocket Endpoint and Connection Manager ([PR](pr-message/C01-WebSocket-Endpoint-pr.md)) | None | C04, C05, C06, D04, C08 |
+| 6 | [x] | **A03** | A | SPA Boot and Client Routing ([PR](pr-message/A03-SPA-Boot-and-Client-Routing-pr.md)) | A10 | A04, D10, A05, B01, B05 |
 
 ### Wave 2 — Auth + Shell + Core Forum (P1)
 
@@ -74,15 +74,15 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 7 | [x] | **C11** | C | Registration API Contract | C10 | C08 |
-| 8 | [x] | **A04** | A | Persistent App Shell Layout | A03 | A06, B01, B04, B05, D01, B06 |
+| 7 | [x] | **C11** | C | Registration API Contract ([PR](pr-message/C11-RegistrationAPIContract-pr.md)) | C10 | C08 |
+| 8 | [x] | **A04** | A | Persistent App Shell Layout ([PR](pr-message/A04-Persistent-App-Shell-Layout-pr.md)) | A03 | A06, B01, B04, B05, D01, B06 |
 | 9 | [x] | **A05** | A | Authenticated-Only Forum Access ([PR](pr-message/A05-Authenticated-Only-Forum-Access-pr.md)) | A03 | A06, B01, B04, B05, D04, C08 |
-| 10 | [ ] | **D10** | D | SPA Login and Registration Views | A03 | D05 |
+| 10 | [x] | **D10** | D | SPA Login and Registration Views ([PR](pr-message/D10-SPA-Login-and-Registration-Views-pr.md)) | A03 | D05 |
 | 11 | [x] | **A06** | A | Global Logout Across the Forum ([PR](pr-message/A06-Global-Logout-Across-the-Forum-pr.md)) | A04, A05 | D05 |
 | 12 | [x] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
 | 13 | [x] | **B02** | B | Remove Feed Comment Rendering ([PR](pr-message/B02-Remove-Feed-Comment-Rendering-pr.md)) | B01 | D05 |
-| 14 | [ ] | **B03** | B | Post Detail Route and Comment Flow | B01 | D05, B06, B07 |
-| 15 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
+| 14 | [x] | **B03** | B | Post Detail Route and Comment Flow ([PR](pr-message/B03-Post-Detail-Route-and-Comment-Flow-pr.md)) | B01 | D05, B06, B07 |
+| 15 | [x] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
 | 16 | [x] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
 
 ### Wave 3 — Real-Time Chat MVP (P2 + P3)
@@ -107,8 +107,8 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 26 | [ ] | **B05** | B | Activity View in the SPA | A03, A04, A05 | D05, D07 |
-| 27 | [ ] | **B06** | B | Notification Behavior in the SPA | A04, B01, B03 | D05, D07 |
+| 26 | [x] | **B05** | B | Activity View in the SPA ([PR](pr-message/B05-Activity-View-in-the-SPA-pr.md)) | A03, A04, A05 | D05, D07 |
+| 27 | [x] | **B06** | B | Notification Behavior in the SPA ([PR](pr-message/B06-Notification-Behavior-in-the-SPA-pr.md)) | A04, B01, B03 | D05, D07 |
 | 28 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
 | 29 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
 
@@ -118,7 +118,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 30 | [ ] | **A07** | A | User Profile Page (Bonus) | C10, A04, A05 | D07 |
+| 30 | [x] | **A07** | A | User Profile Page (Bonus) (Note: Roster link blocked by D01) ([PR](pr-message/A07-User-Profile-Page-pr.md)) | C10, A04, A05 | D07 |
 | 31 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
 | 32 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
 
@@ -154,6 +154,32 @@ Completing **Waves 1–3** (tickets 1–25) delivers a fully functioning real-ti
 - ✅ Last 10 messages loaded initially
 - ✅ Scroll-up pagination with throttle/debounce
 - ✅ Real-time notification of new messages
+
+## Recent Completion Notes
+
+- **B01 / B02 / B03**: the forum content flow is now fully split between feed and post detail.
+- **Post detail inside SPA shell**: opening a post renders `/posts/:id` without a full document reload.
+- **Comments isolated to post detail**: comment fetching no longer occurs in the feed and loads only from the post-detail initializer.
+- **Feed remains decoupled**: feed data flow stays post-only while preserving SPA navigation into post detail.
+- **Comment interactions preserved**: comment submission and comment image upload both work from the SPA post-detail screen.
+- **B05 — Activity in the SPA**: `/activity` is now a SPA feature slice
+  rendered inside the shared authenticated shell. The new module set
+  lives at `SPA/features/activity/` (`activity.api.js`,
+  `activity.views.js`, `activity.page.js`) and is wired through
+  `SPA/core/router/routes.js`, `SPA/core/router/render-template.js`, and
+  `SPA/core/app/create-app.js`. The legacy `web/templates/activity.html`
+  template and all `web/static/js/activity/*` scripts have been deleted.
+  Activity navigation and mutations (status toggle, delete post, edit
+  comment, delete comment) no longer rely on hard `window.location`
+  reloads — deep-link refresh, browser back/forward, and filter/pagination
+  state are all handled through SPA history APIs.
+- **Activity cleanup**: the orphaned legacy `web/static/css/activity.css` has
+  been deleted as part of B05 (it was not loaded by any template or the SPA
+  bundle).
+- **Create-post follow-up**: `web/static/js/create-post.js` still performs a
+  hard `window.location.href = '/activity'` navigation — a pre-existing B04
+  leak from the still-standalone create-post flow, tracked for the create-post
+  SPA migration.
 
 ---
 

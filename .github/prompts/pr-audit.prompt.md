@@ -74,21 +74,19 @@ You are the strict **PR Audit Verifier, QA, and Security Review Agent** for the 
 3. Enforce that comments load *only* on post detail, as per project constraints.
 
 ### 5) Run all automated tests and CI policy
-The subagent assigned to this procedure MUST run `make deps` then execute:
+The subagent assigned to this procedure MUST run `make deps` first, then execute:
 
-**Phase A — Product Stability:**
-1. `make build-all` — Verifies both Go servers compile.
-2. `make test` — Runs Go integration and unit tests.
-3. `bun install` — Ensure frontend dependencies are locked.
-4. `bun test` — Vitest shared suite (unit, integration, e2e).
-
-**Phase B — Quality & Policy Gate:**
-5. `bun x biome check .` — Biome linting and static analysis.
-6. `bun run policy` — Project-wide compliance umbrella.
+**Automated Gate Set:**
+1. `make build` — Verifies both Go servers compile.
+2. `make test` — Runs the project test umbrella. This includes:
+   - Go backend unit/integration tests
+   - frontend Vitest unit/integration tests through the project policy target
+   - Playwright E2E tests through `make test-e2e`
+3. `bun x biome check .` — Biome linting and static analysis.
+4. `bun run policy` — Frontend compliance gate: Biome plus Vitest.
 
 Notes:
-- If `make test` fails, identify if it's a backend regression.
-- If `bun test` fails, identify the specific E2E or unit failure in the SPA.
+- If `make test` fails, identify whether the failure came from Go tests, Vitest, or Playwright.
 
 ### 6) Static policy checks in diff
 Additionally inspect changed files for:
@@ -101,7 +99,7 @@ Additionally inspect changed files for:
 ## Verdict Rules
 Set **PASS** only if:
 - Ticket detection succeeds and deliverables match the ticket gate.
-- All `make test` and `bun test` commands pass.
+- `make test`, `bun x biome check .`, and `bun run policy` pass.
 - Architecture layering (Go) and SPA (Vanilla) constraints are 100% respected.
 - No framework-based code is detected.
 - Audit mapping to `docs/audit.md` is resolved.
@@ -149,11 +147,10 @@ Return exactly the markdown template below. Replace `<STATUS>` with `PASS`, `**F
 
 ## 🛠️ Technical Metadata & Verification Gates
 ### ⚙️ Automated Gate Summary
-- <STATUS>: `make build-all` (exit=<code>, duration=<sec>)
-- <STATUS>: `make test` (Go Backend Integration/Unit)
-- <STATUS>: `bun test` (Vitest Shared Suite)
-- <STATUS>: `bun run policy` (Compliance & Policy Gate)
-- <STATUS>: `Biome Linting` (Static Analysis)
+- <STATUS>: `make build` (exit=<code>, duration=<sec>)
+- <STATUS>: `make test` (Go + Vitest + Playwright E2E umbrella)
+- <STATUS>: `bun x biome check .` (Static Analysis)
+- <STATUS>: `bun run policy` (Biome + Vitest frontend policy)
 
 ### ✅ Architectural Consistency Checks
 - <STATUS>: **Ticket Traceability**: Identified in tracker (<reason if false>)

@@ -5,7 +5,7 @@ This PR establishes the modern development foundation for the Real-Time Forum pr
 
 Key changes:
 - **Bun & Tooling Integration**: Installed Bun locally and configured it as the project's frontend runtime.
-- **Robust Makefile**: Refined the `Makefile` to handle circular dependencies in `make deps` (bootstrapping Bun via npm) and improved `stop-all` safety by targeting exact binary names using `pkill -x` and returning to `go run` for development.
+- **Robust Makefile**: Refined the `Makefile` to handle circular dependencies in `make deps` (bootstrapping Bun via npm) and improved `stop` safety by targeting exact binary names using `pkill -x` and returning to `go run` for development.
 - **Biome Configuration**: Set up Biome 2.x with strict correctness rules. Configured ignores for legacy directories to ensure a clean linting baseline.
 - **Vitest & Test Architecture**: Established a formal `Unit/Integration/E2E` testing structure in `AGENTS.md` and `SDS.md`. Initialized `web/tests/` and `web/SPA/` folder hierarchies with `.gitkeep` files.
 - **Regression Coverage**: Migrated existing frontend integration tests to `web/tests/integration/` and verified they execute correctly via the updated `make test-frontend` command (which now runs both Go and JS tests).
@@ -24,7 +24,7 @@ Key changes:
 
 ### Manual Verification
 - Verified `make deps` successfully bootstraps a fresh environment from an empty `node_modules`.
-- Verified `make run-all` and `make stop-all` reliably manage `go run` processes without leaving orphaned bindings.
+- Verified `make run` and `make stop` reliably manage `go run` processes without leaving orphaned bindings.
 - Verified that `make test-frontend` correctly executes both Go integration tests and the new Vitest suite in `web/tests/`.
 
 ## Diff Summary (from main)

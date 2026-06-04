@@ -1,6 +1,6 @@
 import { escapeHTML } from '../../core/utils/html.js';
 
-function formatCreatedAt(iso) {
+export function formatCreatedAt(iso) {
 	if (!iso) {
 		return '';
 	}
@@ -22,11 +22,11 @@ function formatCreatedAt(iso) {
 	return `${year}-${month}-${day}, ${String(hours).padStart(2, '0')}:${minutes} ${suffix}`;
 }
 
-function resolveUsername(post) {
+export function resolveUsername(post) {
 	return post.username || post.author || (post.user_id ? `User ${post.user_id}` : 'User');
 }
 
-function renderCategories(categories = []) {
+export function renderCategories(categories = []) {
 	if (!Array.isArray(categories) || categories.length === 0) {
 		return '';
 	}
@@ -70,7 +70,50 @@ function reactionTemplate(post) {
 	`;
 }
 
-export function renderPostCard(documentRef, post, { clickable = true, onNavigate = null } = {}) {
+function renderCommentPreview(comment) {
+	const body = typeof comment.body === 'string' ? comment.body.trim() : '';
+	const previewBody = body ? `<p class="comment-text">${escapeHTML(body)}</p>` : '';
+
+	return `
+		<article class="comment" data-comment-id="${escapeHTML(comment.id)}">
+			<div class="comment-meta muted">
+				<strong><a data-link class="profile-link" href="/profile/${escapeHTML(comment.author_id || comment.user_id || '')}">${escapeHTML(resolveUsername(comment))}</a></strong>
+				<span>${formatCreatedAt(comment.created_at)}</span>
+			</div>
+			<div class="comment-body">
+				${previewBody}
+			</div>
+		</article>
+	`;
+}
+
+function commentPreviewTemplate(previewComments = [], showCommentPreview = false) {
+	if (!showCommentPreview) {
+		return '';
+	}
+
+	if (!Array.isArray(previewComments) || previewComments.length === 0) {
+		return `
+			<section class="post-comments" data-comments-preview>
+				<p class="muted">No comments yet.</p>
+			</section>
+		`;
+	}
+
+	return `
+		<section class="post-comments" data-comments-preview>
+			<div class="comments comments-scroll">
+				${previewComments.map((comment) => renderCommentPreview(comment)).join('')}
+			</div>
+		</section>
+	`;
+}
+
+export function renderPostCard(
+	documentRef,
+	post,
+	{ clickable = true, onNavigate = null, previewComments = [], showCommentPreview = false } = {},
+) {
 	const article = documentRef.createElement('article');
 	article.className = 'post card card-pad';
 	article.dataset.postId = String(post.id);
@@ -96,7 +139,7 @@ export function renderPostCard(documentRef, post, { clickable = true, onNavigate
 			<div>
 				${renderCategories(post.categories)}
 				<h3 class="post-title">${escapeHTML(post.title)}</h3>
-				<p class="muted">Author: ${escapeHTML(resolveUsername(post))}</p>
+				<p class="muted">Author: <a data-link class="profile-link" href="/profile/${escapeHTML(post.author_id || post.user_id || '')}">${escapeHTML(resolveUsername(post))}</a></p>
 			</div>
 
 			<div class="post-header-right">
@@ -112,6 +155,8 @@ export function renderPostCard(documentRef, post, { clickable = true, onNavigate
 		<section class="post-actions">
 			${reactionTemplate(post)}
 		</section>
+
+		${commentPreviewTemplate(previewComments, showCommentPreview)}
 	`;
 
 	if (clickable) {
