@@ -89,6 +89,72 @@ describe('SPA Application Engine', () => {
 		}
 	});
 
+	test('authenticated boot starts notification polling', async () => {
+		const browser = createMockBrowser('/');
+		const notificationCenter = { start: vi.fn(), stop: vi.fn() };
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			notificationCenter,
+		});
+
+		await app.boot();
+
+		expect(notificationCenter.start).toHaveBeenCalledTimes(1);
+		expect(notificationCenter.stop).not.toHaveBeenCalled();
+	});
+
+	test('unauthenticated boot does not start notification polling', async () => {
+		const browser = createMockBrowser('/login');
+		const notificationCenter = { start: vi.fn(), stop: vi.fn() };
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: false, status: 401 })),
+			notificationCenter,
+		});
+
+		await app.boot();
+
+		expect(notificationCenter.start).not.toHaveBeenCalled();
+	});
+
+	test('logout stops notification polling', async () => {
+		const browser = createMockBrowser('/');
+		const notificationCenter = { start: vi.fn(), stop: vi.fn() };
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			notificationCenter,
+		});
+
+		await app.boot();
+		browser.clickLogout();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(notificationCenter.stop).toHaveBeenCalled();
+		expect(browser.windowRef.location.pathname).toBe('/login');
+	});
+
+	test('app stop tears down notification polling', async () => {
+		const browser = createMockBrowser('/');
+		const notificationCenter = { start: vi.fn(), stop: vi.fn() };
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			notificationCenter,
+		});
+
+		await app.boot();
+		app.stop();
+
+		expect(notificationCenter.stop).toHaveBeenCalled();
+	});
+
 	test('authenticated boot redirects public-only entry states into forum shell', async () => {
 		const browser = createMockBrowser('/register');
 		const app = createApp({

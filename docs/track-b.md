@@ -164,6 +164,40 @@ Work:
 - preserve mark-one-read and mark-all-as-read behavior
 - preserve notification click and deep-link navigation
 
+Implementation Notes:
+- added the SPA feature slice `SPA/features/notification/` with the
+  standard three-file separation:
+  - `notification.api.js` — REST client for
+    `GET /api/v1/notifications`, `PATCH /api/v1/notifications/{id}/read`,
+    and `PATCH /api/v1/notifications/read-all`; returns uniform
+    `{ ok, status, ... }` results
+  - `notification.views.js` — bell/badge/dropdown markup, item markup
+    (carrying `data-notification-{type,post-id,comment-id}` for
+    stateless destination resolution), and the message formatter
+  - `notification.page.js` — `createNotificationCenter` lifecycle
+    controller: 5s polling with duplicate-interval prevention, badge +
+    dropdown rendering, mark-one/mark-all, and click → mark-read →
+    SPA-router navigation
+- mounted the bell in the persistent authenticated shell
+  (`SPA/features/shell/shell.views.js`) so it survives client-side route
+  changes; only `.app-shell__outlet` is swapped on navigation
+- wired the polling lifecycle through `SPA/core/app/create-app.js`:
+  start after authenticated boot and after login `onSuccess`; stop on
+  logout, app teardown, and any `401`
+- preserved the existing notification API contracts — no backend changes
+- replaced legacy hard-reload navigation (`window.location.href` in
+  `web/static/js/notifications.js`) with SPA router navigation; clicking
+  a notification marks it read then routes to
+  `/posts/{id}?highlight={comment_id|last}` without a full reload
+- added SPA comment deep-link highlighting
+  (`SPA/features/post/comment-highlight.js` + `comment-highlight.css`),
+  resolving the legacy `#comment-{id}` selector to the SPA
+  `[data-comment-id]` markup and supporting `highlight=last`; called from
+  `initPostDetailPage` after comments render, with a retry loop for
+  async comment loading
+- toast and sound are intentionally out of scope for B06 (the legacy
+  `web/static/js/notifications.js` toast/sound path was not migrated)
+
 Verification Gate:
 - notification polling works from the SPA shell
 - unread badge/count behavior is preserved

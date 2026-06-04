@@ -1,5 +1,7 @@
 // SPA/features/shell/shell.views.js
 
+import { renderNotificationBell } from '../notification/notification.views.js';
+
 function renderAppNavigation() {
 	return `
 		<nav aria-label="Forum navigation">
@@ -21,6 +23,7 @@ export function renderAuthenticatedShell(content) {
 				</div>
 				${renderAppNavigation()}
 				<div class="app-shell__actions">
+					${renderNotificationBell()}
 					<button class="app-shell__logout" type="button" data-action="logout">Logout</button>
 				</div>
 			</header>
