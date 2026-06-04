@@ -26,10 +26,10 @@ func createTestUser(t *testing.T, dbConn *sql.DB, username string) (int64, strin
 		Username:  username,
 		Email:     email,
 		Password:  "password123",
-		Age:       20,
+		FirstName: "First",
+		LastName:  "Last",
+		Age:       25,
 		Gender:    "other",
-		FirstName: "Test",
-		LastName:  "User",
 	})
 	if err != nil {
 		t.Fatalf("create user: %v", err)

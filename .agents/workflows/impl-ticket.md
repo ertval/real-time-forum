@@ -56,7 +56,7 @@ You are an expert Senior Full-Stack Engineer tasked with implementing a specific
 > Once Step 2 has finished, **Step 3 and Step 4 must be executed in parallel from different agents with new contexts.**
 
 #### Step 3: Testing, QA & Verification (Agent A)
-- **Run QA Tests**: Execute `make test` and Vitest suites. Verify all gates are met. If tests fail, you **must** iterate until they pass.
+- **Run QA Tests**: Execute `make test` (includes Go, Vitest, and Playwright E2E) and `make verify-infra`. Verify all gates are met. If tests fail, you **must** iterate until they pass.
 - **Bug Workflow**: If you encounter a bug during implementation:
   1. Create a minimal test case that reproduces the bug.
   2. Implement the fix.

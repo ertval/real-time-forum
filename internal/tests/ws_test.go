@@ -64,6 +64,8 @@ func TestWebSocket_InvalidSession(t *testing.T) {
 ---------------------*/
 
 func TestWebSocket_ValidConnection(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -80,6 +82,8 @@ func TestWebSocket_ValidConnection(t *testing.T) {
 }
 
 func TestWebSocket_MultiTab(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 
@@ -102,6 +106,8 @@ func TestWebSocket_MultiTab(t *testing.T) {
 }
 
 func TestWebSocket_DisconnectCleansUp(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	h, db := newTestAPI(t)
 	defer db.Close()
 

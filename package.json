@@ -5,7 +5,7 @@
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
-		"dev": "make run-all",
+		"dev": "make run",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"lint": "biome check .",
@@ -20,6 +20,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.12",
+		"@playwright/test": "^1.59.1",
 		"vitest": "^3.0.7"
 	}
 }

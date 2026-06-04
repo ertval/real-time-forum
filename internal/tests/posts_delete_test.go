@@ -70,7 +70,7 @@ func TestAPIPostDelete_OnlyAuthorCanDelete(t *testing.T) {
 	})
 
 	// Register + login another user B
-	regBody := `{"username":"delete_other","email":"delete_other@example.com","password":"password123","age":20,"gender":"other","first_name":"Test","last_name":"User"}`
+	regBody := `{"username":"delete_other","email":"delete_other@example.com","password":"password123","first_name":"Delete","last_name":"Other","age":25,"gender":"other"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", bytes.NewBufferString(regBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
