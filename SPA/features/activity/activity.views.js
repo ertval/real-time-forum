@@ -2,6 +2,7 @@
 
 import { IMAGE_ACCEPT_ATTR } from '../../core/shared/utils.js';
 import { escapeHTML } from '../../core/utils/html.js';
+import { normalizeReactionState } from '../post/post.reactions.logic.js';
 import { formatCreatedAt, renderCategories, resolveUsername } from '../post/post-card.views.js';
 
 export function renderActivityView() {
@@ -130,8 +131,8 @@ function renderActivitySection({
 }
 
 function reactionPillsMarkup({ scope, refId, likeCount, dislikeCount, userReaction }) {
-	const liked = Number(userReaction) === 1;
-	const disliked = Number(userReaction) === -1;
+	const liked = userReaction === 'like';
+	const disliked = userReaction === 'dislike';
 	const dataAttr = scope === 'comment' ? 'data-comment-id' : 'data-post-id';
 
 	return `
@@ -204,11 +205,7 @@ function renderPostOwnerActions(postId, ownerStatus) {
 }
 
 function getReactionMetrics(item) {
-	return {
-		likeCount: Number(item.likes ?? item.likes_count) || 0,
-		dislikeCount: Number(item.dislikes ?? item.dislikes_count) || 0,
-		userReaction: Number(item.my_reaction ?? item.current_user_reaction ?? 0) || 0,
-	};
+	return normalizeReactionState(item);
 }
 
 export function renderActivityPostCard(post, { showOwnerActions = false } = {}) {

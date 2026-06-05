@@ -468,6 +468,7 @@ On application load:
 - fetch one post
 - fetch and render comments only in this route
 - comment creation remains here
+- post and comment reaction controls render in this route (see 7.4.2)
 
 ## 7.4.1 Activity Behavior
 
@@ -492,6 +493,37 @@ On application load:
   trigger an in-place `refresh()` instead of a document navigation
 - the standalone `web/templates/activity.html` template and
   `web/static/js/activity/*` scripts no longer exist
+
+## 7.4.2 Reaction Behavior
+
+- post and comment reactions are handled entirely inside the SPA by the
+  reaction engine in `SPA/features/post/` (`post.reactions.bindings.js`,
+  `post.reactions.logic.js`, `post.reactions.api.js`)
+- `initReactionBindings()` attaches one delegated `change` listener to
+  `document`; a module-level guard makes it idempotent, so the feed,
+  post-detail, and activity pages can each call it without producing
+  duplicate listeners
+- the listener is bound at the document level, so it survives SPA route
+  transitions and re-rendered comment lists without re-binding; there is
+  no `DOMContentLoaded` or standalone-template boot logic
+- reaction pill markup is shared by `renderPostReactions` /
+  `renderCommentReactions` (`post-card.views.js`) across the feed,
+  post-detail, and activity views
+- `normalizeReactionState()` reconciles both backend payload shapes —
+  list/detail (`likes` / `dislikes` / `my_reaction` int) and the reaction
+  POST response (`likes_count` / `dislikes_count` / `reaction`) — into a
+  canonical `{ likeCount, dislikeCount, userReaction }` so active state
+  and counts render uniformly
+- reaction scope is resolved by the `data-post-id` / `data-comment-id`
+  attribute rather than a fixed element tag, so the feed/activity
+  `<article data-post-id>` and the post-detail `<section data-post-id>`
+  both resolve; comment scope resolves via the `.comment` /
+  `.activity-comment` class
+- toggling posts to `POST /api/v1/posts/:id/{like,dislike}` or
+  `POST /api/v1/comments/:id/{like,dislike}`; the returned counts update
+  in place with no full page reload, and the optimistic checkbox flip is
+  reverted if the request fails or the user is unauthenticated
+- backend reaction contracts are unchanged
 
 ## 7.5 Chat UI Behavior
 
