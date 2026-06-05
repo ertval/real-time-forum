@@ -99,6 +99,32 @@ Authentication design:
 -   Server returns updated counts
 -   Frontend updates UI instantly
 
+### SPA reaction wiring (B07)
+
+The SPA reaction engine lives in `SPA/features/post/`:
+
+-   `post.reactions.bindings.js` — a single delegated `change` listener
+    attached to `document`, guarded by a module-level flag so it is bound
+    exactly once regardless of how many feature pages call
+    `initReactionBindings`. The listener survives SPA route changes (only
+    the shell outlet is swapped) and re-rendered comment lists without
+    re-binding.
+-   `post.reactions.logic.js` — pure helpers, including
+    `normalizeReactionState`, which reconciles the two backend payload
+    shapes: list/detail (`likes` / `dislikes` / `my_reaction` as an int)
+    and the reaction POST response (`likes_count` / `dislikes_count` /
+    `reaction`). It exposes a canonical
+    `{ likeCount, dislikeCount, userReaction }` so every view renders
+    counts and active state uniformly.
+-   `post.reactions.api.js` — the reaction POST client.
+
+Reaction pill markup is shared via `renderPostReactions` /
+`renderCommentReactions` (`post-card.views.js`) and reused by the feed,
+post-detail, and activity views. Scope resolution matches on the
+`data-post-id` / `data-comment-id` attribute (not a fixed tag), so the
+feed/activity `<article data-post-id>` and the post-detail
+`<section data-post-id>` both resolve correctly.
+
 ------------------------------------------------------------------------
 
 ## 6. Image Upload System

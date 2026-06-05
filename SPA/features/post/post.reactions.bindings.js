@@ -17,9 +17,15 @@ function getReactionButton(target) {
 }
 
 function getReactionScope(button, postId) {
-	return postId
-		? button.closest('article[data-post-id]')
-		: button.closest('.comment, .activity-comment');
+	if (!postId) {
+		return button.closest('.comment, .activity-comment');
+	}
+
+	// The reaction <input> itself carries data-post-id, so search from its parent
+	// to skip the input and find the container element. The feed and activity
+	// views use <article data-post-id> while the post-detail route uses
+	// <section data-post-id>, so match on the attribute rather than the tag.
+	return button.parentElement?.closest('[data-post-id]') ?? null;
 }
 
 function restoreReactionState(button, opposite, previousState, oppositePreviousState) {
@@ -90,7 +96,12 @@ export function initReactionBindings({
 	documentRef = typeof document !== 'undefined' ? document : null,
 	fetchRef = typeof fetch === 'function' ? fetch.bind(globalThis) : null,
 } = {}) {
-	if (reactionsInitialized || !documentRef || typeof fetchRef !== 'function') {
+	if (
+		reactionsInitialized ||
+		!documentRef ||
+		typeof documentRef.addEventListener !== 'function' ||
+		typeof fetchRef !== 'function'
+	) {
 		return;
 	}
 
