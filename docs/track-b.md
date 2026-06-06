@@ -231,11 +231,15 @@ Implementation Notes:
 - post-detail now renders post reactions (`post-detail.views.js`) and
   comment reactions (`post.page.js` comment markup), and wires
   `initReactionBindings` through `initPostDetailPage`
-- resolved the audited scope mismatch: reaction scope is matched on the
-  `data-post-id` / `data-comment-id` attribute (search starts from the
-  input's parent to skip the input, which also carries the id) rather
-  than a fixed `article` tag, so the feed/activity `<article>` and the
-  post-detail `<section data-post-id>` both resolve
+- resolved the audited scope mismatch: the reaction `<input>` carries no
+  id of its own, so the listener resolves the target from the container.
+  It reads the `.reactions` wrapper's `data-reaction-scope` hook
+  (`post` / `comment`), then `closest('[data-post-id]')` or
+  `closest('[data-comment-id]')` for the id — matching on the attribute
+  rather than a fixed `article` tag, so the feed/activity `<article>` and
+  the post-detail `<section data-post-id>` both resolve. Inputs no longer
+  reuse the container id, so `[data-post-id="N"]` selects exactly one
+  element on the detail page
 - the delegated listener survives SPA navigation and `reloadComments()`
   re-renders without re-binding or duplicate listeners; no
   `DOMContentLoaded` and no standalone-template boot logic
