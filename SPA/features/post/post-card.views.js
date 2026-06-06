@@ -44,12 +44,13 @@ export function renderCategories(categories = []) {
 }
 
 // Shared reaction pill markup for posts and comments. `scope` drives the
-// data-reaction-scope hook and selects the id attribute the delegated reaction
-// listener reads (data-post-id for posts, data-comment-id for comments).
+// data-reaction-scope hook the delegated reaction listener reads to resolve the
+// target id from the container element (data-post-id for posts, data-comment-id
+// for comments). The reaction <input> deliberately carries no id attribute of
+// its own so it never collides with the unique [data-post-id] container
+// selector the post-detail deep-link relies on.
 function renderReactions(item, scope) {
 	const { likeCount, dislikeCount, userReaction } = normalizeReactionState(item);
-	const idAttr = scope === 'comment' ? 'data-comment-id' : 'data-post-id';
-	const idMarkup = `${idAttr}="${escapeHTML(item.id)}"`;
 
 	return `
 		<div class="reactions" data-reaction-scope="${scope}">
@@ -57,7 +58,6 @@ function renderReactions(item, scope) {
 				<input
 					type="checkbox"
 					data-reaction="like"
-					${idMarkup}
 					${userReaction === 'like' ? 'checked' : ''}
 				/>
 				<span>Like</span>
@@ -68,7 +68,6 @@ function renderReactions(item, scope) {
 				<input
 					type="checkbox"
 					data-reaction="dislike"
-					${idMarkup}
 					${userReaction === 'dislike' ? 'checked' : ''}
 				/>
 				<span>Dislike</span>

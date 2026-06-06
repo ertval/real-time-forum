@@ -130,10 +130,14 @@ function renderActivitySection({
 	`;
 }
 
-function reactionPillsMarkup({ scope, refId, likeCount, dislikeCount, userReaction }) {
+// Reaction <input> elements carry no id attribute of their own; the delegated
+// listener resolves the target id from the [data-post-id]/[data-comment-id]
+// container via the data-reaction-scope hook. This keeps reaction inputs from
+// colliding with the unique [data-post-id] container selector. `refId` is
+// retained for signature symmetry with callers but is no longer emitted.
+function reactionPillsMarkup({ scope, likeCount, dislikeCount, userReaction }) {
 	const liked = userReaction === 'like';
 	const disliked = userReaction === 'dislike';
-	const dataAttr = scope === 'comment' ? 'data-comment-id' : 'data-post-id';
 
 	return `
 		<div class="reactions" data-reaction-scope="${escapeHTML(scope)}">
@@ -141,7 +145,6 @@ function reactionPillsMarkup({ scope, refId, likeCount, dislikeCount, userReacti
 				<input
 					type="checkbox"
 					data-reaction="like"
-					${dataAttr}="${escapeHTML(String(refId))}"
 					${liked ? 'checked' : ''}
 				/>
 				<span>Like</span>
@@ -152,7 +155,6 @@ function reactionPillsMarkup({ scope, refId, likeCount, dislikeCount, userReacti
 				<input
 					type="checkbox"
 					data-reaction="dislike"
-					${dataAttr}="${escapeHTML(String(refId))}"
 					${disliked ? 'checked' : ''}
 				/>
 				<span>Dislike</span>
@@ -254,7 +256,7 @@ export function renderActivityPostCard(post, { showOwnerActions = false } = {}) 
 			</section>
 
 			<section class="post-actions">
-				${reactionPillsMarkup({ scope: 'post', refId: postId, likeCount, dislikeCount, userReaction })}
+				${reactionPillsMarkup({ scope: 'post', likeCount, dislikeCount, userReaction })}
 			</section>
 		</article>
 	`;
@@ -343,7 +345,6 @@ export function renderActivityCommentEntry(comment) {
 				<div class="activity-comment-reactions comment">
 					${reactionPillsMarkup({
 						scope: 'comment',
-						refId: commentIdStr,
 						likeCount,
 						dislikeCount,
 						userReaction,
