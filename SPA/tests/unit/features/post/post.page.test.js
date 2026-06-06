@@ -353,11 +353,16 @@ class FakePostForm extends FakeHTMLFormElement {
 		return this.secondarySubmit ? [this.secondarySubmit, this.primarySubmit] : [this.primarySubmit];
 	}
 
-	async submit() {
+	async submit({ submitter } = {}) {
 		const handler = this.listeners.get('submit');
-		const event = { preventDefault: vi.fn() };
+		const event = { preventDefault: vi.fn(), submitter };
 		await handler(event);
 		return event;
+	}
+
+	async submitDraft() {
+		// Mirrors clicking the "Save Draft" button (name="action" value="draft").
+		return this.submit({ submitter: { value: 'draft' } });
 	}
 }
 
@@ -756,8 +761,90 @@ describe('initPostFormPage', () => {
 			categoryIds: [3],
 			imageFile: null,
 			imageURL: null,
+			status: 'published',
 		});
 		expect(navigate).toHaveBeenCalledWith('/posts/88');
+	});
+
+	test('saving a draft sends status=draft and navigates to activity inside the SPA', async () => {
+		const documentRef = createPostFormDocument('create-post');
+		const navigate = vi.fn();
+		const fetchRef = vi.fn();
+		const windowRef = { location: { pathname: '/create-post', search: '' } };
+
+		loadPostCategories.mockResolvedValue([{ id: 3, name: 'General' }]);
+		createPost.mockResolvedValue({
+			ok: true,
+			status: 201,
+			data: { id: 90 },
+			payload: { data: { id: 90 } },
+		});
+
+		await initPostFormPage({ windowRef, documentRef, fetchRef, navigate });
+		documentRef.root.form.titleInput.value = 'Work in progress';
+		documentRef.root.form.bodyInput.value = 'Not ready yet';
+		documentRef.root.form.categoryHost.labels[0].children[0].checked = true;
+
+		await documentRef.root.form.submitDraft();
+
+		expect(createPost).toHaveBeenCalledWith(fetchRef, {
+			title: 'Work in progress',
+			body: 'Not ready yet',
+			categoryIds: [3],
+			imageFile: null,
+			imageURL: null,
+			status: 'draft',
+		});
+		// Drafts live in Activity; navigation stays inside the SPA.
+		expect(navigate).toHaveBeenCalledWith('/activity');
+		expect(documentRef.root.form.feedback.textContent).toBe('Draft saved.');
+	});
+
+	test('saving a draft does not require a category', async () => {
+		const documentRef = createPostFormDocument('create-post');
+		const navigate = vi.fn();
+		const fetchRef = vi.fn();
+		const windowRef = { location: { pathname: '/create-post', search: '' } };
+
+		loadPostCategories.mockResolvedValue([{ id: 3, name: 'General' }]);
+		createPost.mockResolvedValue({
+			ok: true,
+			status: 201,
+			data: { id: 91 },
+			payload: { data: { id: 91 } },
+		});
+
+		await initPostFormPage({ windowRef, documentRef, fetchRef, navigate });
+		documentRef.root.form.titleInput.value = 'Just a title';
+		documentRef.root.form.bodyInput.value = 'Draft body';
+		// No category selected.
+
+		await documentRef.root.form.submitDraft();
+
+		expect(createPost).toHaveBeenCalledWith(
+			fetchRef,
+			expect.objectContaining({ status: 'draft', categoryIds: [] }),
+		);
+		expect(navigate).toHaveBeenCalledWith('/activity');
+	});
+
+	test('publishing still requires a category even though drafts do not', async () => {
+		const documentRef = createPostFormDocument('create-post');
+		const navigate = vi.fn();
+		const fetchRef = vi.fn();
+		const windowRef = { location: { pathname: '/create-post', search: '' } };
+
+		loadPostCategories.mockResolvedValue([{ id: 3, name: 'General' }]);
+
+		await initPostFormPage({ windowRef, documentRef, fetchRef, navigate });
+		documentRef.root.form.titleInput.value = 'Needs a category';
+		documentRef.root.form.bodyInput.value = 'Body present';
+		// No category selected → publish must be blocked.
+
+		await documentRef.root.form.submit();
+
+		expect(createPost).not.toHaveBeenCalled();
+		expect(documentRef.root.form.feedback.textContent).toBe('Select at least one category.');
 	});
 
 	test('submits update flow with remove_image after clearing persisted media', async () => {
