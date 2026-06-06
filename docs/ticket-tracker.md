@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `21`
+- Done: `27`
 - Partially Implemented: `0`
-- Not Started: `16`
+- Not Started: `10`
 
 ---
 
@@ -82,7 +82,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 12 | [x] | **B01** | B | Feed Route in the SPA | A03, A04, A05 | B02, B03, B06, B07 |
 | 13 | [x] | **B02** | B | Remove Feed Comment Rendering ([PR](pr-message/B02-Remove-Feed-Comment-Rendering-pr.md)) | B01 | D05 |
 | 14 | [x] | **B03** | B | Post Detail Route and Comment Flow ([PR](pr-message/B03-Post-Detail-Route-and-Comment-Flow-pr.md)) | B01 | D05, B06, B07 |
-| 15 | [ ] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
+| 15 | [x] | **B04** | B | Create and Edit Post SPA Flows | A04, A05 | D05, B08 |
 | 16 | [x] | **C02** | C | Private Messages Schema and Repository Layer | C10 | C03, C05, C06, C07 |
 
 ### Wave 3 — Real-Time Chat MVP (P2 + P3)
@@ -96,7 +96,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 19 | [x] | **C04** | C | Presence Broadcasting | C01 | C06, D04, C08 |
 | 20 | [x] | **C05** | C | Chat Roster API ([PR](pr-message/C05-Chat-Roster-API-pr.md)) | C02, C01 | D01, C08 |
 | 21 | [x] | **C06** | C | Realtime DM Send and Delivery ([PR](pr-message/C06-Realtime-DM-Send-and-Delivery-pr.md)) | C02, C01, C04 | D04, C08 |
-| 22 | [ ] | **D01** | D | Persistent Chat Roster UI | A04, C05 | D02, D04, D06 |
+| 22 | [x] | **D01** | D | Persistent Chat Roster UI ([PR](pr-message/D01-Persistent-Chat-Roster-UI-pr.md)) | A04, C05 | D02, D04, D06 |
 | 23 | [ ] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
 | 24 | [ ] | **D03** | D | Incremental History Loading | D02 | D06 |
 | 25 | [ ] | **D04** | D | Browser WebSocket Chat Integration | D09, A05, C01, C04, C06, D01, D02 | D06, D07 |
@@ -107,10 +107,10 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
-| 26 | [ ] | **B05** | B | Activity View in the SPA | A03, A04, A05 | D05, D07 |
-| 27 | [ ] | **B06** | B | Notification Behavior in the SPA | A04, B01, B03 | D05, D07 |
-| 28 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
-| 29 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
+| 26 | [x] | **B05** | B | Activity View in the SPA ([PR](pr-message/B05-Activity-View-in-the-SPA-pr.md)) | A03, A04, A05 | D05, D07 |
+| 27 | [x] | **B06** | B | Notification Behavior in the SPA ([PR](pr-message/B06-Notification-Behavior-in-the-SPA-pr.md)) | A04, B01, B03 | D05, D07 |
+| 28 | [x] | **B07** | B | Reaction Behavior in the SPA ([PR](pr-message/B07-Reaction-Behavior-in-the-SPA-pr.md)) | B01, B03 | D05, D07 |
+| 29 | [x] | **B08** | B | Draft Workflows in the SPA ([PR](pr-message/B08-Draft-Workflows-in-the-SPA-pr.md)) | B04 | D05, D07 |
 
 ### Wave 5 — Bonus Features (P5)
 
@@ -162,6 +162,24 @@ Completing **Waves 1–3** (tickets 1–25) delivers a fully functioning real-ti
 - **Comments isolated to post detail**: comment fetching no longer occurs in the feed and loads only from the post-detail initializer.
 - **Feed remains decoupled**: feed data flow stays post-only while preserving SPA navigation into post detail.
 - **Comment interactions preserved**: comment submission and comment image upload both work from the SPA post-detail screen.
+- **B05 — Activity in the SPA**: `/activity` is now a SPA feature slice
+  rendered inside the shared authenticated shell. The new module set
+  lives at `SPA/features/activity/` (`activity.api.js`,
+  `activity.views.js`, `activity.page.js`) and is wired through
+  `SPA/core/router/routes.js`, `SPA/core/router/render-template.js`, and
+  `SPA/core/app/create-app.js`. The legacy `web/templates/activity.html`
+  template and all `web/static/js/activity/*` scripts have been deleted.
+  Activity navigation and mutations (status toggle, delete post, edit
+  comment, delete comment) no longer rely on hard `window.location`
+  reloads — deep-link refresh, browser back/forward, and filter/pagination
+  state are all handled through SPA history APIs.
+- **Activity cleanup**: the orphaned legacy `web/static/css/activity.css` has
+  been deleted as part of B05 (it was not loaded by any template or the SPA
+  bundle).
+- **Create-post follow-up**: `web/static/js/create-post.js` still performs a
+  hard `window.location.href = '/activity'` navigation — a pre-existing B04
+  leak from the still-standalone create-post flow, tracked for the create-post
+  SPA migration.
 
 ---
 

@@ -1,4 +1,5 @@
 import { escapeHTML } from '../../core/utils/html.js';
+import { normalizeReactionState } from './post.reactions.logic.js';
 
 export function formatCreatedAt(iso) {
 	if (!iso) {
@@ -42,32 +43,46 @@ export function renderCategories(categories = []) {
 	`;
 }
 
-function reactionTemplate(post) {
+// Shared reaction pill markup for posts and comments. `scope` drives the
+// data-reaction-scope hook the delegated reaction listener reads to resolve the
+// target id from the container element (data-post-id for posts, data-comment-id
+// for comments). The reaction <input> deliberately carries no id attribute of
+// its own so it never collides with the unique [data-post-id] container
+// selector the post-detail deep-link relies on.
+function renderReactions(item, scope) {
+	const { likeCount, dislikeCount, userReaction } = normalizeReactionState(item);
+
 	return `
-		<div class="reactions" data-reaction-scope="post">
+		<div class="reactions" data-reaction-scope="${scope}">
 			<label class="reaction-pill">
 				<input
 					type="checkbox"
 					data-reaction="like"
-					data-post-id="${escapeHTML(post.id)}"
-					${post.current_user_reaction === 'like' ? 'checked' : ''}
+					${userReaction === 'like' ? 'checked' : ''}
 				/>
 				<span>Like</span>
-				<span data-like-count>${Number(post.likes_count ?? 0)}</span>
+				<span data-like-count>${likeCount}</span>
 			</label>
 
 			<label class="reaction-pill">
 				<input
 					type="checkbox"
 					data-reaction="dislike"
-					data-post-id="${escapeHTML(post.id)}"
-					${post.current_user_reaction === 'dislike' ? 'checked' : ''}
+					${userReaction === 'dislike' ? 'checked' : ''}
 				/>
 				<span>Dislike</span>
-				<span data-dislike-count>${Number(post.dislikes_count ?? 0)}</span>
+				<span data-dislike-count>${dislikeCount}</span>
 			</label>
 		</div>
 	`;
+}
+
+export function renderPostReactions(post) {
+	return renderReactions(post, 'post');
+}
+
+export function renderCommentReactions(comment) {
+	return renderReactions(comment, 'comment');
 }
 
 function renderCommentPreview(comment) {
@@ -153,7 +168,7 @@ export function renderPostCard(
 		</section>
 
 		<section class="post-actions">
-			${reactionTemplate(post)}
+			${renderPostReactions(post)}
 		</section>
 
 		${commentPreviewTemplate(previewComments, showCommentPreview)}
