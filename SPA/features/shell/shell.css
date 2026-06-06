@@ -13,23 +13,61 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: var(--space-md) var(--space-lg);
+	padding: 0.75rem var(--space-xl);
 	background: white;
 	border: 1px solid var(--border-light);
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-xl);
 	box-shadow: var(--shadow-sm);
 }
 
 .app-shell__brand {
+	display: flex;
+	align-items: center;
 	font-family: "Outfit", sans-serif;
 	font-weight: 700;
-	font-size: 1.25rem;
-	color: var(--bg-teal);
+	font-size: 1.45rem;
+	color: var(--text-primary);
+	letter-spacing: -0.02em;
 }
 
 .app-shell__brand-mark {
-	color: var(--accent-primary);
-	margin-right: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	background: var(--bg-teal);
+	border-radius: var(--radius-md);
+	color: white;
+	font-size: 1.15rem;
+	font-weight: 700;
+	margin-right: 8px;
+}
+
+/* Navigation Layout */
+.app-shell__header nav {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.app-shell__header nav span[aria-hidden="true"] {
+	display: none; /* Hide pipe separators visually */
+}
+
+.app-shell__header nav a {
+	font-family: "Outfit", sans-serif;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--text-secondary);
+	padding: 0.5rem 1rem;
+	border-radius: var(--radius-full);
+	transition: all var(--transition-fast);
+}
+
+.app-shell__header nav a:hover {
+	background: var(--accent-soft);
+	color: var(--accent-hover);
 }
 
 .app-shell__actions {
@@ -39,17 +77,22 @@
 }
 
 .app-shell__logout {
-	padding: 0.5rem 1rem;
+	padding: 0.5rem 1.15rem;
 	border: 1px solid var(--border-light);
-	background: var(--bg-secondary);
+	background: white;
 	border-radius: var(--radius-full);
+	font-family: "Outfit", sans-serif;
 	font-weight: 600;
+	font-size: 0.9rem;
+	color: var(--text-secondary);
 	cursor: pointer;
 	transition: var(--transition-fast);
 }
 
 .app-shell__logout:hover {
-	background: var(--border-light);
+	background: var(--bg-secondary);
+	color: var(--text-primary);
+	border-color: var(--text-muted);
 }
 
 .app-shell__layout {
@@ -61,41 +104,60 @@
 .app-shell__outlet {
 	background: white;
 	border: 1px solid var(--border-light);
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-xl);
 	padding: var(--space-xl);
 	min-height: 500px;
+	box-shadow: var(--shadow-sm);
 }
 
+/* Chat & Sidebar Panels */
 .chat-panel {
 	background: white;
 	border: 1px solid var(--border-light);
-	border-radius: var(--radius-lg);
-	padding: var(--space-md);
+	border-radius: var(--radius-xl);
+	padding: var(--space-lg);
+	box-shadow: var(--shadow-sm);
 }
 
 .chat-panel--stacked {
-	margin-top: 1rem;
+	margin-top: 1.25rem;
 }
 
 .chat-panel__title {
-	font-size: 0.875rem;
-	color: var(--text-muted);
+	font-family: "Outfit", sans-serif;
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	color: var(--accent-primary);
 	text-transform: uppercase;
 }
 
 .chat-panel__title--spaced {
-	margin-bottom: 1rem;
+	margin-bottom: 1.15rem;
 }
 
 .chat-panel__roster {
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
-	/* Fixed height with internal scroll so the roster box stays stable as rows
-	   load asynchronously or presence changes — the panel must not grow with its
-	   contents (that would shift the chat sidebar between routes). */
+	gap: 0.35rem;
 	height: 240px;
 	overflow-y: auto;
+	padding-right: 4px;
+}
+
+/* Custom Scrollbar for Chat Roster */
+.chat-panel__roster::-webkit-scrollbar {
+	width: 5px;
+}
+.chat-panel__roster::-webkit-scrollbar-track {
+	background: transparent;
+}
+.chat-panel__roster::-webkit-scrollbar-thumb {
+	background: var(--border-light);
+	border-radius: var(--radius-full);
+}
+.chat-panel__roster::-webkit-scrollbar-thumb:hover {
+	background: var(--text-muted);
 }
 
 .chat-panel__empty {
