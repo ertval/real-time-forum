@@ -1,8 +1,11 @@
 // SPA/core/app/create-app.js
 
+import { initActivityPage } from '../../features/activity/activity.page.js';
 import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
+import { initChatRoster } from '../../features/chat/chat.roster.page.js';
 import { initFeedPage } from '../../features/feed/feed.page.js';
-import { initPostDetailPage } from '../../features/post/post.page.js';
+import { createNotificationCenter } from '../../features/notification/notification.page.js';
+import { initPostDetailPage, initPostFormPage } from '../../features/post/post.page.js';
 import { initProfilePage } from '../../features/profile/profile.page.js';
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
 import { renderTemplate } from '../router/render-template.js';
@@ -98,6 +101,23 @@ export function createApp(options = {}) {
 		authShellOutlet: null,
 	};
 
+	const notificationCenter =
+		options.notificationCenter ??
+		createNotificationCenter({
+			windowRef,
+			documentRef,
+			fetchRef,
+			navigate: (path, navigationOptions) => navigate(path, navigationOptions),
+		});
+
+	function startNotifications() {
+		notificationCenter?.start?.();
+	}
+
+	function stopNotifications() {
+		notificationCenter?.stop?.();
+	}
+
 	function cacheAuthShellNodes() {
 		if (typeof mainContent.querySelector !== 'function') {
 			state.authShellRoot = null;
@@ -159,8 +179,17 @@ export function createApp(options = {}) {
 	}
 
 	function runRouteInitializer(match) {
+		if (match?.route?.access === 'protected') {
+			initChatRoster({ windowRef, documentRef, fetchRef });
+		}
+
 		if (match?.route?.id === 'feed') {
 			initFeedPage({ windowRef, documentRef, fetchRef });
+			return;
+		}
+
+		if (match?.route?.id === 'create-post' || match?.route?.id === 'edit-post') {
+			void initPostFormPage({ windowRef, documentRef, fetchRef, navigate });
 			return;
 		}
 
@@ -171,6 +200,11 @@ export function createApp(options = {}) {
 
 		if (match?.route?.id === 'post-detail') {
 			void initPostDetailPage({ windowRef, documentRef, fetchRef });
+			return;
+		}
+
+		if (match?.route?.id === 'activity') {
+			initActivityPage({ windowRef, documentRef, fetchRef });
 		}
 	}
 
@@ -244,6 +278,7 @@ export function createApp(options = {}) {
 		}
 
 		state.isAuthenticated = false;
+		stopNotifications();
 		goTo('/login', true);
 	}
 
@@ -291,6 +326,7 @@ export function createApp(options = {}) {
 			navigate,
 			onSuccess() {
 				state.isAuthenticated = true;
+				startNotifications();
 			},
 		});
 	}
@@ -305,6 +341,10 @@ export function createApp(options = {}) {
 
 		handleLocationChange();
 		hideLoadingOverlay(documentRef, setTimeoutRef);
+
+		if (state.isAuthenticated) {
+			startNotifications();
+		}
 	}
 
 	function start() {
@@ -318,6 +358,7 @@ export function createApp(options = {}) {
 		documentRef.removeEventListener('click', onDocumentClick);
 		documentRef.removeEventListener('submit', onDocumentSubmit);
 		windowRef.removeEventListener('popstate', onPopState);
+		stopNotifications();
 	}
 
 	return {

@@ -91,6 +91,11 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
+	/* Fixed height with internal scroll so the roster box stays stable as rows
+	   load asynchronously or presence changes — the panel must not grow with its
+	   contents (that would shift the chat sidebar between routes). */
+	height: 240px;
+	overflow-y: auto;
 }
 
 .chat-panel__empty {

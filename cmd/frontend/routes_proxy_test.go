@@ -17,6 +17,8 @@ import (
 // TestAPIProxyPreservesPathAndCookie verifies that the REST proxy still forwards
 // the original request path and session cookie to the backend unchanged.
 func TestAPIProxyPreservesPathAndCookie(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	originalBackendURL := backendBaseURL
 	defer func() {
 		backendBaseURL = originalBackendURL
@@ -59,6 +61,8 @@ func TestAPIProxyPreservesPathAndCookie(t *testing.T) {
 // that the frontend can proxy a WebSocket upgrade request to /ws without
 // dropping the session cookie used for backend authentication.
 func TestWebSocketProxyPreservesPathAndCookie(t *testing.T) {
+	requireLocalTCPListener(t)
+
 	originalBackendURL := backendBaseURL
 	defer func() {
 		backendBaseURL = originalBackendURL
