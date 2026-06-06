@@ -39,13 +39,16 @@ contracts are reused unchanged.
   after the detail view mounts, reusing the existing engine — no second engine.
 - **Scope-selector mismatch resolved**: the audit flagged that the reaction
   listener resolved post scope via `button.closest('article[data-post-id]')`,
-  but the post-detail root is `<section data-post-id>`. Post scope now matches on
-  the attribute (`[data-post-id]`) rather than a fixed `article` tag
-  (`post.reactions.bindings.js`), and the search starts from
-  `button.parentElement` to skip the reaction `<input>` (which also carries the
-  id). The feed/activity `<article data-post-id>` and the post-detail
-  `<section data-post-id>` both resolve; comment scope continues to resolve via
-  the `.comment` / `.activity-comment` class.
+  but the post-detail root is `<section data-post-id>`. The reaction `<input>`
+  no longer carries `data-post-id` / `data-comment-id` of its own, so it can
+  never collide with the unique `[data-post-id]` container selector
+  (`[data-post-id="N"]` now selects exactly one element on the detail page).
+  Instead, `resolveReactionTarget` (`post.reactions.bindings.js`) reads the
+  `.reactions` wrapper's `data-reaction-scope` hook (`post` / `comment`), then
+  resolves the id from the nearest container via `closest('[data-post-id]')`
+  or `closest('[data-comment-id]')`. Matching on the attribute rather than a
+  fixed `article` tag, the feed/activity `<article data-post-id>` and the
+  post-detail `<section data-post-id>` both resolve.
 
 ### 3. Backend / API Compatibility
 - **Backend Contracts Preserved**: Existing reaction endpoints
