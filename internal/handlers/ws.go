@@ -2,8 +2,11 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -19,6 +22,11 @@ var upgrader = websocket.Upgrader{
 		return true
 	},
 }
+
+// dmDBTimeout caps every DB call made on behalf of an inbound dm.send so a
+// slow query cannot pin a goroutine indefinitely. The number is generous
+// relative to a healthy local SQLite roundtrip; tune if real workloads need it.
+const dmDBTimeout = 5 * time.Second
 
 type WsHandler struct {
 	db  *sql.DB
@@ -55,6 +63,13 @@ func (h *WsHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	client, firstConnection := h.hub.Add(session.UserID, conn)
 
+	// Cache the sender's username on the client so dm.send does not need to
+	// query the users table per outbound message. Best-effort: on lookup
+	// failure the field stays "" and handleDMSend falls back to "unknown".
+	if users, err := db.GetUsersByIDs(r.Context(), h.db, []int64{session.UserID}); err == nil && len(users) > 0 {
+		client.Username = users[0].Username
+	}
+
 	// Enqueue presence messages before starting goroutines. The Send channel is
 	// buffered so this is safe. Doing it here — rather than after launching
 	// readPump — eliminates a race where readPump's defer (Remove + offline
@@ -90,9 +105,29 @@ func (h *WsHandler) readPump(userID int64, c *ws.Client) {
 		return nil
 	})
 
+	// Frame dispatch is intentionally synchronous: one goroutine per connection
+	// reads, validates, persists, and emits in order. This gives us
+	// per-connection ordering for free and keeps the DB write path off the
+	// hot read loop's critical section. Do NOT change this to `go h.handle…`
+	// without also adding ordering and rate-limiting guards.
 	for {
-		if _, _, err := c.Conn.ReadMessage(); err != nil {
+		_, raw, err := c.Conn.ReadMessage()
+		if err != nil {
 			break
+		}
+		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+
+		var msg ws.WSMessage
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			// Malformed frame: drop silently. We have no `type` to attribute
+			// the error to and no contract for a generic protocol error. The
+			// connection stays open — a buggy client can recover on its own.
+			continue
+		}
+
+		switch msg.Type {
+		case "dm.send":
+			h.handleDMSend(userID, c, msg.Payload)
 		}
 	}
 }
@@ -125,4 +160,141 @@ func (h *WsHandler) writePump(c *ws.Client) {
 			}
 		}
 	}
+}
+
+/*--------------------------
+  dm.send wire types
+--------------------------*/
+
+type dmSendPayload struct {
+	RecipientID int64  `json:"recipient_id"`
+	Body        string `json:"body"`
+}
+
+// dmMessagePayload is the typed wire shape for the `dm.message` server event.
+// Tagged so marshalling is guaranteed-correct against SDS § 5.5 without
+// relying on map ordering or untyped any-values.
+type dmMessagePayload struct {
+	ID             int64  `json:"id"`
+	SenderID       int64  `json:"sender_id"`
+	RecipientID    int64  `json:"recipient_id"`
+	SenderUsername string `json:"sender_username"`
+	Body           string `json:"body"`
+	CreatedAt      string `json:"created_at"`
+}
+
+// chatErrorPayload is the typed wire shape for the `chat.error` server event.
+type chatErrorPayload struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// Canonical chat.error codes. The SDS shows `RECIPIENT_OFFLINE` as the
+// example; the rest are project conventions documented here as the single
+// source of truth for the dm.send rejection contract.
+const (
+	codeInvalidPayload   = "INVALID_PAYLOAD"
+	codeInvalidRecipient = "INVALID_RECIPIENT"
+	codeSelfSend         = "SELF_SEND"
+	codeEmptyBody        = "EMPTY_BODY"
+	codeRecipientOffline = "RECIPIENT_OFFLINE"
+	codeInternalError    = "INTERNAL_ERROR"
+)
+
+// handleDMSend processes a client dm.send event:
+//  1. Validate payload (parseable, recipient present, non-self, non-empty body).
+//  2. Reject if recipient is offline → chat.error RECIPIENT_OFFLINE.
+//     NOTE: there is an unavoidable TOCTOU window between IsUserOnline and
+//     SendToUser — the recipient may disconnect after the check. The message
+//     is still persisted; the recipient picks it up via the REST history API
+//     on reconnect. This matches SDS § 6.1 ("reject recipient if offline" is
+//     a check, not a transactional guarantee).
+//  3. Persist via db.CreateMessage.
+//  4. Emit dm.message to sender and recipient.
+//
+// Self-send is also rejected at the db layer via db.CreateMessage; the
+// handler-layer check exists so the wire error has a precise code instead
+// of leaking the repository's free-form error string.
+func (h *WsHandler) handleDMSend(senderID int64, senderClient *ws.Client, payload json.RawMessage) {
+	var p dmSendPayload
+	if err := json.Unmarshal(payload, &p); err != nil {
+		h.sendChatError(senderClient, codeInvalidPayload, "invalid dm.send payload")
+		return
+	}
+	if p.RecipientID == 0 {
+		h.sendChatError(senderClient, codeInvalidRecipient, "recipient_id is required")
+		return
+	}
+	if p.RecipientID == senderID {
+		h.sendChatError(senderClient, codeSelfSend, "cannot send a message to yourself")
+		return
+	}
+	if strings.TrimSpace(p.Body) == "" {
+		h.sendChatError(senderClient, codeEmptyBody, "message body cannot be empty")
+		return
+	}
+	if !h.hub.IsUserOnline(p.RecipientID) {
+		h.sendChatError(senderClient, codeRecipientOffline, "recipient is offline")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), dmDBTimeout)
+	defer cancel()
+
+	msg, err := db.CreateMessage(ctx, h.db, db.CreateMessageRequest{
+		SenderID:    senderID,
+		RecipientID: p.RecipientID,
+		Body:        p.Body,
+	})
+	if err != nil {
+		// Surface a generic code; never echo the DB error string to the wire.
+		h.sendChatError(senderClient, codeInternalError, "failed to send message")
+		return
+	}
+
+	senderUsername := senderClient.Username
+	if senderUsername == "" {
+		senderUsername = "unknown"
+	}
+
+	data := marshalEvent("dm.message", dmMessagePayload{
+		ID:             msg.ID,
+		SenderID:       msg.SenderID,
+		RecipientID:    msg.RecipientID,
+		SenderUsername: senderUsername,
+		Body:           msg.Body,
+		CreatedAt:      msg.CreatedAt,
+	})
+
+	// Deliver to both parties. SendToUser returns ErrUserOffline if the
+	// recipient raced us to disconnect; that is fine — the message is in the
+	// DB and they will see it on reconnect via the history API.
+	h.hub.SendToUser(senderID, data)
+	h.hub.SendToUser(p.RecipientID, data)
+}
+
+// sendChatError enqueues a chat.error event on the sender's connection only.
+// The send is non-blocking — a saturated client buffer drops the error rather
+// than blocking the read pump. Same policy as Hub broadcasts.
+func (h *WsHandler) sendChatError(c *ws.Client, code, message string) {
+	data := marshalEvent("chat.error", chatErrorPayload{
+		Code:    code,
+		Message: message,
+	})
+	select {
+	case c.Send <- data:
+	default:
+	}
+}
+
+// marshalEvent serializes a typed payload into a WSMessage envelope.
+// json.Marshal of a typed struct with primitive fields cannot fail; the
+// returned errors are intentionally discarded.
+func marshalEvent(eventType string, payload any) []byte {
+	rawPayload, _ := json.Marshal(payload)
+	envelope, _ := json.Marshal(ws.WSMessage{
+		Type:    eventType,
+		Payload: rawPayload,
+	})
+	return envelope
 }
