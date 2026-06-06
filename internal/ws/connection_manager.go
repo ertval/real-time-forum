@@ -11,9 +11,12 @@ import (
 
 // client wraps a websocket connection with a dedicated send channel so that
 // all writes to the connection are serialized through a single goroutine.
+// Username is resolved once at upgrade time and reused for every outbound
+// dm.message — avoids a DB round-trip per send on the chat hot path.
 type Client struct {
-	Conn *websocket.Conn
-	Send chan []byte
+	Conn     *websocket.Conn
+	Send     chan []byte
+	Username string
 }
 
 func NewClient(conn *websocket.Conn) *Client {
