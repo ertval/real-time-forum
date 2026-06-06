@@ -68,17 +68,23 @@ class FakeNode extends Element {
 	}
 }
 
-// Builds a post-reaction fixture rooted at a container with data-post-id.
-// `rootTag` lets us exercise both <article data-post-id> (feed/activity) and
+// Builds a post-reaction fixture mirroring the real SPA markup: a container
+// carrying data-post-id wraps a .reactions[data-reaction-scope="post"] element,
+// which holds the reaction inputs. The inputs carry NO id of their own — the
+// listener resolves the post id from the container via the data-reaction-scope
+// hook. `rootTag` exercises both <article data-post-id> (feed/activity) and
 // <section data-post-id> (post detail).
 function buildPostFixture({ rootTag = 'article', initialReaction = '' } = {}) {
 	const root = new FakeNode({ tag: rootTag, className: 'post', dataset: { postId: '42' } });
-
-	const likeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'like', postId: '42' } });
-	const dislikeInput = new FakeNode({
-		tag: 'input',
-		dataset: { reaction: 'dislike', postId: '42' },
+	const reactions = new FakeNode({
+		tag: 'div',
+		className: 'reactions',
+		dataset: { reactionScope: 'post' },
 	});
+	root.append(reactions);
+
+	const likeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'like' } });
+	const dislikeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'dislike' } });
 	likeInput.checked = initialReaction === 'like';
 	dislikeInput.checked = initialReaction === 'dislike';
 
@@ -86,8 +92,8 @@ function buildPostFixture({ rootTag = 'article', initialReaction = '' } = {}) {
 	const dislikeLabel = new FakeNode({ tag: 'label' });
 	likeLabel.append(likeInput);
 	dislikeLabel.append(dislikeInput);
-	root.append(likeLabel);
-	root.append(dislikeLabel);
+	reactions.append(likeLabel);
+	reactions.append(dislikeLabel);
 
 	const likeCount = new FakeNode({ tag: 'span', dataset: { likeCount: '' } });
 	const dislikeCount = new FakeNode({ tag: 'span', dataset: { dislikeCount: '' } });
@@ -99,18 +105,22 @@ function buildPostFixture({ rootTag = 'article', initialReaction = '' } = {}) {
 	return { root, likeInput, dislikeInput, likeCount, dislikeCount };
 }
 
-// Builds a comment-reaction fixture rooted at <article class="comment"
-// data-comment-id>, mirroring the post-detail comment markup. Comment inputs
-// carry data-comment-id (no data-post-id), so the listener resolves scope via
-// the `.comment` class selector.
+// Builds a comment-reaction fixture mirroring the post-detail comment markup:
+// an <article class="comment" data-comment-id> container wraps a
+// .reactions[data-reaction-scope="comment"] element holding the inputs. The
+// inputs carry no id; the listener resolves the comment id from the container
+// via the data-reaction-scope hook.
 function buildCommentFixture({ initialReaction = '' } = {}) {
 	const root = new FakeNode({ tag: 'article', className: 'comment', dataset: { commentId: '7' } });
-
-	const likeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'like', commentId: '7' } });
-	const dislikeInput = new FakeNode({
-		tag: 'input',
-		dataset: { reaction: 'dislike', commentId: '7' },
+	const reactions = new FakeNode({
+		tag: 'div',
+		className: 'reactions',
+		dataset: { reactionScope: 'comment' },
 	});
+	root.append(reactions);
+
+	const likeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'like' } });
+	const dislikeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'dislike' } });
 	likeInput.checked = initialReaction === 'like';
 	dislikeInput.checked = initialReaction === 'dislike';
 
@@ -118,8 +128,8 @@ function buildCommentFixture({ initialReaction = '' } = {}) {
 	const dislikeLabel = new FakeNode({ tag: 'label' });
 	likeLabel.append(likeInput);
 	dislikeLabel.append(dislikeInput);
-	root.append(likeLabel);
-	root.append(dislikeLabel);
+	reactions.append(likeLabel);
+	reactions.append(dislikeLabel);
 
 	const likeCount = new FakeNode({ tag: 'span', dataset: { likeCount: '' } });
 	const dislikeCount = new FakeNode({ tag: 'span', dataset: { dislikeCount: '' } });

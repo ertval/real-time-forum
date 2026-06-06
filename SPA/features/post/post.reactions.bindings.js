@@ -16,16 +16,24 @@ function getReactionButton(target) {
 	return target.closest('[data-reaction]');
 }
 
-function getReactionScope(button, postId) {
-	if (!postId) {
-		return button.closest('.comment, .activity-comment');
+// Resolves the reaction target from the container element rather than the
+// <input>. The reaction inputs intentionally carry no id attribute (so they
+// never collide with the unique [data-post-id] container selector), so the id
+// is read from the nearest [data-post-id]/[data-comment-id] ancestor. The
+// .reactions wrapper's data-reaction-scope hook picks which container to find:
+// posts live under [data-post-id] (<article> in the feed/activity, <section> on
+// the detail route), comments under .comment / .activity-comment.
+function resolveReactionTarget(button) {
+	const wrapper = button.closest('[data-reaction-scope]');
+	const scope = wrapper?.dataset.reactionScope;
+
+	if (scope === 'comment') {
+		const container = button.closest('[data-comment-id]');
+		return { container, postId: null, commentId: container?.dataset.commentId ?? null };
 	}
 
-	// The reaction <input> itself carries data-post-id, so search from its parent
-	// to skip the input and find the container element. The feed and activity
-	// views use <article data-post-id> while the post-detail route uses
-	// <section data-post-id>, so match on the attribute rather than the tag.
-	return button.parentElement?.closest('[data-post-id]') ?? null;
+	const container = button.closest('[data-post-id]');
+	return { container, postId: container?.dataset.postId ?? null, commentId: null };
 }
 
 function restoreReactionState(button, opposite, previousState, oppositePreviousState) {
@@ -58,15 +66,16 @@ async function handleReactionChange(fetchRef, event) {
 	event.stopPropagation();
 
 	const previousState = !button.checked;
-	const reaction = getReactionRequest({
-		type: button.dataset.reaction,
-		postId: button.dataset.postId,
-		commentId: button.dataset.commentId,
-	});
-	const scope = getReactionScope(button, reaction.postId);
+	const { container: scope, postId, commentId } = resolveReactionTarget(button);
 	if (!scope) {
 		return;
 	}
+
+	const reaction = getReactionRequest({
+		type: button.dataset.reaction,
+		postId,
+		commentId,
+	});
 
 	const oppositeType = getOppositeReactionType(reaction.type);
 	const opposite = scope.querySelector(`input[data-reaction="${oppositeType}"]`);
