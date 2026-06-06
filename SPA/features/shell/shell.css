@@ -71,6 +71,9 @@
 	border: 1px solid var(--border-light);
 	border-radius: var(--radius-lg);
 	padding: var(--space-md);
+	height: 320px;
+	display: flex;
+	flex-direction: column;
 }
 
 .chat-panel--stacked {
@@ -91,6 +94,8 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
+	overflow-y: auto;
+	flex: 1;
 }
 
 .chat-panel__empty {
@@ -99,7 +104,7 @@
 }
 
 .chat-panel__active-empty {
-	height: 200px;
+	flex: 1;
 	display: flex;
 	align-items: center;
 	justify-content: center;
