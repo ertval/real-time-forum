@@ -291,4 +291,3 @@ Implementation Notes:
 - coverage: `post.page.test.js` asserts a draft submit sends `status="draft"` and
   navigates to `/activity`, a normal submit sends `status="published"`, drafts
   skip the category requirement, and publish still enforces it.
-- audit: PASS — see `docs/audit-reports/pr-audit-chbaikas-B08.md`.

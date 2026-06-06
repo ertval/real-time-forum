@@ -171,6 +171,23 @@ When an image is attached to a DM:
 - Logout remains `POST /api/v1/users/logout`.
 - `GET /api/v1/users/me` remains the bootstrap auth-check endpoint for the SPA.
 
+## 5.1.1 Post Create Request Body
+
+`POST /api/v1/posts` accepts:
+
+```json
+{
+  "title": "string (required)",
+  "content": "string (required)",
+  "category_ids": [1, 2],
+  "status": "draft | published"
+}
+```
+
+- `status` defaults to `"published"` when omitted.
+- `"draft"` posts skip the category requirement; `"published"` posts require at least one category.
+- A draft can be promoted to published via `PATCH /api/v1/posts/{id}` with `{"status": "published"}`.
+
 ## 5.2 Registration Payload
 
 Request:
