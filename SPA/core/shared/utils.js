@@ -38,11 +38,16 @@ export function buildPostMultipartFormData({
 	manual,
 	imageURL = null,
 	removeImage = false,
+	status = null,
 } = {}) {
 	const formData = new FormData();
 
 	formData.append('title', title);
 	formData.append('body', body);
+
+	if (typeof status === 'string' && status) {
+		formData.append('status', status);
+	}
 
 	for (const id of categoryIds) {
 		formData.append('category_ids', String(id));

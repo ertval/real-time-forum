@@ -269,3 +269,26 @@ Verification Gate:
 - saving a draft still works from the SPA create-post view
 - draft editing and publish flows still work
 - draft entry points no longer leave the SPA
+
+Implementation Notes:
+- the create-post "Save Draft" button (`name="action" value="draft"`) is now
+  wired: the form submit handler reads `event.submitter` and, in create mode,
+  treats a `draft` submitter as a draft save (`post.page.js`). A keyboard submit
+  has no submitter and defaults to a normal publish.
+- `createPost` (`post.api.js`) takes an optional `status` and forwards it on both
+  the JSON and multipart paths (`buildPostMultipartFormData` in
+  `core/shared/utils.js` appends a `status` field); the status is only sent when
+  explicitly `draft`/`published`, so existing callers default to the backend's
+  `published`. Draft creation reuses `POST /api/v1/posts` with `status="draft"`
+  — no backend changes, and the `/api/v1/posts/draft` endpoints are intentionally
+  left unused.
+- draft validation is relaxed to match the backend: a draft requires a title and
+  body-or-image but not a category (publish still requires a category).
+- on a successful draft save the SPA shows "Draft saved." and navigates to
+  `/activity` (where drafts are listed) via the in-SPA router — no full reload.
+- publish stays in the existing Activity owner toggle
+  (`PATCH /api/v1/posts/{id}` with `status="published"`); edit-post is unchanged.
+- coverage: `post.page.test.js` asserts a draft submit sends `status="draft"` and
+  navigates to `/activity`, a normal submit sends `status="published"`, drafts
+  skip the category requirement, and publish still enforces it.
+- audit: PASS — see `docs/audit-reports/pr-audit-chbaikas-B08.md`.

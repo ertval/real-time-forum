@@ -116,9 +116,19 @@ export async function getPostComments(fetchRef, postId) {
 
 export async function createPost(
 	fetchRef,
-	{ title = '', body = '', categoryIds = [], imageFile = null, imageURL = null } = {},
+	{
+		title = '',
+		body = '',
+		categoryIds = [],
+		imageFile = null,
+		imageURL = null,
+		status = null,
+	} = {},
 ) {
 	const normalizedCategoryIDs = normalizeCategoryIDs(categoryIds);
+	// Only send a status when the caller explicitly asks for one (e.g. a draft
+	// save). Omitting it lets the backend apply its default ("published").
+	const normalizedStatus = status === 'draft' || status === 'published' ? status : null;
 
 	return performRequest(
 		fetchRef,
@@ -133,12 +143,14 @@ export async function createPost(
 					categoryIds: normalizedCategoryIDs,
 					imageFile: file,
 					imageURL,
+					status: normalizedStatus,
 				}),
 			jsonBody: {
 				title,
 				body,
 				image_url: imageURL,
 				category_ids: normalizedCategoryIDs,
+				...(normalizedStatus ? { status: normalizedStatus } : {}),
 			},
 			multipartHeaders: { Accept: 'application/json' },
 			jsonHeaders: { Accept: 'application/json' },
