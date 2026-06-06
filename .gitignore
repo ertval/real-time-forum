@@ -14,6 +14,7 @@ forum-frontend
 *.out
 debug
 debug.test
+.tmp
 
 # Node / JS / Bun
 node_modules/
