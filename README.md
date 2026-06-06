@@ -68,7 +68,7 @@ Check the [Ticket Tracker](docs/ticket-tracker.md) for detailed progress.
 | Path | Purpose |
 |:--- |:--- |
 | `cmd/` | Server entry points (Backend: 8080, Frontend: 3000) |
-| `SPA/` | **The Frontend Core** — Vertical slices for Auth, Feed, Chat |
+| `SPA/` | **The Frontend Core** — Vertical slices for Auth, Feed, Post, Activity, Profile, Shell, Chat |
 | `internal/` | Business logic, persistence, and request handlers |
 | `web/` | Historical assets, static uploads, and startup guards |
 | `data/` | Persistent SQLite storage |

@@ -66,6 +66,7 @@ Characteristics:
 - No frontend framework (React, Vue, etc.)
 - Modular ES modules
 - Feature slices are implemented for auth, feed, post, activity, shell, and profile routes
+- Each feature slice follows the `{feature}.api.js` / `{feature}.views.js` / `{feature}.page.js` separation (API client, view markup, page/controller lifecycle)
 - Chat and messaging areas are in active development
 - Client-side Routing
 - Vitest for testing suite (Unit, Integration, E2E)
@@ -98,6 +99,32 @@ Authentication design:
 -   Server returns updated counts
 -   Frontend updates UI instantly
 
+### SPA reaction wiring (B07)
+
+The SPA reaction engine lives in `SPA/features/post/`:
+
+-   `post.reactions.bindings.js` — a single delegated `change` listener
+    attached to `document`, guarded by a module-level flag so it is bound
+    exactly once regardless of how many feature pages call
+    `initReactionBindings`. The listener survives SPA route changes (only
+    the shell outlet is swapped) and re-rendered comment lists without
+    re-binding.
+-   `post.reactions.logic.js` — pure helpers, including
+    `normalizeReactionState`, which reconciles the two backend payload
+    shapes: list/detail (`likes` / `dislikes` / `my_reaction` as an int)
+    and the reaction POST response (`likes_count` / `dislikes_count` /
+    `reaction`). It exposes a canonical
+    `{ likeCount, dislikeCount, userReaction }` so every view renders
+    counts and active state uniformly.
+-   `post.reactions.api.js` — the reaction POST client.
+
+Reaction pill markup is shared via `renderPostReactions` /
+`renderCommentReactions` (`post-card.views.js`) and reused by the feed,
+post-detail, and activity views. Scope resolution matches on the
+`data-post-id` / `data-comment-id` attribute (not a fixed tag), so the
+feed/activity `<article data-post-id>` and the post-detail
+`<section data-post-id>` both resolve correctly.
+
 ------------------------------------------------------------------------
 
 ## 6. Image Upload System
@@ -121,24 +148,69 @@ Notifications triggered on:
 Architecture:
 
 -   notifications table
--   Polling mechanism (frontend)
--   Badge counter
--   Dropdown panel
--   Sound feedback
--   Mark-as-read endpoints
+-   Mark-as-read endpoints (`GET /api/v1/notifications`,
+    `PATCH /api/v1/notifications/{id}/read`,
+    `PATCH /api/v1/notifications/read-all`)
+
+Frontend (SPA feature slice `SPA/features/notification/`, mounted in the
+persistent authenticated shell):
+
+-   5s polling lifecycle started after authenticated boot/login and
+    stopped on logout or `401` (no duplicate intervals; survives
+    client-side route changes)
+-   unread badge counter and dropdown panel
+-   mark-one-read / mark-all-read with optimistic update reconciled by
+    the next poll
+-   click → mark-read → SPA-router navigation to
+    `/posts/{id}?highlight={comment_id|last}` (no full page reload),
+    with comment deep-link highlighting on the post detail view
+
+> Toast and sound feedback from the legacy notification UI are not part
+> of the SPA notification slice (out of scope for the B06 migration).
 
 ------------------------------------------------------------------------
 
 ## 8. My Activity Dashboard
 
-Aggregates:
+The Activity view is a SPA feature slice mounted at `/activity` inside the
+shared authenticated shell. It aggregates the user's forum activity in
+collapsible sections:
 
--   User posts
--   User comments
--   Reactions received
--   Notifications
+-   created posts (with owner-only status toggle, edit, delete actions)
+-   authored comments (with inline edit and delete)
+-   liked posts
+-   disliked posts
 
-Provides centralized user activity tracking and navigation.
+Implementation:
+
+-   `SPA/features/activity/activity.api.js` — REST client, query-state
+    helpers, and post/comment mutation calls
+-   `SPA/features/activity/activity.views.js` — view markup
+    (sections, post cards, comment entries, inline comment editor)
+-   `SPA/features/activity/activity.page.js` — page controller
+    (filters, pagination, owner/comment action dispatch, inline edit
+    lifecycle)
+
+Lifecycle:
+
+-   The SPA router matches `/activity` ([SPA/core/router/routes.js](SPA/core/router/routes.js))
+    and renders `renderActivityView()` into the shell outlet via
+    `renderTemplate` ([SPA/core/router/render-template.js](SPA/core/router/render-template.js))
+-   `runRouteInitializer` in
+    [SPA/core/app/create-app.js](SPA/core/app/create-app.js) invokes
+    `initActivityPage()` once the activity markup is mounted
+-   Filter changes (status, items-per-section) call
+    `history.replaceState`; pagination updates use SPA history APIs;
+    activity mutations re-fetch through `refresh()` instead of triggering
+    a full document reload
+
+Navigation:
+
+-   `/activity` is reached through SPA route transitions (e.g. the shell
+    nav `<a data-link href="/activity">`)
+-   Deep-link refresh on `/activity` is served by the SPA shell catch-all
+    in `cmd/frontend`
+-   Browser back/forward replays `popstate` through the SPA router
 
 ------------------------------------------------------------------------
 
