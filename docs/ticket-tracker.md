@@ -109,7 +109,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 |---|--------|--------|-------|-------------|------------|--------|
 | 26 | [x] | **B05** | B | Activity View in the SPA ([PR](pr-message/B05-Activity-View-in-the-SPA-pr.md)) | A03, A04, A05 | D05, D07 |
 | 27 | [x] | **B06** | B | Notification Behavior in the SPA ([PR](pr-message/B06-Notification-Behavior-in-the-SPA-pr.md)) | A04, B01, B03 | D05, D07 |
-| 28 | [ ] | **B07** | B | Reaction Behavior in the SPA | B01, B03 | D05, D07 |
+| 28 | [x] | **B07** | B | Reaction Behavior in the SPA ([PR](pr-message/B07-Reaction-Behavior-in-the-SPA-pr.md)) | B01, B03 | D05, D07 |
 | 29 | [ ] | **B08** | B | Draft Workflows in the SPA | B04 | D05, D07 |
 
 ### Wave 5 — Bonus Features (P5)

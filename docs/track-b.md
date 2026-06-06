@@ -205,7 +205,7 @@ Verification Gate:
 - notification click behavior still navigates correctly
 
 ### B07 - Reaction Behavior in the SPA
-Source: RTF-31 | Phase: P2
+Source: RTF-31 | Phase: P2 | Status: Done
 Depends on: B01, B03
 Blocks: D05, D07
 
@@ -213,6 +213,42 @@ Work:
 - preserve post reaction bindings after SPA migration
 - preserve comment reaction bindings after SPA migration
 - remove reaction boot assumptions tied to standalone templates
+
+Implementation Notes:
+- the SPA reaction engine lives in `SPA/features/post/`:
+  - `post.reactions.bindings.js` — one delegated `change` listener
+    attached to `document`, guarded by a module-level flag so it binds
+    exactly once no matter how many pages call `initReactionBindings`
+  - `post.reactions.logic.js` — pure helpers, including
+    `normalizeReactionState`, which reconciles the list/detail payload
+    (`likes`/`dislikes`/`my_reaction` int) and the reaction POST payload
+    (`likes_count`/`dislikes_count`/`reaction`) into a canonical
+    `{ likeCount, dislikeCount, userReaction }`
+  - `post.reactions.api.js` — the reaction POST client
+- shared reaction pill markup via `renderPostReactions` /
+  `renderCommentReactions` (`post-card.views.js`), reused by the feed,
+  post-detail, and activity views (no duplicated reaction templates)
+- post-detail now renders post reactions (`post-detail.views.js`) and
+  comment reactions (`post.page.js` comment markup), and wires
+  `initReactionBindings` through `initPostDetailPage`
+- resolved the audited scope mismatch: the reaction `<input>` carries no
+  id of its own, so the listener resolves the target from the container.
+  It reads the `.reactions` wrapper's `data-reaction-scope` hook
+  (`post` / `comment`), then `closest('[data-post-id]')` or
+  `closest('[data-comment-id]')` for the id — matching on the attribute
+  rather than a fixed `article` tag, so the feed/activity `<article>` and
+  the post-detail `<section data-post-id>` both resolve. Inputs no longer
+  reuse the container id, so `[data-post-id="N"]` selects exactly one
+  element on the detail page
+- the delegated listener survives SPA navigation and `reloadComments()`
+  re-renders without re-binding or duplicate listeners; no
+  `DOMContentLoaded` and no standalone-template boot logic
+- counts update in place with no full page reload; optimistic state is
+  reverted on request failure or when unauthenticated
+- preserved the existing reaction API contracts — no backend changes
+- added `SPA/tests/unit/features/post/post.reactions.bindings.test.js`
+  covering post and comment like/dislike, toggle, switch, count updates,
+  both scope shapes, and re-render survival
 
 Verification Gate:
 - post reactions work in SPA-rendered views
