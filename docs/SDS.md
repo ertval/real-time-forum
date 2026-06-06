@@ -171,6 +171,23 @@ When an image is attached to a DM:
 - Logout remains `POST /api/v1/users/logout`.
 - `GET /api/v1/users/me` remains the bootstrap auth-check endpoint for the SPA.
 
+## 5.1.1 Post Create Request Body
+
+`POST /api/v1/posts` accepts:
+
+```json
+{
+  "title": "string (required)",
+  "content": "string (required)",
+  "category_ids": [1, 2],
+  "status": "draft | published"
+}
+```
+
+- `status` defaults to `"published"` when omitted.
+- `"draft"` posts skip the category requirement; `"published"` posts require at least one category.
+- A draft can be promoted to published via `PATCH /api/v1/posts/{id}` with `{"status": "published"}`.
+
 ## 5.2 Registration Payload
 
 Request:
@@ -468,6 +485,62 @@ On application load:
 - fetch one post
 - fetch and render comments only in this route
 - comment creation remains here
+- post and comment reaction controls render in this route (see 7.4.2)
+
+## 7.4.1 Activity Behavior
+
+- `/activity` renders inside the shared authenticated shell outlet
+- the SPA router (`SPA/core/router/routes.js`) matches the route and
+  `renderActivityView()` from `SPA/features/activity/activity.views.js`
+  is injected through the standard render-template flow
+- `runRouteInitializer` boots `initActivityPage()` from
+  `SPA/features/activity/activity.page.js`
+- activity data is loaded from `GET /api/v1/users/activity` with
+  `page`, `per_page`, and optional `status` query parameters
+- four collapsible sections are rendered: created posts, comments,
+  liked posts, disliked posts
+- created posts that belong to the current user expose owner-only
+  controls: status toggle (draft/published), edit (SPA navigation to
+  `/edit-post/:id?next=%2Factivity`), and delete
+- comments expose inline edit (reuses the shared image picker) and
+  delete
+- filter and pagination changes update history via
+  `history.replaceState` rather than full reload
+- mutations (status toggle, post delete, comment edit, comment delete)
+  trigger an in-place `refresh()` instead of a document navigation
+- the standalone `web/templates/activity.html` template and
+  `web/static/js/activity/*` scripts no longer exist
+
+## 7.4.2 Reaction Behavior
+
+- post and comment reactions are handled entirely inside the SPA by the
+  reaction engine in `SPA/features/post/` (`post.reactions.bindings.js`,
+  `post.reactions.logic.js`, `post.reactions.api.js`)
+- `initReactionBindings()` attaches one delegated `change` listener to
+  `document`; a module-level guard makes it idempotent, so the feed,
+  post-detail, and activity pages can each call it without producing
+  duplicate listeners
+- the listener is bound at the document level, so it survives SPA route
+  transitions and re-rendered comment lists without re-binding; there is
+  no `DOMContentLoaded` or standalone-template boot logic
+- reaction pill markup is shared by `renderPostReactions` /
+  `renderCommentReactions` (`post-card.views.js`) across the feed,
+  post-detail, and activity views
+- `normalizeReactionState()` reconciles both backend payload shapes —
+  list/detail (`likes` / `dislikes` / `my_reaction` int) and the reaction
+  POST response (`likes_count` / `dislikes_count` / `reaction`) — into a
+  canonical `{ likeCount, dislikeCount, userReaction }` so active state
+  and counts render uniformly
+- reaction scope is resolved by the `data-post-id` / `data-comment-id`
+  attribute rather than a fixed element tag, so the feed/activity
+  `<article data-post-id>` and the post-detail `<section data-post-id>`
+  both resolve; comment scope resolves via the `.comment` /
+  `.activity-comment` class
+- toggling posts to `POST /api/v1/posts/:id/{like,dislike}` or
+  `POST /api/v1/comments/:id/{like,dislike}`; the returned counts update
+  in place with no full page reload, and the optimistic checkbox flip is
+  reverted if the request fails or the user is unauthenticated
+- backend reaction contracts are unchanged
 
 ## 7.5 Chat UI Behavior
 
@@ -517,6 +590,8 @@ On application load:
 - logout visible from every authenticated route
 - feed contains no comments
 - post detail contains comments
+- activity route mounts inside the shared shell and refreshes without
+  full reload on deep-link or back/forward navigation
 - chat roster sorting behavior
 - disabled composer for offline selected user
 - live message rendering on active chat

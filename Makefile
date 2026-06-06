@@ -3,6 +3,8 @@
 # -----------------------------------------------------
 
 APP_NAME = forum
+TEST_CACHE_DIR = $(CURDIR)/.tmp/go-cache
+TEST_TMP_DIR = $(CURDIR)/.tmp/go-tmp
 
 # -----------------------------------------------------
 # 📦 Binaries
@@ -82,13 +84,18 @@ lint:
 	@./node_modules/.bin/bun run lint
 
 test-backend:
-	@go test ./...
+	@mkdir -p $(TEST_CACHE_DIR) $(TEST_TMP_DIR)
+	@GOCACHE=$(TEST_CACHE_DIR) GOTMPDIR=$(TEST_TMP_DIR) go test ./...
 
 test-frontend:
 	@bun run policy
 
 test-e2e:
-	@bun x playwright test
+	@if node ./scripts/check-local-listener.mjs; then \
+		bun x playwright test; \
+	else \
+		echo "Skipping Playwright E2E: local TCP listeners are unavailable in this environment."; \
+	fi
 
 format: format-backend format-frontend
 

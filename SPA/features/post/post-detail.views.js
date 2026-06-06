@@ -2,7 +2,12 @@
 
 import { IMAGE_ACCEPT_ATTR } from '../../core/shared/utils.js';
 import { escapeHTML } from '../../core/utils/html.js';
-import { formatCreatedAt, renderCategories, resolveUsername } from './post-card.views.js';
+import {
+	formatCreatedAt,
+	renderCategories,
+	renderPostReactions,
+	resolveUsername,
+} from './post-card.views.js';
 
 export function renderPostDetailView(post = {}) {
 	const postID = post.id ?? '';
@@ -31,6 +36,10 @@ export function renderPostDetailView(post = {}) {
 				<div class="post-detail-body">
 					<p>${body}</p>
 				</div>
+
+				<section class="post-actions">
+					${renderPostReactions(post)}
+				</section>
 
 				<section data-comments></section>
 
