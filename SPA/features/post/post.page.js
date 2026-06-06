@@ -593,12 +593,17 @@ function collectPostFormPayload(context) {
 	};
 }
 
-function validatePostForm({ title, categoryIds, body, imageFile, hasPersistedImage }) {
+function validatePostForm(
+	{ title, categoryIds, body, imageFile, hasPersistedImage },
+	isDraft = false,
+) {
 	if (!title) {
 		return 'Title is required.';
 	}
 
-	if (categoryIds.length === 0) {
+	// Drafts are work-in-progress, so the category requirement is relaxed to
+	// match the backend, which skips the category check for status="draft".
+	if (!isDraft && categoryIds.length === 0) {
 		return 'Select at least one category.';
 	}
 
@@ -609,20 +614,30 @@ function validatePostForm({ title, categoryIds, body, imageFile, hasPersistedIma
 	return null;
 }
 
-async function handleCreateSubmit(context, payload) {
+async function handleCreateSubmit(context, payload, isDraft = false) {
 	const result = await createPost(context.fetchRef, {
 		title: payload.title,
 		body: payload.body,
 		categoryIds: payload.categoryIds,
 		imageFile: payload.imageFile,
 		imageURL: context.persistedImageURL,
+		status: isDraft ? 'draft' : 'published',
 	});
 
 	if (!result.ok) {
 		setPostFormFeedback(
 			context.form,
-			result?.payload?.error?.message || 'Unable to create the post right now.',
+			result?.payload?.error?.message ||
+				(isDraft ? 'Unable to save the draft right now.' : 'Unable to create the post right now.'),
 		);
+		return;
+	}
+
+	if (isDraft) {
+		// Drafts live in the Activity view; navigate there inside the SPA rather
+		// than to the (unpublished) post detail page.
+		setPostFormFeedback(context.form, 'Draft saved.', 'success');
+		context.navigate('/activity');
 		return;
 	}
 
@@ -680,8 +695,14 @@ function bindPostFormEvents(context) {
 		event.preventDefault();
 		clearPostFormFeedback(context.form);
 
+		// The create-post form has a "Save Draft" submit button (name="action"
+		// value="draft") alongside Publish. Drafts only exist in create mode
+		// (edit-post has no draft control); a keyboard submit has no submitter, so
+		// it defaults to a normal publish.
+		const isDraft = context.mode === 'create' && event.submitter?.value === 'draft';
+
 		const payload = collectPostFormPayload(context);
-		const validationError = validatePostForm(payload);
+		const validationError = validatePostForm(payload, isDraft);
 		if (validationError) {
 			setPostFormFeedback(context.form, validationError);
 			return;
@@ -690,12 +711,12 @@ function bindPostFormEvents(context) {
 		setPostFormBusy(
 			context.form,
 			true,
-			context.mode === 'create' ? 'Publishing...' : 'Updating...',
+			context.mode === 'create' ? (isDraft ? 'Saving draft...' : 'Publishing...') : 'Updating...',
 		);
 
 		try {
 			if (context.mode === 'create') {
-				await handleCreateSubmit(context, payload);
+				await handleCreateSubmit(context, payload, isDraft);
 				return;
 			}
 

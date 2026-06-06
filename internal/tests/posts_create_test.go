@@ -2,9 +2,11 @@ package tests
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -31,6 +33,120 @@ func TestAPIPostsCreate(t *testing.T) {
 	}
 	if post["author"] != "testuser2" {
 		t.Fatalf("expected author %q, got %v", "testuser2", post["author"])
+	}
+}
+
+func TestAPIPostsCreate_JSONDraftPersistsDraftStatus(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	registerUser(t, h, "draftjson", "draftjson@example.com", "password123")
+	token := loginAndGetToken(t, h, "draftjson", "password123")
+
+	rec := createPostRequest(t, h, token, map[string]any{
+		"title":  "JSON draft title",
+		"body":   "JSON draft body",
+		"status": "draft",
+	})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	post := decodeEnvelopeDataMap(t, rec)
+	postID := postIDFromResponse(t, post)
+	stored := loadStoredPost(t, db, postID)
+
+	if stored.title != "JSON draft title" {
+		t.Fatalf("expected persisted title %q, got %q", "JSON draft title", stored.title)
+	}
+	if stored.body != "JSON draft body" {
+		t.Fatalf("expected persisted body %q, got %q", "JSON draft body", stored.body)
+	}
+	if stored.status != "draft" {
+		t.Fatalf("expected persisted status draft, got %q", stored.status)
+	}
+}
+
+func TestAPIPostsCreate_MultipartDraftPersistsDraftStatusAndImage(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	registerUser(t, h, "draftupload", "draftupload@example.com", "password123")
+	token := loginAndGetToken(t, h, "draftupload", "password123")
+
+	rec := multipartRequest(
+		t,
+		h,
+		http.MethodPost,
+		"/api/v1/posts",
+		token,
+		map[string]string{
+			"title":  "Multipart draft title",
+			"body":   "",
+			"status": "draft",
+		},
+		nil,
+		"draft.png",
+		samplePNGBytes,
+	)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	post := decodeEnvelopeDataMap(t, rec)
+	rawURL, ok := post["image_url"]
+	if !ok || rawURL == nil {
+		t.Fatalf("expected image_url in create response, got post=%v", post)
+	}
+	imageURL, ok := rawURL.(string)
+	if !ok || strings.TrimSpace(imageURL) == "" {
+		t.Fatalf("expected non-empty image_url string, got %T(%v)", rawURL, rawURL)
+	}
+	t.Cleanup(func() { cleanupUploadedFromImageURL(t, imageURL) })
+
+	postID := postIDFromResponse(t, post)
+	stored := loadStoredPost(t, db, postID)
+
+	if stored.status != "draft" {
+		t.Fatalf("expected persisted status draft, got %q", stored.status)
+	}
+	if stored.imageURL == nil || *stored.imageURL != imageURL {
+		t.Fatalf("expected persisted image_url %q, got %v", imageURL, stored.imageURL)
+	}
+}
+
+func TestAPIPostsCreate_PublishedStatusStillUsesNormalCreateFlow(t *testing.T) {
+	h, db := newTestAPI(t)
+	defer db.Close()
+
+	registerUser(t, h, "publishedjson", "publishedjson@example.com", "password123")
+	token := loginAndGetToken(t, h, "publishedjson", "password123")
+
+	rec := createPostRequest(t, h, token, map[string]any{
+		"title":        "Published title",
+		"body":         "Published body",
+		"status":       "published",
+		"category_ids": []int64{1},
+	})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	post := decodeEnvelopeDataMap(t, rec)
+	postID := postIDFromResponse(t, post)
+	stored := loadStoredPost(t, db, postID)
+
+	if stored.status != "published" {
+		t.Fatalf("expected persisted status published, got %q", stored.status)
+	}
+	if stored.title != "Published title" {
+		t.Fatalf("expected persisted title %q, got %q", "Published title", stored.title)
+	}
+	if stored.body != "Published body" {
+		t.Fatalf("expected persisted body %q, got %q", "Published body", stored.body)
+	}
+	if got := countPostCategoriesForPostID(t, db, postID); got != 1 {
+		t.Fatalf("expected one category for normal published create, got %d", got)
 	}
 }
 
@@ -273,4 +389,44 @@ func TestAPIPostsCreate_InvalidJSON(t *testing.T) {
 	if env.Error.Message != "invalid json" {
 		t.Fatalf("expected message 'invalid json', got %q", env.Error.Message)
 	}
+}
+
+type storedPostRow struct {
+	title    string
+	body     string
+	status   string
+	imageURL *string
+}
+
+func postIDFromResponse(t *testing.T, post map[string]any) int64 {
+	t.Helper()
+
+	rawID, ok := post["id"]
+	if !ok {
+		t.Fatalf("missing id in create response: %v", post)
+	}
+
+	id, ok := rawID.(float64)
+	if !ok {
+		t.Fatalf("expected numeric id in create response, got %T(%v)", rawID, rawID)
+	}
+	return int64(id)
+}
+
+func loadStoredPost(t *testing.T, db *sql.DB, postID int64) storedPostRow {
+	t.Helper()
+
+	var row storedPostRow
+	var imageURL sql.NullString
+	if err := db.QueryRow(`
+		SELECT title, body, status, image_url
+		FROM posts
+		WHERE id = ?
+	`, postID).Scan(&row.title, &row.body, &row.status, &imageURL); err != nil {
+		t.Fatalf("load stored post %d: %v", postID, err)
+	}
+	if imageURL.Valid {
+		row.imageURL = &imageURL.String
+	}
+	return row
 }
