@@ -14,7 +14,8 @@ import {
 	normalizeCategoryIDs,
 	updatePost,
 } from './post.api.js';
-import { formatCreatedAt, resolveUsername } from './post-card.views.js';
+import { initReactionBindings } from './post.reactions.bindings.js';
+import { formatCreatedAt, renderCommentReactions, resolveUsername } from './post-card.views.js';
 import { renderPostDetailView } from './post-detail.views.js';
 
 const POST_DETAIL_BOUND_ATTR = 'data-post-detail-bound';
@@ -53,6 +54,9 @@ function renderCommentsMarkup(comments) {
 					<div class="comment-body">
 						<p>${body}</p>
 						${imageMarkup}
+					</div>
+					<div class="comment-actions">
+						${renderCommentReactions(comment)}
 					</div>
 				</article>
 			`;
@@ -241,6 +245,8 @@ export async function initPostDetailPage(options = {}) {
 	}
 
 	nextRoot.setAttribute(POST_DETAIL_BOUND_ATTR, 'true');
+
+	initReactionBindings({ documentRef, fetchRef });
 
 	const commentsContainer = nextRoot.querySelector('[data-comments]');
 	if (!commentsContainer) {
