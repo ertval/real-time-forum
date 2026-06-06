@@ -3,11 +3,22 @@
 import { matchRoute } from '../../core/router/routes.js';
 import { setupImagePicker } from '../../core/shared/image-picker.js';
 import { escapeHTML } from '../../core/utils/html.js';
-import { createPostComment, getPostById, getPostComments } from './post.api.js';
+import { highlightCommentFromQuery } from './comment-highlight.js';
+import {
+	createPost,
+	createPostComment,
+	getPostById,
+	getPostComments,
+	loadPostCategories,
+	loadPostForEdit,
+	normalizeCategoryIDs,
+	updatePost,
+} from './post.api.js';
 import { formatCreatedAt, resolveUsername } from './post-card.views.js';
 import { renderPostDetailView } from './post-detail.views.js';
 
 const POST_DETAIL_BOUND_ATTR = 'data-post-detail-bound';
+const POST_FORM_BOUND_ATTR = 'data-post-form-bound';
 
 function renderCommentsMarkup(comments) {
 	if (!Array.isArray(comments) || comments.length === 0) {
@@ -240,5 +251,477 @@ export async function initPostDetailPage(options = {}) {
 	bindCommentForm({ form: commentForm, fetchRef, postId, commentsContainer });
 
 	const comments = await reloadComments(fetchRef, postId, commentsContainer);
+
+	void highlightCommentFromQuery({ windowRef, documentRef, root: commentsContainer });
+
 	return { post, comments };
+}
+
+function setPostFormFeedback(form, message, tone = 'error') {
+	const feedback = form?.querySelector?.('[data-post-form-feedback]');
+	if (!feedback) {
+		return;
+	}
+
+	if (!message) {
+		feedback.hidden = true;
+		feedback.textContent = '';
+		feedback.removeAttribute('data-tone');
+		feedback.removeAttribute('role');
+		return;
+	}
+
+	feedback.hidden = false;
+	feedback.textContent = message;
+	feedback.dataset.tone = tone;
+	feedback.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+}
+
+function clearPostFormFeedback(form) {
+	setPostFormFeedback(form, '');
+}
+
+function setPostFormBusy(form, isBusy, busyLabel) {
+	const submitButtons = form ? Array.from(form.querySelectorAll('button[type="submit"]')) : [];
+	for (const button of submitButtons) {
+		if (isBusy) {
+			if (!button.dataset.originalLabel) {
+				button.dataset.originalLabel = button.textContent ?? '';
+			}
+			button.disabled = true;
+			if (button.classList.contains('post-editor__button--primary')) {
+				button.textContent = busyLabel;
+			}
+			continue;
+		}
+
+		button.disabled = false;
+		if (button.dataset.originalLabel) {
+			button.textContent = button.dataset.originalLabel;
+			delete button.dataset.originalLabel;
+		}
+	}
+}
+
+function renderCategoryCheckboxes(host, categories = [], selectedIds = []) {
+	if (!(host instanceof HTMLElement)) {
+		return;
+	}
+
+	host.innerHTML = '';
+	const selected = new Set(normalizeCategoryIDs(selectedIds));
+
+	for (const category of categories) {
+		const categoryId = Number(category?.id);
+		if (!Number.isFinite(categoryId) || categoryId <= 0) {
+			continue;
+		}
+
+		const label = host.ownerDocument.createElement('label');
+		label.className = 'category-checkbox';
+
+		const input = host.ownerDocument.createElement('input');
+		input.type = 'checkbox';
+		input.value = String(categoryId);
+		input.checked = selected.has(categoryId);
+
+		const text = host.ownerDocument.createElement('span');
+		text.textContent = String(category?.name ?? '');
+
+		label.appendChild(input);
+		label.appendChild(text);
+		host.appendChild(label);
+	}
+}
+
+function getSelectedCategoryIds(host) {
+	if (!(host instanceof HTMLElement)) {
+		return [];
+	}
+
+	return normalizeCategoryIDs(
+		Array.from(host.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value),
+	);
+}
+
+function getSafeReturnPath(windowRef, fallbackPath) {
+	const raw = new URLSearchParams(windowRef.location.search).get('next');
+	if (!raw) return fallbackPath;
+	if (!raw.startsWith('/') || raw.startsWith('//')) return fallbackPath;
+	return raw;
+}
+
+function resolvePostFormMode(match) {
+	if (!match) {
+		return null;
+	}
+
+	if (match.route.id === 'create-post') {
+		return 'create';
+	}
+
+	if (match.route.id === 'edit-post') {
+		return 'edit';
+	}
+
+	return null;
+}
+
+function resolveNavigate(windowRef, navigateOverride) {
+	return (
+		navigateOverride ??
+		((path, navOptions = {}) => navigateTo(windowRef, path, !!navOptions.replace))
+	);
+}
+
+function resolvePostFormElements(root, mode) {
+	if (!root) {
+		return null;
+	}
+
+	const form = root.querySelector(mode === 'create' ? '#create-post-form' : '#edit-post-form');
+	if (!(form instanceof HTMLFormElement)) {
+		return null;
+	}
+
+	const titleInput = form.querySelector('#title');
+	const bodyInput = form.querySelector('#body');
+	const imageInput = form.querySelector('#image');
+	const categoryHost = form.querySelector('#categoryCheckboxes');
+	const imageButton = form.querySelector('#image-button');
+	const imageName = form.querySelector('#image-name');
+	const imagePreview = form.querySelector('#image-preview');
+	const imageClear = form.querySelector('#image-clear');
+	const imagePreviewImg = imagePreview?.querySelector('img');
+	const backLink = form.querySelector('.post-editor__back-link');
+
+	if (
+		!(titleInput instanceof HTMLInputElement) ||
+		!(bodyInput instanceof HTMLTextAreaElement) ||
+		!(imageInput instanceof HTMLInputElement) ||
+		!(categoryHost instanceof HTMLElement)
+	) {
+		return null;
+	}
+
+	return {
+		form,
+		titleInput,
+		bodyInput,
+		imageInput,
+		categoryHost,
+		imageButton,
+		imageName,
+		imagePreview,
+		imageClear,
+		imagePreviewImg,
+		backLink,
+	};
+}
+
+function createPostFormContext(options = {}) {
+	const windowRef = options.windowRef ?? (typeof window !== 'undefined' ? window : null);
+	const documentRef = options.documentRef ?? (typeof document !== 'undefined' ? document : null);
+	const fetchRef = options.fetchRef ?? (typeof fetch === 'function' ? fetch.bind(windowRef) : null);
+	const navigate = resolveNavigate(windowRef, options.navigate);
+
+	if (
+		!windowRef ||
+		!documentRef ||
+		typeof fetchRef !== 'function' ||
+		typeof documentRef.querySelector !== 'function'
+	) {
+		return null;
+	}
+
+	const match = matchRoute(windowRef.location.pathname || '/');
+	const mode = resolvePostFormMode(match);
+	if (!mode) {
+		return null;
+	}
+
+	const screenId = mode === 'create' ? 'create-post' : 'edit-post';
+	const root = documentRef.querySelector(`[data-screen="${screenId}"]`);
+	if (!root || root.getAttribute(POST_FORM_BOUND_ATTR) === 'true') {
+		return null;
+	}
+
+	const elements = resolvePostFormElements(root, mode);
+	if (!elements) {
+		return null;
+	}
+
+	root.setAttribute(POST_FORM_BOUND_ATTR, 'true');
+
+	return {
+		windowRef,
+		documentRef,
+		fetchRef,
+		navigate,
+		match,
+		mode,
+		root,
+		postId: match.params.id ? Number(match.params.id) : null,
+		persistedImageURL: null,
+		removeImage: false,
+		imagePicker: null,
+		categories: [],
+		...elements,
+	};
+}
+
+function navigateTo(windowRef, path, replace = false) {
+	const normalized = path || '/';
+	if (replace) {
+		windowRef.history.replaceState({}, '', normalized);
+	} else {
+		windowRef.history.pushState({}, '', normalized);
+	}
+	windowRef.dispatchEvent(new PopStateEvent('popstate'));
+}
+
+function initializeImagePickerState(context) {
+	context.imagePicker = setupImagePicker({
+		input: context.imageInput,
+		triggerButton: context.imageButton,
+		clearButton: context.imageClear,
+		nameLabel: context.imageName,
+		previewContainer: context.imagePreview,
+		previewImage: context.imagePreviewImg,
+		persistedLabel:
+			context.mode === 'create' ? 'Saved draft image attached' : 'Current post image attached',
+		onTooLarge: () => {
+			setPostFormFeedback(context.form, 'Image must be 20MB or smaller.');
+		},
+		onClearPersisted: () => {
+			context.persistedImageURL = null;
+			context.removeImage = true;
+		},
+	});
+
+	context.imageInput.addEventListener('change', () => {
+		if (context.imagePicker.getFile()) {
+			context.removeImage = false;
+		}
+	});
+}
+
+async function initializeCategories(context) {
+	setPostFormFeedback(context.form, 'Loading categories...', 'success');
+	const categories = await loadPostCategories(context.fetchRef);
+	if (!Array.isArray(categories)) {
+		setPostFormFeedback(context.form, 'Unable to load categories.');
+		return false;
+	}
+
+	context.categories = categories;
+	renderCategoryCheckboxes(context.categoryHost, categories);
+	return true;
+}
+
+async function initializeEditMode(context) {
+	if (!(Number.isFinite(context.postId) && context.postId > 0)) {
+		setPostFormFeedback(context.form, 'Invalid post ID.');
+		return false;
+	}
+
+	if (context.backLink instanceof HTMLAnchorElement) {
+		context.backLink.href = getSafeReturnPath(context.windowRef, `/posts/${context.postId}`);
+	}
+
+	setPostFormFeedback(context.form, 'Loading post...', 'success');
+	const result = await loadPostForEdit(context.fetchRef, context.postId);
+	if (!result.ok || !result.data) {
+		if (result.status === 404) {
+			setPostFormFeedback(context.form, 'Post not found.');
+			return false;
+		}
+
+		if (result.status === 401) {
+			context.navigate('/login', { replace: true });
+			return false;
+		}
+
+		setPostFormFeedback(
+			context.form,
+			result?.payload?.error?.message || 'Unable to load this post.',
+		);
+		return false;
+	}
+
+	context.titleInput.value = String(result.data.title ?? '');
+	context.bodyInput.value = String(result.data.body ?? '');
+	renderCategoryCheckboxes(
+		context.categoryHost,
+		context.categories,
+		result.data.category_ids || [],
+	);
+	context.persistedImageURL = result.data.image_url ?? null;
+	context.removeImage = false;
+	context.imagePicker.setPersistedUrl(context.persistedImageURL);
+	clearPostFormFeedback(context.form);
+	return true;
+}
+
+function initializeCreateMode(context) {
+	if (context.backLink instanceof HTMLAnchorElement) {
+		context.backLink.href = '/';
+	}
+
+	clearPostFormFeedback(context.form);
+}
+
+function collectPostFormPayload(context) {
+	const title = context.titleInput.value.trim();
+	const body = context.bodyInput.value.trim();
+	const categoryIds = getSelectedCategoryIds(context.categoryHost);
+	const imageFile = context.imagePicker?.getFile?.() ?? context.imageInput?.files?.[0] ?? null;
+	const hasPersistedImage = !!context.persistedImageURL;
+
+	return {
+		title,
+		body,
+		categoryIds,
+		imageFile,
+		hasPersistedImage,
+	};
+}
+
+function validatePostForm({ title, categoryIds, body, imageFile, hasPersistedImage }) {
+	if (!title) {
+		return 'Title is required.';
+	}
+
+	if (categoryIds.length === 0) {
+		return 'Select at least one category.';
+	}
+
+	if (!body && !imageFile && !hasPersistedImage) {
+		return 'Post body is required unless an image is attached.';
+	}
+
+	return null;
+}
+
+async function handleCreateSubmit(context, payload) {
+	const result = await createPost(context.fetchRef, {
+		title: payload.title,
+		body: payload.body,
+		categoryIds: payload.categoryIds,
+		imageFile: payload.imageFile,
+		imageURL: context.persistedImageURL,
+	});
+
+	if (!result.ok) {
+		setPostFormFeedback(
+			context.form,
+			result?.payload?.error?.message || 'Unable to create the post right now.',
+		);
+		return;
+	}
+
+	setPostFormFeedback(context.form, 'Post created.', 'success');
+	const createdId = Number(result?.data?.id);
+	context.navigate(Number.isFinite(createdId) && createdId > 0 ? `/posts/${createdId}` : '/');
+}
+
+async function handleEditSubmit(context, payload) {
+	const result = await updatePost(context.fetchRef, context.postId, {
+		title: payload.title,
+		body: payload.body,
+		categoryIds: payload.categoryIds,
+		imageFile: payload.imageFile,
+		removeImage: context.removeImage && !payload.imageFile,
+	});
+
+	if (!result.ok) {
+		if (result.status === 401) {
+			context.navigate('/login', { replace: true });
+			return;
+		}
+
+		if (result.status === 403) {
+			setPostFormFeedback(context.form, 'You can only edit your own posts.');
+			return;
+		}
+
+		if (result.status === 404) {
+			setPostFormFeedback(context.form, 'Post not found.');
+			return;
+		}
+
+		setPostFormFeedback(
+			context.form,
+			result?.payload?.error?.message || 'Unable to update the post right now.',
+		);
+		return;
+	}
+
+	setPostFormFeedback(context.form, 'Post updated.', 'success');
+	const returnTarget =
+		context.backLink instanceof HTMLAnchorElement ? context.backLink.getAttribute('href') : null;
+	context.navigate(returnTarget || `/posts/${context.postId}`);
+}
+
+function bindPostFormEvents(context) {
+	if (context.form.dataset.bound === 'true') {
+		return;
+	}
+
+	context.form.dataset.bound = 'true';
+
+	context.form.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		clearPostFormFeedback(context.form);
+
+		const payload = collectPostFormPayload(context);
+		const validationError = validatePostForm(payload);
+		if (validationError) {
+			setPostFormFeedback(context.form, validationError);
+			return;
+		}
+
+		setPostFormBusy(
+			context.form,
+			true,
+			context.mode === 'create' ? 'Publishing...' : 'Updating...',
+		);
+
+		try {
+			if (context.mode === 'create') {
+				await handleCreateSubmit(context, payload);
+				return;
+			}
+
+			await handleEditSubmit(context, payload);
+		} finally {
+			setPostFormBusy(context.form, false, '');
+		}
+	});
+}
+
+export async function initPostFormPage(options = {}) {
+	const context = createPostFormContext(options);
+	if (!context) {
+		return null;
+	}
+
+	const categoriesReady = await initializeCategories(context);
+	if (!categoriesReady) {
+		return null;
+	}
+
+	initializeImagePickerState(context);
+
+	if (context.mode === 'edit') {
+		const editReady = await initializeEditMode(context);
+		if (!editReady) {
+			return null;
+		}
+	} else {
+		initializeCreateMode(context);
+	}
+
+	bindPostFormEvents(context);
+	return context;
 }
