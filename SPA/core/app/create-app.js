@@ -2,6 +2,7 @@
 
 import { initActivityPage } from '../../features/activity/activity.page.js';
 import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
+import { initChatConversation } from '../../features/chat/chat.conversation.page.js';
 import { initChatRoster } from '../../features/chat/chat.roster.page.js';
 import { initFeedPage } from '../../features/feed/feed.page.js';
 import { createNotificationCenter } from '../../features/notification/notification.page.js';
@@ -181,6 +182,7 @@ export function createApp(options = {}) {
 	function runRouteInitializer(match) {
 		if (match?.route?.access === 'protected') {
 			initChatRoster({ windowRef, documentRef, fetchRef });
+			initChatConversation({ windowRef, documentRef, fetchRef });
 		}
 
 		if (match?.route?.id === 'feed') {
