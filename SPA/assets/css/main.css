@@ -1,6 +1,7 @@
 @import "./tokens.css";
 @import "./base.css";
 @import "./loading.css";
+@import "./design-system.css";
 @import "../../features/auth/auth.css";
 @import "../../features/post/post-forms.css";
 @import "../../features/post/post-card.css";

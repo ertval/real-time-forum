@@ -23,7 +23,7 @@ export function renderPostDetailView(post = {}) {
 
 	return `
 		<section class="post-detail-view" data-screen="post-detail" data-post-id="${escapeHTML(String(postID))}" aria-labelledby="screen-post-title">
-			<article class="post-detail card card-pad">
+			<article class="post-detail">
 				<header class="post-detail-header">
 					${renderCategories(post.categories)}
 					<h1 id="screen-post-title" class="post-detail-title">${title}</h1>

@@ -85,7 +85,7 @@ function renderPostFormFields({
 									×
 								</button>
 							</div>
-							<div id="image-preview" class="image-preview post-editor__image-preview" hidden>
+							<div id="image-preview" class="post-editor__image-preview" hidden>
 								<img alt="Selected upload preview" />
 							</div>
 						</div>
