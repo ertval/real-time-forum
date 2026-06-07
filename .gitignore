@@ -15,6 +15,9 @@ forum-frontend
 debug
 debug.test
 
+# Local temp / build cache (e.g. GOCACHE)
+.tmp/
+
 # Node / JS / Bun
 node_modules/
 dist/

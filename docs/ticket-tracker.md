@@ -97,7 +97,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 20 | [x] | **C05** | C | Chat Roster API ([PR](pr-message/C05-Chat-Roster-API-pr.md)) | C02, C01 | D01, C08 |
 | 21 | [x] | **C06** | C | Realtime DM Send and Delivery ([PR](pr-message/C06-Realtime-DM-Send-and-Delivery-pr.md)) | C02, C01, C04 | D04, C08 |
 | 22 | [x] | **D01** | D | Persistent Chat Roster UI ([PR](pr-message/D01-Persistent-Chat-Roster-UI-pr.md)) | A04, C05 | D02, D04, D06 |
-| 23 | [ ] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
+| 23 | [x] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
 | 24 | [ ] | **D03** | D | Incremental History Loading | D02 | D06 |
 | 25 | [ ] | **D04** | D | Browser WebSocket Chat Integration | D09, A05, C01, C04, C06, D01, D02 | D06, D07 |
 
