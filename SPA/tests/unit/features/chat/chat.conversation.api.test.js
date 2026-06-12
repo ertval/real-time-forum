@@ -40,6 +40,37 @@ describe('fetchConversation', () => {
 		expect(result.hasMore).toBe(true);
 	});
 
+	test('appends before_id when paging older history', async () => {
+		const fetchRef = vi.fn(async () => ({
+			ok: true,
+			status: 200,
+			json: async () => ({ data: { messages: [], has_more: false } }),
+		}));
+
+		await fetchConversation(fetchRef, 42, { beforeId: 91 });
+
+		expect(fetchRef).toHaveBeenCalledWith(
+			'/api/v1/chats/42/messages?before_id=91',
+			expect.objectContaining({ credentials: 'include' }),
+		);
+	});
+
+	test('omits before_id for non-positive or non-finite values', async () => {
+		const fetchRef = vi.fn(async () => ({
+			ok: true,
+			status: 200,
+			json: async () => ({ data: { messages: [], has_more: false } }),
+		}));
+
+		await fetchConversation(fetchRef, 42, { beforeId: 0 });
+		await fetchConversation(fetchRef, 42, { beforeId: -5 });
+		await fetchConversation(fetchRef, 42, { beforeId: Number.NaN });
+
+		for (const [url] of fetchRef.mock.calls) {
+			expect(url).toBe('/api/v1/chats/42/messages');
+		}
+	});
+
 	test('returns empty conversation on non-ok responses', async () => {
 		const fetchRef = vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }));
 		expect(await fetchConversation(fetchRef, 5)).toEqual({ messages: [], hasMore: false });
