@@ -2,13 +2,17 @@
 
 import { initActivityPage } from '../../features/activity/activity.page.js';
 import { canHandleAuthForm, handleAuthFormSubmit } from '../../features/auth/auth.handlers.js';
-import { initChatConversation } from '../../features/chat/chat.conversation.page.js';
+import {
+	initChatConversation,
+	SEND_MESSAGE_EVENT,
+} from '../../features/chat/chat.conversation.page.js';
 import { initChatRoster } from '../../features/chat/chat.roster.page.js';
 import { initFeedPage } from '../../features/feed/feed.page.js';
 import { createNotificationCenter } from '../../features/notification/notification.page.js';
 import { initPostDetailPage, initPostFormPage } from '../../features/post/post.page.js';
 import { initProfilePage } from '../../features/profile/profile.page.js';
 import { renderAuthenticatedShell } from '../../features/shell/shell.views.js';
+import { createChatSocket } from '../realtime/chat-socket.js';
 import { renderTemplate } from '../router/render-template.js';
 import { matchRoute, normalizePathname } from '../router/routes.js';
 
@@ -117,6 +121,39 @@ export function createApp(options = {}) {
 
 	function stopNotifications() {
 		notificationCenter?.stop?.();
+	}
+
+	// The chat socket lives at the app shell level so a single connection serves
+	// the roster and conversation slices across route changes. Inbound frames are
+	// re-published as DOM events the slices subscribe to (see chat-socket.js).
+	const chatSocket = options.chatSocket ?? createChatSocket({ windowRef, documentRef });
+
+	function startChat() {
+		chatSocket?.open?.();
+	}
+
+	function stopChat() {
+		chatSocket?.close?.();
+	}
+
+	// Forwards a composer submission to the backend as a dm.send frame. A closed
+	// socket surfaces a chat.error so the conversation panel can show it.
+	function onSendMessage(event) {
+		const detail = event?.detail;
+		const recipientId = Number(detail?.recipientId ?? 0);
+		const body = String(detail?.body ?? '').trim();
+		if (!recipientId || !body) {
+			return;
+		}
+
+		const sent = chatSocket?.send?.('dm.send', { recipient_id: recipientId, body });
+		if (sent === false && typeof CustomEvent === 'function') {
+			documentRef.dispatchEvent?.(
+				new CustomEvent('chat:error', {
+					detail: { code: 'NOT_CONNECTED', message: 'Not connected. Your message was not sent.' },
+				}),
+			);
+		}
 	}
 
 	function cacheAuthShellNodes() {
@@ -281,6 +318,7 @@ export function createApp(options = {}) {
 
 		state.isAuthenticated = false;
 		stopNotifications();
+		stopChat();
 		goTo('/login', true);
 	}
 
@@ -329,6 +367,7 @@ export function createApp(options = {}) {
 			onSuccess() {
 				state.isAuthenticated = true;
 				startNotifications();
+				startChat();
 			},
 		});
 	}
@@ -346,12 +385,14 @@ export function createApp(options = {}) {
 
 		if (state.isAuthenticated) {
 			startNotifications();
+			startChat();
 		}
 	}
 
 	function start() {
 		documentRef.addEventListener('click', onDocumentClick);
 		documentRef.addEventListener('submit', onDocumentSubmit);
+		documentRef.addEventListener(SEND_MESSAGE_EVENT, onSendMessage);
 		windowRef.addEventListener('popstate', onPopState);
 		return boot();
 	}
@@ -359,8 +400,10 @@ export function createApp(options = {}) {
 	function stop() {
 		documentRef.removeEventListener('click', onDocumentClick);
 		documentRef.removeEventListener('submit', onDocumentSubmit);
+		documentRef.removeEventListener(SEND_MESSAGE_EVENT, onSendMessage);
 		windowRef.removeEventListener('popstate', onPopState);
 		stopNotifications();
+		stopChat();
 	}
 
 	return {

@@ -219,5 +219,6 @@ export function createMockBrowser(initialPath = '/') {
 		clickLink,
 		clickLogout,
 		submitForm,
+		dispatchDocument,
 	};
 }
