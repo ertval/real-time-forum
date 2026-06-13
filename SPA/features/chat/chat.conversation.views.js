@@ -36,13 +36,22 @@ export function renderMessage(message, currentUserId) {
 	`;
 }
 
+// Items only (no <ul> wrapper) so older batches can be prepended into the
+// existing list element during incremental history loading.
+export function renderMessageItems(messages, currentUserId) {
+	if (!Array.isArray(messages) || messages.length === 0) {
+		return '';
+	}
+
+	return messages.map((message) => renderMessage(message, currentUserId)).join('');
+}
+
 export function renderMessageList(messages, currentUserId) {
 	if (!Array.isArray(messages) || messages.length === 0) {
 		return '<p class="chat-conversation__empty" data-conversation-empty>No messages yet. Say hello!</p>';
 	}
 
-	const items = messages.map((message) => renderMessage(message, currentUserId)).join('');
-	return `<ul class="chat-conversation__messages" data-conversation-messages>${items}</ul>`;
+	return `<ul class="chat-conversation__messages" data-conversation-messages>${renderMessageItems(messages, currentUserId)}</ul>`;
 }
 
 export function renderComposer(isOnline) {
