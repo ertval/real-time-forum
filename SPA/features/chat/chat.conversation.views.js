@@ -90,6 +90,7 @@ export function renderConversation({ username, isOnline, messages, currentUserId
 				<span class="chat-conversation__title">${escapeHTML(safeUsername)}</span>
 				<span class="${presenceClass}">${online ? 'online' : 'offline'}</span>
 			</header>
+			<p class="chat-conversation__error" data-conversation-error role="alert" hidden></p>
 			<div class="chat-conversation__scroll" data-conversation-scroll>
 				${renderMessageList(messages, currentUserId)}
 			</div>
