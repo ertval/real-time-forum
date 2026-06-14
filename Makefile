@@ -98,9 +98,8 @@ test-frontend:
 
 test-e2e: free-ports
 	@if node ./scripts/check-local-listener.mjs; then \
-		bun x playwright test; status=$$?; \
-		$(MAKE) --no-print-directory free-ports; \
-		exit $$status; \
+		trap 'node ./scripts/free-ports.mjs 3000 4000 8080' EXIT INT TERM; \
+		bun x playwright test; \
 	else \
 		echo "Skipping Playwright E2E: local TCP listeners are unavailable in this environment."; \
 	fi
