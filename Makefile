@@ -71,6 +71,12 @@ stop-frontend:
 
 stop: stop-backend stop-frontend
 
+# Free any process squatting on the local dev/test ports. By-port cleanup is
+# more reliable than by-name (a leaked go-build cache binary may not match the
+# expected binary name), which is what caused stale-server reuse in E2E runs.
+free-ports:
+	@node ./scripts/free-ports.mjs 3000 4000 8080
+
 # -----------------------------------------------------
 # 🧪 Code Quality
 # -----------------------------------------------------
@@ -90,9 +96,11 @@ test-backend:
 test-frontend:
 	@bun run policy
 
-test-e2e:
+test-e2e: free-ports
 	@if node ./scripts/check-local-listener.mjs; then \
-		bun x playwright test; \
+		bun x playwright test; status=$$?; \
+		$(MAKE) --no-print-directory free-ports; \
+		exit $$status; \
 	else \
 		echo "Skipping Playwright E2E: local TCP listeners are unavailable in this environment."; \
 	fi
