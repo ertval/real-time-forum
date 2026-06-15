@@ -117,7 +117,7 @@ function commentPreviewTemplate(previewComments = [], showCommentPreview = false
 
 	return `
 		<section class="post-comments" data-comments-preview>
-			<div class="comments comments-scroll">
+			<div class="comments-scroll">
 				${previewComments.map((comment) => renderCommentPreview(comment)).join('')}
 			</div>
 		</section>
@@ -138,7 +138,7 @@ export function renderPostCard(
 	const imageMarkup = imageUrl
 		? `
 			<div class="post-image">
-				<div class="post-image-ambient" aria-hidden="true"></div>
+				<div class="post-image-ambient" aria-hidden="true" style="background-image: url('${escapeHTML(imageUrl)}')"></div>
 				<img
 					src="${escapeHTML(imageUrl)}"
 					alt="${escapeHTML(post.title)}"

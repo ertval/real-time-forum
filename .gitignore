@@ -14,6 +14,7 @@ forum-frontend
 *.out
 debug
 debug.test
+.tmp
 
 # Local temp / build cache (e.g. GOCACHE)
 .tmp/

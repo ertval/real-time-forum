@@ -2,14 +2,14 @@ import { escapeHTML } from '../../core/utils/html.js';
 
 export function renderProfileView(userID) {
 	return `
-		<div class="profile-page fade-in" data-screen="profile" data-user-id="${userID}">
+		<div class="profile-page ds-fade-in" data-screen="profile" data-user-id="${userID}">
 			<div class="profile-container">
 				<div class="profile-card glass-panel">
 					<div class="profile-cover"></div>
 					<div class="profile-avatar-wrapper">
 						<div class="profile-avatar skeleton"></div>
 					</div>
-					<div id="profile-content" class="profile-content skeleton-content">
+					<div id="profile-content" class="profile-content">
 						<div class="skeleton-line title"></div>
 						<div class="skeleton-line subtitle"></div>
 						<div class="profile-details-grid">

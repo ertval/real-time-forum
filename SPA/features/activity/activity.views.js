@@ -8,7 +8,6 @@ import { formatCreatedAt, renderCategories, resolveUsername } from '../post/post
 export function renderActivityView() {
 	return `
 		<section
-			class="activity-view"
 			data-screen="activity"
 			aria-labelledby="screen-activity-title"
 		>
@@ -105,7 +104,7 @@ function renderActivitySection({
 	emptyText,
 }) {
 	return `
-		<section class="activity-section card card-pad" id="${sectionId}">
+		<section class="activity-section card-pad" id="${sectionId}">
 			<div class="activity-section-head">
 				<button
 					type="button"
@@ -313,7 +312,7 @@ export function renderActivityCommentEntry(comment) {
 		<div class="activity-comment-entry">
 			${postCard}
 			<article
-				class="activity-comment card card-pad"
+				class="activity-comment card-pad"
 				data-comment-id="${commentIdStr}"
 				data-comment-body="${escapeHTML(body)}"
 				data-comment-image-url="${escapeHTML(imageUrl)}"
@@ -378,8 +377,8 @@ export function renderCommentEditorMarkup(initialBody = '') {
 				<img alt="Comment image preview" />
 			</div>
 			<div class="activity-comment-edit-actions">
-				<button type="submit" class="btn btn-primary btn-sm">Update</button>
-				<button type="button" class="btn btn-outline btn-sm cancel-edit">Cancel</button>
+				<button type="submit" class="btn btn-primary">Update</button>
+				<button type="button" class="btn btn-outline cancel-edit">Cancel</button>
 			</div>
 		</form>
 	`;

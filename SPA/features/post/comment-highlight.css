@@ -1,11 +1,14 @@
 /* SPA/features/post/comment-highlight.css */
 
-/* Soft, temporary highlight applied to a comment deep-linked from a notification. */
 .highlight-comment {
-	background-color: var(--accent-soft, #fffbea);
+	background: linear-gradient(90deg, var(--accent-soft) 0%, rgba(13, 148, 136, 0.04) 100%);
+	border-left: 3px solid var(--accent-primary);
 	transition:
-		background-color 1s ease-out,
-		border-color 1s ease-out;
+		background-color 1.2s var(--ease-in-out),
+		border-color 1.2s var(--ease-in-out);
+	padding-left: 0.85rem;
+	margin-left: -0.85rem;
+	border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
 }
 
 .highlight-comment.fade-out {
