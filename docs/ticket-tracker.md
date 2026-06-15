@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `27`
+- Done: `33`
 - Partially Implemented: `0`
-- Not Started: `10`
+- Not Started: `4`
 
 ---
 
@@ -97,9 +97,9 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | 20 | [x] | **C05** | C | Chat Roster API ([PR](pr-message/C05-Chat-Roster-API-pr.md)) | C02, C01 | D01, C08 |
 | 21 | [x] | **C06** | C | Realtime DM Send and Delivery ([PR](pr-message/C06-Realtime-DM-Send-and-Delivery-pr.md)) | C02, C01, C04 | D04, C08 |
 | 22 | [x] | **D01** | D | Persistent Chat Roster UI ([PR](pr-message/D01-Persistent-Chat-Roster-UI-pr.md)) | A04, C05 | D02, D04, D06 |
-| 23 | [ ] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
-| 24 | [ ] | **D03** | D | Incremental History Loading | D02 | D06 |
-| 25 | [ ] | **D04** | D | Browser WebSocket Chat Integration | D09, A05, C01, C04, C06, D01, D02 | D06, D07 |
+| 23 | [x] | **D02** | D | Active Conversation Panel and Composer | C03, D01 | D03, D04, D06 |
+| 24 | [x] | **D03** | D | Incremental History Loading ([PR](pr-message/D03-Incremental-History-Loading-pr.md)) | D02 | D06 |
+| 25 | [x] | **D04** | D | Browser WebSocket Chat Integration ([PR](pr-message/D04-Browser-WebSocket-Chat-Integration-pr.md)) | D09, A05, C01, C04, C06, D01, D02 | D06, D07 |
 
 ### Wave 4 — Retained Legacy Features (P2)
 
@@ -130,8 +130,8 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 |---|--------|--------|-------|-------------|------------|--------|
 | 33 | [x] | **C07** | C | Database Migration Strategy ([PR](pr-message/C07-Database-Migration-Strategy-pr.md)) | C10, C02 | D07 |
 | 34 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A05, C01, C03, C04, C05, C06 | D07 |
-| 35 | [ ] | **D05** | D | SPA and Forum Frontend Regression Coverage | D10, A06, B02, B03, B04, B05, B06, B07, B08 | D07 |
-| 36 | [ ] | **D06** | D | Chat Frontend Regression Coverage | D01, D02, D03, D04 | D07 |
+| 35 | [x] | **D05** | D | SPA and Forum Frontend Regression Coverage ([PR](pr-message/D05-SPA-Forum-Regression-Coverage-pr.md)) | D10, A06, B02, B03, B04, B05, B06, B07, B08 | D07 |
+| 36 | [x] | **D06** | D | Chat Frontend Regression Coverage ([PR](pr-message/D06-Chat-Frontend-Regression-Coverage-pr.md)) | D01, D02, D03, D04 | D07 |
 | 37 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A07, C09, D08 | None |
 
 ---
