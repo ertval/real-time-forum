@@ -300,6 +300,75 @@ func TestMigrate_AddsImageURLToLegacyPostsAndComments(t *testing.T) {
 	}
 }
 
+// legacyPrivateMessagesSchema models the private_messages table as it shipped
+// in C02 — before C09 added the image_path column. This is the case Migrate
+// must handle: the table already exists in deployed databases, so
+// CREATE TABLE IF NOT EXISTS in forum_schema.sql is a no-op and will NOT add
+// the new column.
+const legacyPrivateMessagesSchema = `
+CREATE TABLE private_messages (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  sender_id     INTEGER NOT NULL,
+  recipient_id  INTEGER NOT NULL,
+  body          TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+`
+
+func TestMigrate_AddsImagePathToLegacyPrivateMessages(t *testing.T) {
+	conn := openLegacyDB(t)
+	defer conn.Close()
+	if _, err := conn.Exec(legacyPrivateMessagesSchema); err != nil {
+		t.Fatalf("create legacy private_messages: %v", err)
+	}
+
+	// Seed two users and a pre-C09 message (no image_path) — exactly what a
+	// deployed forum would already have on disk.
+	if _, err := conn.Exec(`
+		INSERT INTO users (id, username, email, password_hash) VALUES
+		  (1, 'pm_alice', 'pma@old.example', 'h'),
+		  (2, 'pm_bob',   'pmb@old.example', 'h');
+		INSERT INTO private_messages (id, sender_id, recipient_id, body)
+		VALUES (1, 1, 2, 'legacy dm');
+	`); err != nil {
+		t.Fatalf("seed legacy pm: %v", err)
+	}
+
+	if columnSet(t, conn, "private_messages")["image_path"] {
+		t.Fatal("precondition: legacy private_messages already has image_path")
+	}
+
+	if err := db.Migrate(context.Background(), conn); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+
+	if !columnSet(t, conn, "private_messages")["image_path"] {
+		t.Error("expected private_messages.image_path to exist after Migrate")
+	}
+
+	// The pre-existing row must survive with a NULL image_path.
+	var (
+		body  string
+		image sql.NullString
+	)
+	if err := conn.QueryRow(
+		`SELECT body, image_path FROM private_messages WHERE id = 1`,
+	).Scan(&body, &image); err != nil {
+		t.Fatalf("read migrated row: %v", err)
+	}
+	if body != "legacy dm" {
+		t.Errorf("body: got %q want %q", body, "legacy dm")
+	}
+	if image.Valid {
+		t.Errorf("expected NULL image_path on legacy row, got %q", image.String)
+	}
+
+	// Idempotent: a second run must not fail.
+	if err := db.Migrate(context.Background(), conn); err != nil {
+		t.Fatalf("Migrate (second run): %v", err)
+	}
+}
+
 // TestMigrate_BeginTxErrorPropagates closes the DB before calling Migrate
 // so BeginTx returns an error. The function must surface it wrapped via
 // WrapError, not panic and not swallow the failure.

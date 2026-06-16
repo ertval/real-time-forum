@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -169,17 +170,22 @@ func (h *WsHandler) writePump(c *ws.Client) {
 type dmSendPayload struct {
 	RecipientID int64  `json:"recipient_id"`
 	Body        string `json:"body"`
+	// ImageURL is optional (C09). When set it must be a URL produced by the DM
+	// image upload endpoint: /static/uploads/dm/<file>.<jpg|png|gif>.
+	ImageURL string `json:"image_url"`
 }
 
 // dmMessagePayload is the typed wire shape for the `dm.message` server event.
 // Tagged so marshalling is guaranteed-correct against SDS § 5.5 without
-// relying on map ordering or untyped any-values.
+// relying on map ordering or untyped any-values. ImageURL is omitted when the
+// message has no attachment.
 type dmMessagePayload struct {
 	ID             int64  `json:"id"`
 	SenderID       int64  `json:"sender_id"`
 	RecipientID    int64  `json:"recipient_id"`
 	SenderUsername string `json:"sender_username"`
 	Body           string `json:"body"`
+	ImageURL       string `json:"image_url,omitempty"`
 	CreatedAt      string `json:"created_at"`
 }
 
@@ -198,8 +204,23 @@ const (
 	codeSelfSend         = "SELF_SEND"
 	codeEmptyBody        = "EMPTY_BODY"
 	codeRecipientOffline = "RECIPIENT_OFFLINE"
+	codeInvalidImage     = "INVALID_IMAGE"
 	codeInternalError    = "INTERNAL_ERROR"
 )
+
+// dmImageURLPattern matches exactly the URLs the DM image upload endpoint
+// produces: /static/uploads/dm/<uuid-ish>.<ext>. The image_url on dm.send is
+// later rendered as an <img src> by the frontend (D08), so it is validated
+// rather than trusted — this rejects arbitrary paths, traversal (".."), and
+// external URLs, binding the field to files our own endpoint created.
+var dmImageURLPattern = regexp.MustCompile(`^/static/uploads/dm/[A-Za-z0-9._-]+\.(jpg|png|gif)$`)
+
+// isValidDMImageURL reports whether url is a well-formed DM upload URL. An
+// embedded ".." segment is rejected even though the character class forbids
+// "/", as defence-in-depth against path traversal.
+func isValidDMImageURL(url string) bool {
+	return dmImageURLPattern.MatchString(url) && !strings.Contains(url, "..")
+}
 
 // handleDMSend processes a client dm.send event:
 //  1. Validate payload (parseable, recipient present, non-self, non-empty body).
@@ -230,7 +251,13 @@ func (h *WsHandler) handleDMSend(senderID int64, senderClient *ws.Client, payloa
 		return
 	}
 	if strings.TrimSpace(p.Body) == "" {
+		// Body is required even with an attachment (SDS § 6.1 + the DB CHECK
+		// on private_messages.body). Image-only messages are out of scope.
 		h.sendChatError(senderClient, codeEmptyBody, "message body cannot be empty")
+		return
+	}
+	if p.ImageURL != "" && !isValidDMImageURL(p.ImageURL) {
+		h.sendChatError(senderClient, codeInvalidImage, "invalid image_url")
 		return
 	}
 	if !h.hub.IsUserOnline(p.RecipientID) {
@@ -245,6 +272,7 @@ func (h *WsHandler) handleDMSend(senderID int64, senderClient *ws.Client, payloa
 		SenderID:    senderID,
 		RecipientID: p.RecipientID,
 		Body:        p.Body,
+		ImagePath:   p.ImageURL,
 	})
 	if err != nil {
 		// Surface a generic code; never echo the DB error string to the wire.
@@ -257,12 +285,18 @@ func (h *WsHandler) handleDMSend(senderID int64, senderClient *ws.Client, payloa
 		senderUsername = "unknown"
 	}
 
+	imageURL := ""
+	if msg.ImagePath != nil {
+		imageURL = *msg.ImagePath
+	}
+
 	data := marshalEvent("dm.message", dmMessagePayload{
 		ID:             msg.ID,
 		SenderID:       msg.SenderID,
 		RecipientID:    msg.RecipientID,
 		SenderUsername: senderUsername,
 		Body:           msg.Body,
+		ImageURL:       imageURL,
 		CreatedAt:      msg.CreatedAt,
 	})
 
