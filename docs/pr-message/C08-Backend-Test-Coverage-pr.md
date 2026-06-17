@@ -25,14 +25,17 @@ error paths). Implements ticket C08; a prerequisite for D07.
 - `GET` on the POST-only register/login routes → `405` (the `AllowMethods`
   contract).
 
-### 3. Documentation
+### 3. Dead-code removal (`internal/middleware/auth.go`)
+- Removed **`OptionalAuth`** — surfaced by this ticket's audit as dead code with
+  no non-test callers. Rather than write a test pinning unused code (test
+  over-engineering), the function is deleted. `go build`/`go vet`/`go test ./...`
+  confirm nothing depended on it.
+
+### 4. Documentation
 - Coverage report (below) mapping every gate clause to its proving test.
 - `docs/ticket-tracker.md` → C08 `[x]`.
 
 ### Deliberately out of scope (avoiding test over-engineering)
-- **`OptionalAuth` (`internal/middleware/auth.go`)** is dead code (no non-test
-  callers). It is *not* tested here — testing unused code would pin code that
-  should be deleted. Flagged separately for removal.
 - The remaining uncovered lines in `bumpSessionVersionTx` /
   `invalidateUserSessionsTx` are SQL-error branches; exercising them would
   require sabotage with little behavioral value.
@@ -82,13 +85,14 @@ A fresh-context audit independently re-verified each gate clause against
 `docs/track-c.md` / `docs/SDS.md` (without reading the plan) and confirmed the
 "already satisfied by C03–C06" thesis clause-by-clause. **Verdict: PASS** — no
 critical findings; the two new test files assert real behavior and are stable
-across repeated runs; no production code changed; build/vet/tests green. Audit
-nits addressed: a test comment was corrected to describe the sessions index as a
-*partial* unique index (one valid session per user); the `OptionalAuth` dead-code
-observation was flagged for separate removal.
+across repeated runs; build/vet/tests green. Audit nits addressed: a test
+comment was corrected to describe the sessions index as a *partial* unique index
+(one valid session per user); the `OptionalAuth` dead-code finding is now
+resolved by deleting the function in this PR (the only production change).
 
 ## Key Files Impacted
 - `internal/tests/session_lifecycle_test.go` (new)
 - `internal/tests/auth_errors_test.go` (new)
+- `internal/middleware/auth.go` (removed dead `OptionalAuth`)
 - `docs/ticket-tracker.md`
 - `docs/pr-message/C08-Backend-Test-Coverage-pr.md` (new)
