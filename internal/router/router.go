@@ -286,11 +286,14 @@ func NewRouter(database *sql.DB, hub *ws.Hub) http.Handler {
 			http.MethodGet,
 		),
 	)
+	// GET  /chats/{userID}/messages → history
+	// POST /chats/{userID}/images   → DM image upload (C09)
 	mux.Handle(
 		apiPrefix+"/chats/",
 		middleware.AllowMethods(
 			auth(http.HandlerFunc(chats.HandleChatMessages)),
 			http.MethodGet,
+			http.MethodPost,
 		),
 	)
 

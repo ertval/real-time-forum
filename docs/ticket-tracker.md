@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `33`
+- Done: `35`
 - Partially Implemented: `0`
-- Not Started: `4`
+- Not Started: `2`
 
 ---
 
@@ -119,7 +119,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
 | 30 | [x] | **A07** | A | User Profile Page (Bonus) (Note: Roster link blocked by D01) ([PR](pr-message/A07-User-Profile-Page-pr.md)) | C10, A04, A05 | D07 |
-| 31 | [ ] | **C09** | C | DM Image Upload Backend (Bonus) | C02, C06 | D08, D07 |
+| 31 | [x] | **C09** | C | DM Image Upload Backend (Bonus) ([PR](pr-message/C09-DM-Image-Upload-Backend-pr.md)) | C02, C06 | D08, D07 |
 | 32 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
 
 ### Wave 6 — Finalization & Acceptance (P3–P4)
@@ -129,7 +129,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 | # | Status | Ticket | Track | Description | Depends on | Blocks |
 |---|--------|--------|-------|-------------|------------|--------|
 | 33 | [x] | **C07** | C | Database Migration Strategy ([PR](pr-message/C07-Database-Migration-Strategy-pr.md)) | C10, C02 | D07 |
-| 34 | [ ] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence | C11, A05, C01, C03, C04, C05, C06 | D07 |
+| 34 | [x] | **C08** | C | Backend Test Coverage for Auth, Messaging, and Presence ([PR](pr-message/C08-Backend-Test-Coverage-pr.md)) | C11, A05, C01, C03, C04, C05, C06 | D07 |
 | 35 | [x] | **D05** | D | SPA and Forum Frontend Regression Coverage ([PR](pr-message/D05-SPA-Forum-Regression-Coverage-pr.md)) | D10, A06, B02, B03, B04, B05, B06, B07, B08 | D07 |
 | 36 | [x] | **D06** | D | Chat Frontend Regression Coverage ([PR](pr-message/D06-Chat-Frontend-Regression-Coverage-pr.md)) | D01, D02, D03, D04 | D07 |
 | 37 | [ ] | **D07** | D | Final Acceptance Validation | B05, B06, B07, B08, C07, C08, D04, D05, D06, A07, C09, D08 | None |

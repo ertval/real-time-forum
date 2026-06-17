@@ -9,17 +9,22 @@ import (
 )
 
 type PrivateMessage struct {
-	ID          int64  `json:"id"`
-	SenderID    int64  `json:"sender_id"`
-	RecipientID int64  `json:"recipient_id"`
-	Body        string `json:"body"`
-	CreatedAt   string `json:"created_at"`
+	ID          int64   `json:"id"`
+	SenderID    int64   `json:"sender_id"`
+	RecipientID int64   `json:"recipient_id"`
+	Body        string  `json:"body"`
+	ImagePath   *string `json:"image_url,omitempty"`
+	CreatedAt   string  `json:"created_at"`
 }
 
 type CreateMessageRequest struct {
 	SenderID    int64
 	RecipientID int64
 	Body        string
+	// ImagePath is the relative URL of an attached DM image
+	// (e.g. /static/uploads/dm/abc.png). Empty means no attachment and is
+	// stored as NULL.
+	ImagePath string
 }
 
 // CreateMessage persists a new private message and returns the stored record.
@@ -31,10 +36,17 @@ func CreateMessage(ctx context.Context, database *sql.DB, req CreateMessageReque
 		return PrivateMessage{}, fmt.Errorf("message body cannot be empty")
 	}
 
+	// Empty ImagePath is stored as NULL so the column means "no attachment"
+	// rather than an empty string.
+	var imagePath any
+	if strings.TrimSpace(req.ImagePath) != "" {
+		imagePath = req.ImagePath
+	}
+
 	result, err := database.ExecContext(ctx,
-		`INSERT INTO private_messages (sender_id, recipient_id, body)
-		 VALUES (?, ?, ?)`,
-		req.SenderID, req.RecipientID, req.Body,
+		`INSERT INTO private_messages (sender_id, recipient_id, body, image_path)
+		 VALUES (?, ?, ?, ?)`,
+		req.SenderID, req.RecipientID, req.Body, imagePath,
 	)
 	if err != nil {
 		return PrivateMessage{}, fmt.Errorf("create message: %w", err)
@@ -45,13 +57,19 @@ func CreateMessage(ctx context.Context, database *sql.DB, req CreateMessageReque
 		return PrivateMessage{}, fmt.Errorf("last insert id: %w", err)
 	}
 
-	var msg PrivateMessage
+	var (
+		msg PrivateMessage
+		img sql.NullString
+	)
 	err = database.QueryRowContext(ctx,
-		`SELECT id, sender_id, recipient_id, body, created_at
+		`SELECT id, sender_id, recipient_id, body, image_path, created_at
 		 FROM private_messages WHERE id = ?`, id,
-	).Scan(&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Body, &msg.CreatedAt)
+	).Scan(&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Body, &img, &msg.CreatedAt)
 	if err != nil {
 		return PrivateMessage{}, fmt.Errorf("fetch created message: %w", err)
+	}
+	if img.Valid {
+		msg.ImagePath = &img.String
 	}
 
 	return msg, nil
@@ -149,10 +167,10 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 
 	if beforeID > 0 {
 		rows, err = database.QueryContext(ctx,
-			`SELECT id, sender_id, recipient_id, body, created_at FROM private_messages
+			`SELECT id, sender_id, recipient_id, body, image_path, created_at FROM private_messages
 			 WHERE sender_id = ? AND recipient_id = ? AND id < ?
 			 UNION ALL
-			 SELECT id, sender_id, recipient_id, body, created_at FROM private_messages
+			 SELECT id, sender_id, recipient_id, body, image_path, created_at FROM private_messages
 			 WHERE sender_id = ? AND recipient_id = ? AND id < ?
 			 ORDER BY id DESC
 			 LIMIT ?`,
@@ -160,10 +178,10 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 		)
 	} else {
 		rows, err = database.QueryContext(ctx,
-			`SELECT id, sender_id, recipient_id, body, created_at FROM private_messages
+			`SELECT id, sender_id, recipient_id, body, image_path, created_at FROM private_messages
 			 WHERE sender_id = ? AND recipient_id = ?
 			 UNION ALL
-			 SELECT id, sender_id, recipient_id, body, created_at FROM private_messages
+			 SELECT id, sender_id, recipient_id, body, image_path, created_at FROM private_messages
 			 WHERE sender_id = ? AND recipient_id = ?
 			 ORDER BY id DESC
 			 LIMIT ?`,
@@ -177,9 +195,15 @@ func GetMessageHistory(ctx context.Context, database *sql.DB, userA, userB, befo
 
 	var msgs []PrivateMessage
 	for rows.Next() {
-		var m PrivateMessage
-		if err := rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Body, &m.CreatedAt); err != nil {
+		var (
+			m   PrivateMessage
+			img sql.NullString
+		)
+		if err := rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Body, &img, &m.CreatedAt); err != nil {
 			return nil, false, fmt.Errorf("scan message: %w", err)
+		}
+		if img.Valid {
+			m.ImagePath = &img.String
 		}
 		msgs = append(msgs, m)
 	}
