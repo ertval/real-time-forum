@@ -23,10 +23,14 @@ type columnSpec struct {
 // any column in requiredColumns must also exist in forum_schema.sql with the
 // same definition.
 //
-// Only TABLES that existed in the initial release need entries here; new
-// tables (e.g. private_messages, oauth_users, notifications) are created by
-// CREATE TABLE IF NOT EXISTS in forum_schema.sql, which is a one-shot for
-// the table and its columns.
+// A table needs entries here only once a column is added to it *after* the
+// table first shipped. A brand-new table carries all of its columns in
+// forum_schema.sql via CREATE TABLE IF NOT EXISTS, so it needs no entry — but
+// once a later release adds a column to a table that already exists in
+// deployed databases, that column MUST be listed here: CREATE TABLE IF NOT
+// EXISTS is a no-op on an existing table and will not add it. That is why
+// private_messages.image_path appears below even though private_messages is
+// itself created by the schema file.
 var requiredColumns = []columnSpec{
 	// C10 — User profile schema extension. NOT NULL with safe defaults so
 	// existing user rows remain valid after the ALTER.
@@ -40,6 +44,11 @@ var requiredColumns = []columnSpec{
 	// on populated tables.
 	{"posts", "image_url", "TEXT"},
 	{"comments", "image_url", "TEXT"},
+
+	// C09 — DM image attachments. private_messages predates this column, so
+	// databases created between C02 and C09 need the ALTER. Nullable so it
+	// cannot fail on populated tables.
+	{"private_messages", "image_path", "TEXT DEFAULT NULL"},
 }
 
 // Migrate brings an existing database up to the current schema by adding any

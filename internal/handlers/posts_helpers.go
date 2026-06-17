@@ -237,6 +237,15 @@ func validateImageType(file io.ReadSeeker, filename string) (string, error) {
 }
 
 func saveUploadedImage(file io.Reader, mime string) (string, string, error) {
+	return saveUploadedImageToSubdir(file, mime, "")
+}
+
+// saveUploadedImageToSubdir writes the upload under web/static/uploads[/subdir]
+// and returns the public URL and on-disk path. subdir is a single, hardcoded
+// path segment (e.g. "dm"); pass "" for the uploads root. It exists so DM image
+// uploads can live under uploads/dm/ while sharing the type→extension mapping
+// and copy logic with the post/comment path.
+func saveUploadedImageToSubdir(file io.Reader, mime, subdir string) (string, string, error) {
 	var ext string
 	switch mime {
 	case "image/jpeg":
@@ -250,6 +259,11 @@ func saveUploadedImage(file io.Reader, mime string) (string, string, error) {
 	}
 
 	dir := filepath.Join("web", "static", "uploads")
+	urlPrefix := "/static/uploads/"
+	if subdir != "" {
+		dir = filepath.Join(dir, subdir)
+		urlPrefix += subdir + "/"
+	}
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", "", err
 	}
@@ -268,7 +282,7 @@ func saveUploadedImage(file io.Reader, mime string) (string, string, error) {
 		return "", "", err
 	}
 
-	return "/static/uploads/" + filename, diskPath, nil
+	return urlPrefix + filename, diskPath, nil
 }
 
 // Collects all related Image urls of a post for deletion

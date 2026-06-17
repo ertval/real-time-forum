@@ -75,13 +75,92 @@ func (h *ChatsHandler) HandleChatRoster(w http.ResponseWriter, r *http.Request) 
   HANDLE CHAT MESSAGES
 --------------------------*/
 
+// HandleChatMessages dispatches the per-conversation subroutes under
+// /api/v1/chats/{userID}/...:
+//   - GET  .../messages → chat history
+//   - POST .../images   → DM image upload (C09)
 func (h *ChatsHandler) HandleChatMessages(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
+	path := strings.TrimPrefix(r.URL.Path, "/api/v1/chats/")
+	switch {
+	case strings.HasSuffix(path, "/messages"):
+		if r.Method != http.MethodGet {
+			MethodNotAllowed(w, r)
+			return
+		}
 		h.getChatHistory(w, r)
+	case strings.HasSuffix(path, "/images"):
+		if r.Method != http.MethodPost {
+			MethodNotAllowed(w, r)
+			return
+		}
+		h.uploadDMImage(w, r)
 	default:
-		MethodNotAllowed(w, r)
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid path, expected /chats/{userID}/messages or /chats/{userID}/images", http.StatusBadRequest))
 	}
+}
+
+/*--------------------------
+  UPLOAD DM IMAGE (C09)
+--------------------------*/
+
+// uploadDMImage stores an image to be attached to a DM and returns its URL.
+// It does not create a message — the sender includes the returned image_url in
+// a subsequent dm.send WebSocket event (SDS §5.7). Validation (size, allowed
+// types) is shared with the post/comment upload path.
+func (h *ChatsHandler) uploadDMImage(w http.ResponseWriter, r *http.Request) {
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil || userID == 0 {
+		WriteError(w, r, NewError("UNAUTHORIZED", "user not authenticated", http.StatusUnauthorized))
+		return
+	}
+
+	// Parse and validate the {userID} path segment so the endpoint honours its
+	// route contract; the recipient itself is validated again on dm.send.
+	if _, ok := parseChatTargetID(r.URL.Path, "/images"); !ok {
+		WriteError(w, r, NewError("BAD_REQUEST", "invalid recipient user ID", http.StatusBadRequest))
+		return
+	}
+
+	cleanup, ok := parseMultipartForm(w, r)
+	if !ok {
+		return
+	}
+	defer cleanup()
+
+	file, mime, hasUpload, ok := parseImageUpload(w, r)
+	if !ok {
+		return
+	}
+	if !hasUpload {
+		WriteError(w, r, NewError("BAD_REQUEST", "image field is required", http.StatusBadRequest))
+		return
+	}
+	defer file.Close()
+
+	url, _, err := saveUploadedImageToSubdir(file, mime, "dm")
+	if err != nil {
+		WriteError(w, r, NewError("INTERNAL_SERVER_ERROR", "failed to save image", http.StatusInternalServerError))
+		return
+	}
+
+	WriteOK(w, map[string]string{"image_url": url}, nil)
+}
+
+// parseChatTargetID extracts the positive {userID} from a
+// /api/v1/chats/{userID}/<suffix> path. Returns false when the segment is
+// missing or not a positive integer.
+func parseChatTargetID(path, suffix string) (int64, bool) {
+	p := strings.TrimPrefix(path, "/api/v1/chats/")
+	p = strings.TrimSuffix(p, suffix)
+	p = strings.Trim(p, "/")
+	if p == "" {
+		return 0, false
+	}
+	id, err := strconv.ParseInt(p, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, false
+	}
+	return id, true
 }
 
 /*--------------------------
@@ -160,7 +239,7 @@ func (h *ChatsHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
 	messagesData := make([]map[string]any, len(messages))
 	for i, msg := range messages {
 		senderUsername := usersMap[msg.SenderID]
-		messagesData[i] = map[string]any{
+		row := map[string]any{
 			"id":              msg.ID,
 			"sender_id":       msg.SenderID,
 			"recipient_id":    msg.RecipientID,
@@ -168,6 +247,10 @@ func (h *ChatsHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
 			"body":            msg.Body,
 			"created_at":      msg.CreatedAt,
 		}
+		if msg.ImagePath != nil {
+			row["image_url"] = *msg.ImagePath
+		}
+		messagesData[i] = row
 	}
 
 	resp := struct {
