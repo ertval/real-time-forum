@@ -126,6 +126,49 @@ func TestCreateMessage_WhitespaceBodyRejected(t *testing.T) {
 	}
 }
 
+func TestCreateMessage_WithImagePersistsImagePath(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	defer sqlDB.Close()
+	ctx := context.Background()
+	aliceID, bobID := seedTwoUsers(t, sqlDB)
+
+	const url = "/static/uploads/dm/abc123.png"
+	msg, err := db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{
+		SenderID:    aliceID,
+		RecipientID: bobID,
+		Body:        "with image",
+		ImagePath:   url,
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+	if msg.ImagePath == nil {
+		t.Fatal("expected non-nil ImagePath")
+	}
+	if *msg.ImagePath != url {
+		t.Errorf("ImagePath: got %q want %q", *msg.ImagePath, url)
+	}
+}
+
+func TestCreateMessage_WithoutImageLeavesImagePathNil(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	defer sqlDB.Close()
+	ctx := context.Background()
+	aliceID, bobID := seedTwoUsers(t, sqlDB)
+
+	msg, err := db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{
+		SenderID:    aliceID,
+		RecipientID: bobID,
+		Body:        "no image",
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+	if msg.ImagePath != nil {
+		t.Errorf("expected nil ImagePath, got %q", *msg.ImagePath)
+	}
+}
+
 /*--------------------------
   GetMessageHistory
 ---------------------------*/
@@ -256,6 +299,31 @@ func TestGetMessageHistory_ConversationIsolation(t *testing.T) {
 	}
 	if msgs[0].Body != "alice to bob" {
 		t.Errorf("unexpected message in alice-bob conversation: %q", msgs[0].Body)
+	}
+}
+
+func TestGetMessageHistory_ReturnsImagePath(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	defer sqlDB.Close()
+	ctx := context.Background()
+	aliceID, bobID := seedTwoUsers(t, sqlDB)
+
+	const url = "/static/uploads/dm/hist.gif"
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "plain"})
+	db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{SenderID: aliceID, RecipientID: bobID, Body: "with image", ImagePath: url})
+
+	msgs, _, err := db.GetMessageHistory(ctx, sqlDB, aliceID, bobID, 0)
+	if err != nil {
+		t.Fatalf("GetMessageHistory: %v", err)
+	}
+	if len(msgs) != 2 {
+		t.Fatalf("expected 2 messages, got %d", len(msgs))
+	}
+	if msgs[0].ImagePath != nil {
+		t.Errorf("first message should have nil ImagePath, got %q", *msgs[0].ImagePath)
+	}
+	if msgs[1].ImagePath == nil || *msgs[1].ImagePath != url {
+		t.Errorf("second message ImagePath: got %v want %q", msgs[1].ImagePath, url)
 	}
 }
 
