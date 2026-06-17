@@ -38,7 +38,7 @@ export function renderAuthenticatedShell(content) {
 							<p class="chat-panel__empty">No active chats</p>
 						</div>
 					</section>
-					<section class="chat-panel chat-panel--stacked" data-chat-active>
+					<section class="chat-panel" data-chat-active>
 						<h2 class="chat-panel__title">Active</h2>
 						<div class="chat-panel__active-empty">
 							Select a user to chat
