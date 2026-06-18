@@ -1,3 +1,4 @@
+import { IMAGE_ACCEPT_ATTR } from '../../core/shared/utils.js';
 import { escapeHTML } from '../../core/utils/html.js';
 
 export function formatTimestamp(value) {
@@ -13,6 +14,18 @@ export function formatTimestamp(value) {
 	return date.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+// Bonus (D08): a DM may carry an image attachment. The backend constrains
+// image_url to `/static/uploads/dm/<file>.<jpg|png|gif>` (C09), but we still
+// escape it before injecting it as an attribute — defence in depth.
+export function renderMessageImage(imageUrl) {
+	const url = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+	if (!url) {
+		return '';
+	}
+
+	return `<img class="chat-conversation__image" src="${escapeHTML(url)}" alt="Shared image" loading="lazy" />`;
+}
+
 export function renderMessage(message, currentUserId) {
 	const senderId = Number(message?.sender_id ?? 0);
 	const isOwn = Number.isFinite(currentUserId) && senderId === currentUserId;
@@ -20,6 +33,7 @@ export function renderMessage(message, currentUserId) {
 	const body = String(message?.body ?? '');
 	const rawCreatedAt = message?.created_at ?? '';
 	const messageId = Number(message?.id ?? 0);
+	const imageMarkup = renderMessageImage(message?.image_url);
 
 	const itemClass = isOwn
 		? 'chat-conversation__message chat-conversation__message--own'
@@ -32,6 +46,7 @@ export function renderMessage(message, currentUserId) {
 				<time class="chat-conversation__time" datetime="${escapeHTML(rawCreatedAt)}">${escapeHTML(formatTimestamp(rawCreatedAt))}</time>
 			</div>
 			<p class="chat-conversation__body">${escapeHTML(body)}</p>
+			${imageMarkup}
 		</li>
 	`;
 }
@@ -62,7 +77,28 @@ export function renderComposer(isOnline) {
 		: '<p class="chat-conversation__offline-note" data-conversation-offline>You cannot message users while they are offline.</p>';
 
 	return `
+		<div class="chat-conversation__attachment" data-conversation-image-preview hidden>
+			<img class="chat-conversation__attachment-thumb" data-conversation-image-thumb alt="Attachment preview" />
+			<button
+				class="chat-conversation__attachment-remove"
+				data-conversation-image-clear
+				type="button"
+				aria-label="Remove attached image">×</button>
+		</div>
 		<form class="chat-conversation__composer" data-conversation-composer>
+			<input
+				class="chat-conversation__image-input"
+				data-conversation-image-input
+				type="file"
+				accept="${IMAGE_ACCEPT_ATTR}"
+				hidden
+				${disabledAttr} />
+			<button
+				class="chat-conversation__attach"
+				data-conversation-attach
+				type="button"
+				aria-label="Attach an image"
+				${disabledAttr}>📎</button>
 			<input
 				class="chat-conversation__input"
 				data-conversation-input

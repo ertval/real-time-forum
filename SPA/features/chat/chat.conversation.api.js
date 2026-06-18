@@ -35,6 +35,37 @@ export async function fetchConversation(fetchRef, userId, { beforeId } = {}) {
 	}
 }
 
+// C09 upload endpoint: POST /api/v1/chats/:id/images with a single `image`
+// multipart field. Returns the saved image URL the caller then attaches to a
+// dm.send frame, or '' on any failure so the composer can surface the error.
+export async function uploadDMImage(fetchRef, userId, file) {
+	if (typeof fetchRef !== 'function' || !Number.isFinite(userId) || userId <= 0 || !file) {
+		return '';
+	}
+
+	const formData = new FormData();
+	formData.append('image', file);
+
+	try {
+		const response = await fetchRef(`${API_BASE}/chats/${userId}/images`, {
+			method: 'POST',
+			credentials: 'include',
+			headers: { Accept: 'application/json' },
+			body: formData,
+		});
+
+		if (!response?.ok) {
+			return '';
+		}
+
+		const payload = await response.json();
+		const url = payload?.data?.image_url;
+		return typeof url === 'string' ? url : '';
+	} catch {
+		return '';
+	}
+}
+
 // Needed to tell own messages apart from the other party's in the rendered history.
 export async function fetchCurrentUserId(fetchRef) {
 	if (typeof fetchRef !== 'function') {

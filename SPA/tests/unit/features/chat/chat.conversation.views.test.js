@@ -4,6 +4,7 @@ import {
 	renderComposer,
 	renderConversation,
 	renderMessage,
+	renderMessageImage,
 	renderMessageList,
 } from '../../../../features/chat/chat.conversation.views.js';
 
@@ -52,6 +53,41 @@ describe('renderMessage', () => {
 		expect(html).not.toContain('<img src=x');
 		expect(html).toContain('&lt;img');
 	});
+
+	test('renders an inline image when image_url is present (D08)', () => {
+		const html = renderMessage({ ...message, image_url: '/static/uploads/dm/a.jpg' }, 1);
+		expect(html).toContain('chat-conversation__image');
+		expect(html).toContain('src="/static/uploads/dm/a.jpg"');
+		expect(html).toContain('loading="lazy"');
+	});
+
+	test('omits the image element when there is no attachment (D08)', () => {
+		expect(renderMessage(message, 1)).not.toContain('chat-conversation__image');
+		expect(renderMessage({ ...message, image_url: '   ' }, 1)).not.toContain(
+			'chat-conversation__image',
+		);
+	});
+
+	test('escapes the image url to prevent attribute injection (D08)', () => {
+		const html = renderMessage({ ...message, image_url: '/x.jpg" onerror="alert(1)' }, 1);
+		expect(html).not.toContain('onerror="alert(1)"');
+		expect(html).toContain('&quot;');
+	});
+});
+
+describe('renderMessageImage', () => {
+	test('returns an empty string for missing or blank urls', () => {
+		expect(renderMessageImage('')).toBe('');
+		expect(renderMessageImage('   ')).toBe('');
+		expect(renderMessageImage(null)).toBe('');
+		expect(renderMessageImage(undefined)).toBe('');
+	});
+
+	test('renders an img element for a valid url', () => {
+		const html = renderMessageImage('/static/uploads/dm/pic.png');
+		expect(html).toContain('<img');
+		expect(html).toContain('src="/static/uploads/dm/pic.png"');
+	});
 });
 
 describe('renderMessageList', () => {
@@ -85,6 +121,15 @@ describe('renderComposer', () => {
 		const html = renderComposer(false);
 		expect(html).toContain('disabled');
 		expect(html).toContain('data-conversation-offline');
+	});
+
+	test('exposes the image attachment controls (D08)', () => {
+		const html = renderComposer(true);
+		expect(html).toContain('data-conversation-image-input');
+		expect(html).toContain('type="file"');
+		expect(html).toContain('data-conversation-attach');
+		expect(html).toContain('data-conversation-image-preview');
+		expect(html).toContain('data-conversation-image-clear');
 	});
 });
 
