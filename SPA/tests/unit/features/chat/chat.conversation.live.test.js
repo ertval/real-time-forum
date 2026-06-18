@@ -191,6 +191,123 @@ describe('conversation composer submit (D04)', () => {
 	});
 });
 
+describe('conversation composer image attachment (D08)', () => {
+	const imageFile = new File(['bytes'], 'p.png', { type: 'image/png' });
+
+	function makeImageFetch({
+		meId = 1,
+		imageUrl = '/static/uploads/dm/p.png',
+		uploadOk = true,
+	} = {}) {
+		return vi.fn(async (url) => {
+			if (String(url).endsWith('/users/me')) {
+				return { ok: true, status: 200, json: async () => ({ data: { id: meId } }) };
+			}
+			if (String(url).endsWith('/images')) {
+				return {
+					ok: uploadOk,
+					status: uploadOk ? 200 : 500,
+					json: async () => ({ data: uploadOk ? { image_url: imageUrl } : {} }),
+				};
+			}
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ({ data: { messages: [], has_more: false } }),
+			};
+		});
+	}
+
+	function composerWith(input, files) {
+		return {
+			querySelector: (sel) => {
+				if (sel === '[data-conversation-input]') return input;
+				if (sel === '[data-conversation-image-input]') return { files };
+				return null;
+			},
+		};
+	}
+
+	test('uploads the attachment and forwards its image_url with the message', async () => {
+		const activeRoot = createActiveRoot();
+		const documentRef = createDocumentRef(activeRoot);
+		const fetchRef = makeImageFetch({ meId: 1 });
+
+		initChatConversation({ windowRef: {}, documentRef, fetchRef });
+		await selectUser(documentRef, 2);
+
+		const input = { value: 'look at this' };
+		activeRoot.dispatch('submit', {
+			target: {
+				closest: (sel) =>
+					sel === '[data-conversation-composer]' ? composerWith(input, [imageFile]) : null,
+			},
+			preventDefault: vi.fn(),
+		});
+		await flushMicrotasks();
+
+		expect(fetchRef).toHaveBeenCalledWith(
+			'/api/v1/chats/2/images',
+			expect.objectContaining({ method: 'POST', credentials: 'include' }),
+		);
+		const sends = documentRef.dispatched.filter((e) => e.type === SEND_MESSAGE_EVENT);
+		expect(sends).toHaveLength(1);
+		expect(sends[0].detail).toEqual({
+			recipientId: 2,
+			body: 'look at this',
+			imageUrl: '/static/uploads/dm/p.png',
+		});
+		expect(input.value).toBe('');
+	});
+
+	test('a failed upload surfaces an error and sends nothing', async () => {
+		const activeRoot = createActiveRoot();
+		const documentRef = createDocumentRef(activeRoot);
+		const fetchRef = makeImageFetch({ meId: 1, uploadOk: false });
+
+		initChatConversation({ windowRef: {}, documentRef, fetchRef });
+		await selectUser(documentRef, 2);
+
+		const input = { value: 'with broken image' };
+		activeRoot.dispatch('submit', {
+			target: {
+				closest: (sel) =>
+					sel === '[data-conversation-composer]' ? composerWith(input, [imageFile]) : null,
+			},
+			preventDefault: vi.fn(),
+		});
+		await flushMicrotasks();
+
+		expect(documentRef.dispatched.filter((e) => e.type === SEND_MESSAGE_EVENT)).toHaveLength(0);
+		expect(activeRoot._error.isHidden()).toBe(false);
+		// The composer text is preserved so the user can retry.
+		expect(input.value).toBe('with broken image');
+	});
+
+	test('an image with no message body is blocked and never uploads', async () => {
+		const activeRoot = createActiveRoot();
+		const documentRef = createDocumentRef(activeRoot);
+		const fetchRef = makeImageFetch({ meId: 1 });
+
+		initChatConversation({ windowRef: {}, documentRef, fetchRef });
+		await selectUser(documentRef, 2);
+
+		const input = { value: '   ' };
+		activeRoot.dispatch('submit', {
+			target: {
+				closest: (sel) =>
+					sel === '[data-conversation-composer]' ? composerWith(input, [imageFile]) : null,
+			},
+			preventDefault: vi.fn(),
+		});
+		await flushMicrotasks();
+
+		expect(fetchRef).not.toHaveBeenCalledWith('/api/v1/chats/2/images', expect.anything());
+		expect(documentRef.dispatched.filter((e) => e.type === SEND_MESSAGE_EVENT)).toHaveLength(0);
+		expect(activeRoot._error.isHidden()).toBe(false);
+	});
+});
+
 describe('conversation live dm.message (D04)', () => {
 	test('incoming message for the active thread is appended live', async () => {
 		const activeRoot = createActiveRoot();

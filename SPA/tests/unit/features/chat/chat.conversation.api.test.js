@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import {
 	fetchConversation,
 	fetchCurrentUserId,
+	uploadDMImage,
 } from '../../../../features/chat/chat.conversation.api.js';
 
 describe('fetchConversation', () => {
@@ -132,5 +133,57 @@ describe('fetchCurrentUserId', () => {
 			throw new Error('network');
 		});
 		expect(await fetchCurrentUserId(fetchRef)).toBeNull();
+	});
+});
+
+describe('uploadDMImage (D08)', () => {
+	const file = new File(['bytes'], 'pic.png', { type: 'image/png' });
+
+	test('returns an empty string for invalid arguments without calling fetch', async () => {
+		const fetchRef = vi.fn();
+		expect(await uploadDMImage(null, 5, file)).toBe('');
+		expect(await uploadDMImage(fetchRef, 0, file)).toBe('');
+		expect(await uploadDMImage(fetchRef, Number.NaN, file)).toBe('');
+		expect(await uploadDMImage(fetchRef, 5, null)).toBe('');
+		expect(fetchRef).not.toHaveBeenCalled();
+	});
+
+	test('posts a multipart image field and returns the saved url', async () => {
+		const fetchRef = vi.fn(async () => ({
+			ok: true,
+			status: 200,
+			json: async () => ({ data: { image_url: '/static/uploads/dm/pic.png' } }),
+		}));
+
+		const url = await uploadDMImage(fetchRef, 42, file);
+
+		expect(url).toBe('/static/uploads/dm/pic.png');
+		const [calledUrl, options] = fetchRef.mock.calls[0];
+		expect(calledUrl).toBe('/api/v1/chats/42/images');
+		expect(options.method).toBe('POST');
+		expect(options.credentials).toBe('include');
+		expect(options.body).toBeInstanceOf(FormData);
+		expect(options.body.get('image')).toBe(file);
+	});
+
+	test('returns an empty string on a non-ok response', async () => {
+		const fetchRef = vi.fn(async () => ({ ok: false, status: 413, json: async () => ({}) }));
+		expect(await uploadDMImage(fetchRef, 42, file)).toBe('');
+	});
+
+	test('returns an empty string when the url is missing from the payload', async () => {
+		const fetchRef = vi.fn(async () => ({
+			ok: true,
+			status: 200,
+			json: async () => ({ data: {} }),
+		}));
+		expect(await uploadDMImage(fetchRef, 42, file)).toBe('');
+	});
+
+	test('returns an empty string when fetch throws', async () => {
+		const fetchRef = vi.fn(async () => {
+			throw new Error('network');
+		});
+		expect(await uploadDMImage(fetchRef, 42, file)).toBe('');
 	});
 });
