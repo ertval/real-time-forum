@@ -121,6 +121,30 @@ describe('create-app chat socket wiring (D04)', () => {
 		expect(chatSocket.send).toHaveBeenCalledWith('dm.send', { recipient_id: 3, body: 'hi there' });
 	});
 
+	test('SEND_MESSAGE_EVENT forwards image_url when an attachment is present (D08)', async () => {
+		const browser = createMockBrowser('/');
+		const chatSocket = createMockSocket();
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			notificationCenter: { start: vi.fn(), stop: vi.fn() },
+			chatSocket,
+		});
+
+		await app.boot();
+		browser.dispatchDocument(SEND_MESSAGE_EVENT, {
+			type: SEND_MESSAGE_EVENT,
+			detail: { recipientId: 3, body: 'see this', imageUrl: '/static/uploads/dm/p.png' },
+		});
+
+		expect(chatSocket.send).toHaveBeenCalledWith('dm.send', {
+			recipient_id: 3,
+			body: 'see this',
+			image_url: '/static/uploads/dm/p.png',
+		});
+	});
+
 	test('a failed send dispatches a chat:error NOT_CONNECTED event', async () => {
 		const browser = createMockBrowser('/');
 		const chatSocket = createMockSocket();

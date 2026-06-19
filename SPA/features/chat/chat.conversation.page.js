@@ -1,6 +1,7 @@
 import { WS_EVENTS } from '../../core/realtime/chat-socket.js';
+import { MAX_IMAGE_BYTES } from '../../core/shared/utils.js';
 import { throttle } from '../../core/utils/throttle.js';
-import { fetchConversation, fetchCurrentUserId } from './chat.conversation.api.js';
+import { fetchConversation, fetchCurrentUserId, uploadDMImage } from './chat.conversation.api.js';
 import {
 	renderConversation,
 	renderMessage,
@@ -15,6 +16,11 @@ const INPUT_SELECTOR = '[data-conversation-input]';
 const SCROLL_CONTAINER_SELECTOR = '[data-conversation-scroll]';
 const MESSAGE_LIST_SELECTOR = '[data-conversation-messages]';
 const ERROR_SELECTOR = '[data-conversation-error]';
+const IMAGE_INPUT_SELECTOR = '[data-conversation-image-input]';
+const ATTACH_SELECTOR = '[data-conversation-attach]';
+const IMAGE_PREVIEW_SELECTOR = '[data-conversation-image-preview]';
+const IMAGE_THUMB_SELECTOR = '[data-conversation-image-thumb]';
+const IMAGE_CLEAR_SELECTOR = '[data-conversation-image-clear]';
 
 // Outbound composer submissions are published as this DOM event; the app shell
 // owns the socket and forwards it as a dm.send frame. Keeps the conversation
@@ -166,6 +172,10 @@ export function initChatConversation(options = {}) {
 			currentUserId: resolvedId,
 		});
 
+		// The previous composer (and any pending attachment preview) was just
+		// discarded with the innerHTML swap; release its object URL.
+		revokeAttachmentPreview();
+
 		conversationState = {
 			userId: detail.userId,
 			oldestId: oldestMessageId(conversation.messages),
@@ -210,6 +220,117 @@ export function initChatConversation(options = {}) {
 		banner?.setAttribute('hidden', '');
 	}
 
+	// Bonus (D08): object URL backing the in-composer attachment preview. Tracked
+	// so it can be revoked when the selection changes, is cleared, or is sent.
+	let attachmentObjectUrl = null;
+
+	function revokeAttachmentPreview() {
+		if (attachmentObjectUrl && typeof URL?.revokeObjectURL === 'function') {
+			URL.revokeObjectURL(attachmentObjectUrl);
+		}
+		attachmentObjectUrl = null;
+	}
+
+	function resetComposerImage() {
+		revokeAttachmentPreview();
+		const input = activeRoot.querySelector?.(IMAGE_INPUT_SELECTOR);
+		if (input) {
+			input.value = '';
+		}
+		activeRoot.querySelector?.(IMAGE_PREVIEW_SELECTOR)?.setAttribute?.('hidden', '');
+		activeRoot.querySelector?.(IMAGE_THUMB_SELECTOR)?.removeAttribute?.('src');
+	}
+
+	function showAttachmentPreview(file) {
+		if (file && file.size > MAX_IMAGE_BYTES) {
+			resetComposerImage();
+			showError('Image must be 20MB or smaller.');
+			return;
+		}
+
+		revokeAttachmentPreview();
+
+		const preview = activeRoot.querySelector?.(IMAGE_PREVIEW_SELECTOR);
+		const thumb = activeRoot.querySelector?.(IMAGE_THUMB_SELECTOR);
+		if (!file || !preview || !thumb) {
+			resetComposerImage();
+			return;
+		}
+
+		if (typeof URL?.createObjectURL === 'function') {
+			attachmentObjectUrl = URL.createObjectURL(file);
+			thumb.src = attachmentObjectUrl;
+		}
+		preview.removeAttribute?.('hidden');
+		clearError();
+	}
+
+	function setComposerBusy(composer, busy) {
+		for (const el of [
+			composer.querySelector?.('[data-conversation-send]'),
+			composer.querySelector?.(ATTACH_SELECTOR),
+		]) {
+			if (busy) {
+				el?.setAttribute?.('disabled', '');
+			} else {
+				el?.removeAttribute?.('disabled');
+			}
+		}
+	}
+
+	function selectedComposerFile(composer) {
+		return composer.querySelector?.(IMAGE_INPUT_SELECTOR)?.files?.[0] ?? null;
+	}
+
+	// Uploads the attachment with the send/attach controls disabled, returning the
+	// saved image URL or '' on failure (the caller surfaces the error).
+	async function uploadComposerImage(composer, recipientId, file) {
+		setComposerBusy(composer, true);
+		const imageUrl = await uploadDMImage(fetchRef, recipientId, file);
+		setComposerBusy(composer, false);
+		return imageUrl;
+	}
+
+	// Upload any attached image first, then publish the outbound message (with the
+	// returned image_url) through the shell-owned socket. The backend still
+	// requires a non-empty body even when an image is attached (SDS §6.1), so an
+	// image-only submit is surfaced as guidance rather than silently dropped.
+	async function handleComposerSubmit(composer) {
+		const recipientId = state.recipientId;
+		if (!recipientId) {
+			return;
+		}
+
+		const input = composer.querySelector?.(INPUT_SELECTOR);
+		const body = String(input?.value ?? '').trim();
+		const file = selectedComposerFile(composer);
+
+		if (!body) {
+			if (file) {
+				showError('Add a message to send with your image.');
+			}
+			return;
+		}
+
+		const detail = { recipientId, body };
+		if (file) {
+			const imageUrl = await uploadComposerImage(composer, recipientId, file);
+			if (!imageUrl) {
+				showError('Image upload failed. Please try again.');
+				return;
+			}
+			detail.imageUrl = imageUrl;
+		}
+
+		documentRef.dispatchEvent?.(new CustomEvent(SEND_MESSAGE_EVENT, { detail, bubbles: true }));
+
+		if (input) {
+			input.value = '';
+		}
+		resetComposerImage();
+		clearError();
+	}
+
 	documentRef.addEventListener('chat:user-selected', (event) => {
 		void onUserSelected(event);
 	});
@@ -246,24 +367,26 @@ export function initChatConversation(options = {}) {
 			return;
 		}
 		event.preventDefault?.();
+		void handleComposerSubmit(composer);
+	});
 
-		const input = composer.querySelector?.(INPUT_SELECTOR);
-		const body = String(input?.value ?? '').trim();
-		if (!body || !state.recipientId) {
+	// Attachment controls are delegated on the persistent root because the
+	// composer markup is replaced on every conversation switch (D08).
+	activeRoot.addEventListener?.('click', (event) => {
+		if (event.target?.closest?.(ATTACH_SELECTOR)) {
+			activeRoot.querySelector?.(IMAGE_INPUT_SELECTOR)?.click?.();
 			return;
 		}
-
-		documentRef.dispatchEvent?.(
-			new CustomEvent(SEND_MESSAGE_EVENT, {
-				detail: { recipientId: state.recipientId, body },
-				bubbles: true,
-			}),
-		);
-
-		if (input) {
-			input.value = '';
+		if (event.target?.closest?.(IMAGE_CLEAR_SELECTOR)) {
+			resetComposerImage();
 		}
-		clearError();
+	});
+
+	activeRoot.addEventListener?.('change', (event) => {
+		if (!event.target?.matches?.(IMAGE_INPUT_SELECTOR)) {
+			return;
+		}
+		showAttachmentPreview(event.target.files?.[0] ?? null);
 	});
 
 	return { activeRoot };

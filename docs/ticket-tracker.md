@@ -45,9 +45,9 @@ The canonical product and technical requirements are in:
 ## Summary Snapshot
 
 - Total tickets: `37`
-- Done: `35`
+- Done: `36`
 - Partially Implemented: `0`
-- Not Started: `2`
+- Not Started: `1`
 
 ---
 
@@ -120,7 +120,7 @@ The implementation is organized into **6 waves**. Waves 1–3 deliver a function
 |---|--------|--------|-------|-------------|------------|--------|
 | 30 | [x] | **A07** | A | User Profile Page (Bonus) (Note: Roster link blocked by D01) ([PR](pr-message/A07-User-Profile-Page-pr.md)) | C10, A04, A05 | D07 |
 | 31 | [x] | **C09** | C | DM Image Upload Backend (Bonus) ([PR](pr-message/C09-DM-Image-Upload-Backend-pr.md)) | C02, C06 | D08, D07 |
-| 32 | [ ] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
+| 32 | [x] | **D08** | D | DM Image Rendering Frontend (Bonus) | C09, D02, D04 | D07 |
 
 ### Wave 6 — Finalization & Acceptance (P3–P4)
 

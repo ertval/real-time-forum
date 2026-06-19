@@ -146,7 +146,14 @@ export function createApp(options = {}) {
 			return;
 		}
 
-		const sent = chatSocket?.send?.('dm.send', { recipient_id: recipientId, body });
+		// D08 (bonus): an optional pre-uploaded DM image URL travels with the frame.
+		const imageUrl = typeof detail?.imageUrl === 'string' ? detail.imageUrl.trim() : '';
+		const payload = { recipient_id: recipientId, body };
+		if (imageUrl) {
+			payload.image_url = imageUrl;
+		}
+
+		const sent = chatSocket?.send?.('dm.send', payload);
 		if (sent === false && typeof CustomEvent === 'function') {
 			documentRef.dispatchEvent?.(
 				new CustomEvent('chat:error', {
