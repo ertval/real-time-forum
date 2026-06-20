@@ -7,13 +7,14 @@
 // more reliable than `pkill -f name`, because the leaked process may be a
 // go-build cache binary whose name does not match the expected binary name.
 //
-// Usage: `node ./scripts/free-ports.mjs [port...]` (defaults: 3000 4000 8080).
+// Usage: `node ./scripts/free-ports.mjs [port...]` (defaults: 3000 8080 — the
+// frontend dev server and the Go backend respectively).
 // Best-effort and idempotent: missing tooling or no listener is not an error.
 
 import { execFileSync } from 'node:child_process';
 import process from 'node:process';
 
-const DEFAULT_PORTS = [3000, 4000, 8080];
+const DEFAULT_PORTS = [3000, 8080];
 
 const ports = process.argv.slice(2).length
 	? process.argv
@@ -32,6 +33,8 @@ function run(cmd, args) {
 
 // Resolve PIDs listening on a TCP port. Tries lsof, then ss, then fuser —
 // whichever is available on the host. Returns a de-duplicated array of PIDs.
+// Note: if none of these tools exist, every probe returns empty and cleanup
+// becomes a silent no-op (preferable to silently reusing a stale server).
 function pidsOnPort(port) {
 	const pids = new Set();
 
@@ -69,7 +72,10 @@ for (const port of ports) {
 		} catch {
 			/* already gone */
 		}
-		// Give it a beat, then force-kill if still listening.
+		// Re-check immediately; if SIGTERM didn't free the port, escalate to
+		// SIGKILL. (No deliberate delay: a process that already released the
+		// port won't show up here, and one that's still listening is killed
+		// outright rather than waited on.)
 		const stillThere = pidsOnPort(port).includes(pid);
 		if (stillThere) {
 			try {
