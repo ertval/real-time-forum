@@ -107,6 +107,15 @@ make test-e2e      # Run only Playwright E2E tests
 make lint          # Execute Biome static analysis
 make format        # Standardize code formatting (Backend + Frontend)
 make format-frontend # Fix Biome static analysis issues
+```
+
+**Run E2E through `make`, not Playwright directly.** `make test` / `make test-e2e`
+are the supported local entry points: they free ports `3000` (frontend) and `8080`
+(backend) and start a fresh server. The Playwright config sets `reuseExistingServer:
+false`, so invoking `bun x playwright test` by hand while a dev server is already
+running fails with a port-in-use error instead of silently reusing the existing
+(possibly stale) instance. Stop your dev servers — or just use `make test-e2e`,
+which handles cleanup for you.
 
 ### 🧪 Testing Tiers
 
@@ -119,7 +128,6 @@ The project follows a rigorous three-tier validation strategy:
 | **E2E** | Full multi-step user journeys | Playwright (Headless Chrome) |
 
 **Note**: Playwright browsers are automatically installed during `make deps`. If you encounter issues, run `bun x playwright install chromium`.
-```
 
 ### 🌱 Database Seeding
 Use the QA seed runner when you want a deterministic local dataset.

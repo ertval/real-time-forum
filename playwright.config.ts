@@ -21,12 +21,18 @@ export default defineConfig({
 		{
 			command: 'make run-backend',
 			url: 'http://localhost:8080/api/v1/users/me',
-			reuseExistingServer: !process.env.CI,
+			// Never attach to a pre-existing process: a leaked/stale server would
+			// otherwise be reused and the suite would run against the wrong app.
+			// `make test-e2e` frees these ports first, so a fresh server always starts.
+			reuseExistingServer: false,
 		},
 		{
 			command: 'make run-frontend',
 			url: 'http://localhost:3000',
-			reuseExistingServer: !process.env.CI,
+			// Never attach to a pre-existing process: a leaked/stale server would
+			// otherwise be reused and the suite would run against the wrong app.
+			// `make test-e2e` frees these ports first, so a fresh server always starts.
+			reuseExistingServer: false,
 		},
 	],
 });
