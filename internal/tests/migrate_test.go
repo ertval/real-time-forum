@@ -363,6 +363,15 @@ func TestMigrate_AddsImagePathToLegacyPrivateMessages(t *testing.T) {
 		t.Errorf("expected NULL image_path on legacy row, got %q", image.String)
 	}
 
+	// The body CHECK must have been relaxed: an image-only message (empty body
+	// + image_path) is now insertable on the migrated table.
+	if _, err := conn.Exec(
+		`INSERT INTO private_messages (sender_id, recipient_id, body, image_path)
+		 VALUES (1, 2, '', '/static/uploads/dm/imageonly.png')`,
+	); err != nil {
+		t.Errorf("expected image-only insert to succeed after migration, got: %v", err)
+	}
+
 	// Idempotent: a second run must not fail.
 	if err := db.Migrate(context.Background(), conn); err != nil {
 		t.Fatalf("Migrate (second run): %v", err)

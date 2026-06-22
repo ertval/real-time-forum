@@ -16,8 +16,18 @@ function getReactionButton(target) {
 	return target.closest('[data-reaction]');
 }
 
+function isPressed(button) {
+	return button?.getAttribute('aria-pressed') === 'true';
+}
+
+function setPressed(button, pressed) {
+	if (button) {
+		button.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+	}
+}
+
 // Resolves the reaction target from the container element rather than the
-// <input>. The reaction inputs intentionally carry no id attribute (so they
+// <button>. The reaction buttons intentionally carry no id attribute (so they
 // never collide with the unique [data-post-id] container selector), so the id
 // is read from the nearest [data-post-id]/[data-comment-id] ancestor. The
 // .reactions wrapper's data-reaction-scope hook picks which container to find:
@@ -36,13 +46,6 @@ function resolveReactionTarget(button) {
 	return { container, postId: container?.dataset.postId ?? null, commentId: null };
 }
 
-function restoreReactionState(button, opposite, previousState, oppositePreviousState) {
-	button.checked = previousState;
-	if (opposite && oppositePreviousState !== null) {
-		opposite.checked = oppositePreviousState;
-	}
-}
-
 function applyReactionCountsToDom(scope, payload) {
 	const { likesCount, dislikesCount } = getReactionCounts(payload);
 	const likeCount = scope?.querySelector('[data-like-count]');
@@ -57,7 +60,7 @@ function applyReactionCountsToDom(scope, payload) {
 	}
 }
 
-async function handleReactionChange(fetchRef, event) {
+async function handleReactionClick(fetchRef, event) {
 	const button = getReactionButton(event.target);
 	if (!button) {
 		return;
@@ -65,7 +68,6 @@ async function handleReactionChange(fetchRef, event) {
 
 	event.stopPropagation();
 
-	const previousState = !button.checked;
 	const { container: scope, postId, commentId } = resolveReactionTarget(button);
 	if (!scope) {
 		return;
@@ -77,26 +79,27 @@ async function handleReactionChange(fetchRef, event) {
 		commentId,
 	});
 
-	const oppositeType = getOppositeReactionType(reaction.type);
-	const opposite = scope.querySelector(`input[data-reaction="${oppositeType}"]`);
-	const oppositePreviousState = opposite ? opposite.checked : null;
+	// The button's aria-pressed reflects the persisted reaction: clicking the
+	// active button clears it, clicking the other switches. Nothing is mutated
+	// until the server confirms, so a failed or anonymous request simply leaves
+	// the existing state untouched — there is nothing to roll back.
+	const wasActive = isPressed(button);
+
 	const currentUser = await getCurrentUser(fetchRef);
 	if (!currentUser) {
-		restoreReactionState(button, opposite, previousState, oppositePreviousState);
 		return;
 	}
 
-	const nextSelection = applyReactionSelection(previousState ? reaction.type : null, reaction.type);
+	const nextSelection = applyReactionSelection(wasActive ? reaction.type : null, reaction.type);
 	const response = await postReaction(fetchRef, reaction);
 	if (!response?.ok) {
-		restoreReactionState(button, opposite, previousState, oppositePreviousState);
 		return;
 	}
 
-	button.checked = nextSelection === reaction.type;
-	if (opposite) {
-		opposite.checked = false;
-	}
+	const oppositeType = getOppositeReactionType(reaction.type);
+	const opposite = scope.querySelector(`[data-reaction="${oppositeType}"]`);
+	setPressed(button, nextSelection === reaction.type);
+	setPressed(opposite, false);
 
 	applyReactionCountsToDom(scope, await response.json());
 }
@@ -114,8 +117,8 @@ export function initReactionBindings({
 		return;
 	}
 
-	documentRef.addEventListener('change', (event) => {
-		void handleReactionChange(fetchRef, event);
+	documentRef.addEventListener('click', (event) => {
+		void handleReactionClick(fetchRef, event);
 	});
 
 	reactionsInitialized = true;

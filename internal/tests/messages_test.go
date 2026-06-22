@@ -126,6 +126,30 @@ func TestCreateMessage_WhitespaceBodyRejected(t *testing.T) {
 	}
 }
 
+func TestCreateMessage_ImageOnlyAccepted(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	defer sqlDB.Close()
+	ctx := context.Background()
+	aliceID, bobID := seedTwoUsers(t, sqlDB)
+
+	const url = "/static/uploads/dm/imageonly.png"
+	msg, err := db.CreateMessage(ctx, sqlDB, db.CreateMessageRequest{
+		SenderID:    aliceID,
+		RecipientID: bobID,
+		Body:        "",
+		ImagePath:   url,
+	})
+	if err != nil {
+		t.Fatalf("expected image-only message to be accepted, got: %v", err)
+	}
+	if msg.Body != "" {
+		t.Errorf("body: got %q want empty", msg.Body)
+	}
+	if msg.ImagePath == nil || *msg.ImagePath != url {
+		t.Errorf("ImagePath: got %v want %q", msg.ImagePath, url)
+	}
+}
+
 func TestCreateMessage_WithImagePersistsImagePath(t *testing.T) {
 	sqlDB := setupTestDB(t)
 	defer sqlDB.Close()

@@ -145,6 +145,50 @@ describe('create-app chat socket wiring (D04)', () => {
 		});
 	});
 
+	test('SEND_MESSAGE_EVENT forwards an image-only frame with an empty body (D08)', async () => {
+		const browser = createMockBrowser('/');
+		const chatSocket = createMockSocket();
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			notificationCenter: { start: vi.fn(), stop: vi.fn() },
+			chatSocket,
+		});
+
+		await app.boot();
+		browser.dispatchDocument(SEND_MESSAGE_EVENT, {
+			type: SEND_MESSAGE_EVENT,
+			detail: { recipientId: 3, body: '', imageUrl: '/static/uploads/dm/p.png' },
+		});
+
+		expect(chatSocket.send).toHaveBeenCalledWith('dm.send', {
+			recipient_id: 3,
+			body: '',
+			image_url: '/static/uploads/dm/p.png',
+		});
+	});
+
+	test('SEND_MESSAGE_EVENT with neither body nor image is dropped', async () => {
+		const browser = createMockBrowser('/');
+		const chatSocket = createMockSocket();
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: vi.fn(async () => ({ ok: true, status: 200 })),
+			notificationCenter: { start: vi.fn(), stop: vi.fn() },
+			chatSocket,
+		});
+
+		await app.boot();
+		browser.dispatchDocument(SEND_MESSAGE_EVENT, {
+			type: SEND_MESSAGE_EVENT,
+			detail: { recipientId: 3, body: '   ' },
+		});
+
+		expect(chatSocket.send).not.toHaveBeenCalled();
+	});
+
 	test('a failed send dispatches a chat:error NOT_CONNECTED event', async () => {
 		const browser = createMockBrowser('/');
 		const chatSocket = createMockSocket();

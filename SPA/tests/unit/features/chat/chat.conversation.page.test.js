@@ -20,6 +20,9 @@ function createActiveRoot() {
 		setAttribute(name, value) {
 			attrs.set(name, String(value));
 		},
+		removeAttribute(name) {
+			attrs.delete(name);
+		},
 		addEventListener(type, handler) {
 			if (!listeners.has(type)) {
 				listeners.set(type, []);
@@ -34,12 +37,35 @@ function createActiveRoot() {
 	};
 }
 
-function createDocumentRef(activeRoot) {
+// Minimal stand-in for the roster panel so the conversation page can toggle
+// its `hidden` attribute when swapping between the list and an open thread.
+function createRosterRoot() {
+	const attrs = new Map();
+	return {
+		getAttribute(name) {
+			return attrs.has(name) ? attrs.get(name) : null;
+		},
+		setAttribute(name, value) {
+			attrs.set(name, String(value));
+		},
+		removeAttribute(name) {
+			attrs.delete(name);
+		},
+	};
+}
+
+function createDocumentRef(activeRoot, rosterRoot = null) {
 	const listeners = new Map();
 	return {
 		_listeners: listeners,
 		querySelector(selector) {
-			return selector === '[data-chat-active]' ? activeRoot : null;
+			if (selector === '[data-chat-active]') {
+				return activeRoot;
+			}
+			if (selector === '[data-chat-roster]') {
+				return rosterRoot;
+			}
+			return null;
 		},
 		addEventListener(type, handler) {
 			if (!listeners.has(type)) {
@@ -126,6 +152,34 @@ describe('initChatConversation', () => {
 			'/api/v1/chats/2/messages',
 			expect.objectContaining({ credentials: 'include' }),
 		);
+	});
+
+	test('selecting a user shows the conversation and hides the roster; back reverses it', async () => {
+		const activeRoot = createActiveRoot();
+		const rosterRoot = createRosterRoot();
+		// Shell renders the conversation panel hidden by default.
+		activeRoot.setAttribute('hidden', '');
+		const documentRef = createDocumentRef(activeRoot, rosterRoot);
+		const fetchRef = makeFetch({ meId: 1, messages: [] });
+
+		initChatConversation({ windowRef: {}, documentRef, fetchRef });
+		documentRef.dispatch('chat:user-selected', {
+			detail: { userId: 2, username: 'bob', isOnline: true },
+		});
+		await flushMicrotasks();
+
+		// Conversation shown, roster hidden.
+		expect(activeRoot.getAttribute('hidden')).toBeNull();
+		expect(rosterRoot.getAttribute('hidden')).toBe('');
+
+		// Click the in-header back arrow.
+		activeRoot.dispatch('click', {
+			target: { closest: (sel) => (sel === '[data-conversation-back]' ? {} : null) },
+		});
+
+		// Roster shown again, conversation hidden.
+		expect(activeRoot.getAttribute('hidden')).toBe('');
+		expect(rosterRoot.getAttribute('hidden')).toBeNull();
 	});
 
 	test('selecting a user with no history renders the empty state', async () => {

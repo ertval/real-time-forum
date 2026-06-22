@@ -142,12 +142,14 @@ export function createApp(options = {}) {
 		const detail = event?.detail;
 		const recipientId = Number(detail?.recipientId ?? 0);
 		const body = String(detail?.body ?? '').trim();
-		if (!recipientId || !body) {
+		// D08 (bonus): an optional pre-uploaded DM image URL travels with the frame.
+		// A message may carry just text, just an image, or both — only a frame with
+		// neither is dropped.
+		const imageUrl = typeof detail?.imageUrl === 'string' ? detail.imageUrl.trim() : '';
+		if (!recipientId || (!body && !imageUrl)) {
 			return;
 		}
 
-		// D08 (bonus): an optional pre-uploaded DM image URL travels with the frame.
-		const imageUrl = typeof detail?.imageUrl === 'string' ? detail.imageUrl.trim() : '';
 		const payload = { recipient_id: recipientId, body };
 		if (imageUrl) {
 			payload.image_url = imageUrl;

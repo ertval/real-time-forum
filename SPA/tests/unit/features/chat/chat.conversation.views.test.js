@@ -73,6 +73,12 @@ describe('renderMessage', () => {
 		expect(html).not.toContain('onerror="alert(1)"');
 		expect(html).toContain('&quot;');
 	});
+
+	test('renders an image-only message without an empty body paragraph', () => {
+		const html = renderMessage({ ...message, body: '', image_url: '/static/uploads/dm/a.jpg' }, 1);
+		expect(html).toContain('chat-conversation__image');
+		expect(html).not.toContain('chat-conversation__body');
+	});
 });
 
 describe('renderMessageImage', () => {
@@ -157,5 +163,16 @@ describe('renderConversation', () => {
 		expect(html).toContain('chat-conversation__presence--offline');
 		expect(html).toContain('data-conversation-empty');
 		expect(html).toContain('disabled');
+	});
+
+	test('renders a back control to return to the user list', () => {
+		const html = renderConversation({
+			username: 'alice',
+			isOnline: true,
+			messages: [],
+			currentUserId: 2,
+		});
+		expect(html).toContain('data-conversation-back');
+		expect(html).toContain('chat-conversation__back');
 	});
 });

@@ -336,13 +336,14 @@ func TestDMSend_InvalidImageURLRejected(t *testing.T) {
 	}
 }
 
-func TestDMSend_EmptyBodyWithImageStillRejected(t *testing.T) {
+func TestDMSend_ImageOnlyAccepted(t *testing.T) {
 	h, sqlDB := newTestAPI(t)
 	defer sqlDB.Close()
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 
 	tokenAlice := registerAndLoginAs(t, h, "imgonlyalice")
+	aliceID := getUserID(t, h, tokenAlice)
 	tokenBob := registerAndLoginAs(t, h, "imgonlybob")
 	bobID := getUserID(t, h, tokenBob)
 
@@ -369,20 +370,39 @@ func TestDMSend_EmptyBodyWithImageStillRejected(t *testing.T) {
 	drainUntilType(connAlice, "presence.update", time.Second)
 	drainUntilType(connBob, "presence.update", time.Second)
 
-	// Image attached but empty body — body is still required (SDS §6.1).
+	// Image attached with an empty body — image-only DMs are allowed and must
+	// be echoed to both parties and persisted.
 	sendDMSendWithImage(t, connAlice, bobID, "", imageURL)
 
-	errMsg, ok := drainUntilType(connAlice, "chat.error", 2*time.Second)
-	if !ok {
-		t.Fatal("expected chat.error for empty body with image")
+	for _, c := range []*websocket.Conn{connAlice, connBob} {
+		msg, ok := drainUntilType(c, "dm.message", 2*time.Second)
+		if !ok {
+			t.Fatal("did not receive dm.message for image-only send")
+		}
+		var payload struct {
+			Body     string `json:"body"`
+			ImageURL string `json:"image_url"`
+		}
+		if err := json.Unmarshal(msg["payload"], &payload); err != nil {
+			t.Fatalf("unmarshal dm.message payload: %v", err)
+		}
+		if payload.Body != "" {
+			t.Errorf("dm.message body: got %q want empty", payload.Body)
+		}
+		if payload.ImageURL != imageURL {
+			t.Errorf("dm.message image_url: got %q want %q", payload.ImageURL, imageURL)
+		}
 	}
-	var payload struct {
-		Code string `json:"code"`
+
+	// The image-only message must be persisted and surfaced by the history API.
+	msgs := getChatMessages(t, h, tokenBob, aliceID, 0)
+	found := false
+	for _, m := range msgs {
+		if m["image_url"] == imageURL {
+			found = true
+		}
 	}
-	if err := json.Unmarshal(errMsg["payload"], &payload); err != nil {
-		t.Fatalf("unmarshal chat.error: %v", err)
-	}
-	if payload.Code != "EMPTY_BODY" {
-		t.Errorf("expected EMPTY_BODY, got %q", payload.Code)
+	if !found {
+		t.Errorf("history did not surface image-only message %q, got: %v", imageURL, msgs)
 	}
 }

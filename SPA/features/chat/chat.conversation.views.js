@@ -39,13 +39,17 @@ export function renderMessage(message, currentUserId) {
 		? 'chat-conversation__message chat-conversation__message--own'
 		: 'chat-conversation__message chat-conversation__message--incoming';
 
+	// Image-only messages have no text, so the body paragraph is omitted
+	// rather than rendered empty.
+	const bodyMarkup = body ? `<p class="chat-conversation__body">${escapeHTML(body)}</p>` : '';
+
 	return `
 		<li class="${itemClass}" data-message-id="${messageId}">
 			<div class="chat-conversation__meta">
 				<span class="chat-conversation__sender">${escapeHTML(username)}</span>
 				<time class="chat-conversation__time" datetime="${escapeHTML(rawCreatedAt)}">${escapeHTML(formatTimestamp(rawCreatedAt))}</time>
 			</div>
-			<p class="chat-conversation__body">${escapeHTML(body)}</p>
+			${bodyMarkup}
 			${imageMarkup}
 		</li>
 	`;
@@ -123,7 +127,12 @@ export function renderConversation({ username, isOnline, messages, currentUserId
 	return `
 		<div class="chat-conversation" data-conversation-view>
 			<header class="chat-conversation__header">
-				<span class="chat-conversation__title">${escapeHTML(safeUsername)}</span>
+				<div class="chat-conversation__header-left">
+					<button type="button" class="chat-conversation__back" data-conversation-back aria-label="Back to chats">
+						<span aria-hidden="true">←</span>
+					</button>
+					<span class="chat-conversation__title">${escapeHTML(safeUsername)}</span>
+				</div>
 				<span class="${presenceClass}">${online ? 'online' : 'offline'}</span>
 			</header>
 			<p class="chat-conversation__error" data-conversation-error role="alert" hidden></p>

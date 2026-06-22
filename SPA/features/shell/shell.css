@@ -212,6 +212,13 @@
 	overflow: hidden;
 }
 
+/* The roster and conversation share one slot; only one is shown at a time.
+   Needed because `display: flex` above otherwise wins over the native
+   `[hidden]` (display: none). */
+.chat-panel[hidden] {
+	display: none;
+}
+
 .chat-panel::before {
 	content: "";
 	position: absolute;

@@ -10,6 +10,8 @@ import {
 } from './chat.conversation.views.js';
 
 const ACTIVE_ROOT_SELECTOR = '[data-chat-active]';
+const ROSTER_ROOT_SELECTOR = '[data-chat-roster]';
+const BACK_SELECTOR = '[data-conversation-back]';
 const ACTIVE_BOUND_ATTR = 'data-conversation-bound';
 const COMPOSER_SELECTOR = '[data-conversation-composer]';
 const INPUT_SELECTOR = '[data-conversation-input]';
@@ -73,6 +75,32 @@ export function initChatConversation(options = {}) {
 	// Tracks the conversation currently on screen so live dm.message frames can
 	// be matched to the active thread.
 	const state = { recipientId: 0, username: '', isOnline: false };
+
+	// The roster (user list) and the conversation share one panel slot, like
+	// Messenger: the list shows by default, selecting a user swaps to the open
+	// thread, and the in-header back arrow returns to the list. Toggling is done
+	// by hiding one panel and showing the other.
+	const rosterRoot = documentRef.querySelector(ROSTER_ROOT_SELECTOR);
+
+	function showConversationPanel() {
+		activeRoot.removeAttribute?.('hidden');
+		rosterRoot?.setAttribute?.('hidden', '');
+	}
+
+	function showRosterPanel() {
+		activeRoot.setAttribute?.('hidden', '');
+		rosterRoot?.removeAttribute?.('hidden');
+	}
+
+	// Minimise the open thread and return to the user list. Clearing
+	// recipientId stops live dm.message frames from targeting the closed thread.
+	function closeConversation() {
+		state.recipientId = 0;
+		state.username = '';
+		state.isOnline = false;
+		revokeAttachmentPreview();
+		showRosterPanel();
+	}
 
 	// Resolve the signed-in user once so own/incoming messages can be styled apart.
 	let currentUserId = null;
@@ -184,6 +212,7 @@ export function initChatConversation(options = {}) {
 		};
 
 		bindIncrementalLoading();
+		showConversationPanel();
 	}
 
 	// Appends a single live message to the open thread, replacing the empty
@@ -292,9 +321,9 @@ export function initChatConversation(options = {}) {
 	}
 
 	// Upload any attached image first, then publish the outbound message (with the
-	// returned image_url) through the shell-owned socket. The backend still
-	// requires a non-empty body even when an image is attached (SDS §6.1), so an
-	// image-only submit is surfaced as guidance rather than silently dropped.
+	// returned image_url) through the shell-owned socket. A message may carry just
+	// text, just an image, or both; only a completely empty submit (no text and no
+	// file) is silently ignored.
 	async function handleComposerSubmit(composer) {
 		const recipientId = state.recipientId;
 		if (!recipientId) {
@@ -305,10 +334,7 @@ export function initChatConversation(options = {}) {
 		const body = String(input?.value ?? '').trim();
 		const file = selectedComposerFile(composer);
 
-		if (!body) {
-			if (file) {
-				showError('Add a message to send with your image.');
-			}
+		if (!body && !file) {
 			return;
 		}
 
@@ -370,9 +396,14 @@ export function initChatConversation(options = {}) {
 		void handleComposerSubmit(composer);
 	});
 
-	// Attachment controls are delegated on the persistent root because the
-	// composer markup is replaced on every conversation switch (D08).
+	// Attachment controls and the header back arrow are delegated on the
+	// persistent root because the conversation markup is replaced on every
+	// conversation switch (D08).
 	activeRoot.addEventListener?.('click', (event) => {
+		if (event.target?.closest?.(BACK_SELECTOR)) {
+			closeConversation();
+			return;
+		}
 		if (event.target?.closest?.(ATTACH_SELECTOR)) {
 			activeRoot.querySelector?.(IMAGE_INPUT_SELECTOR)?.click?.();
 			return;

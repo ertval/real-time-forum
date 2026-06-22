@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 // columnSpec describes a column that must exist on a table after migration.
@@ -109,8 +110,82 @@ func Migrate(ctx context.Context, database *sql.DB) error {
 		cols[c.column] = true
 	}
 
+	// Relax the private_messages body CHECK so image-only DMs are allowed.
+	// Must run after the column loop above so image_path is guaranteed to
+	// exist before the rebuilt table references it.
+	if err := migratePrivateMessagesBodyCheck(ctx, tx); err != nil {
+		return err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return WrapError("commit migration tx", err)
+	}
+	return nil
+}
+
+// migratePrivateMessagesBodyCheck relaxes the original
+// `CHECK (length(trim(body)) > 0)` on private_messages to
+// `CHECK ((length(trim(body)) > 0) OR image_path IS NOT NULL)` so a DM may
+// carry just an image with no text — matching the posts/comments image-only
+// pattern.
+//
+// SQLite cannot ALTER a CHECK constraint, so the table is rebuilt via the
+// documented create-copy-drop-rename procedure. private_messages is not the
+// target of any foreign key (no other table references it), so the rebuild is
+// safe with foreign_keys left enabled inside the migration transaction.
+//
+// Idempotent: a fresh database built from forum_schema.sql already carries the
+// relaxed constraint, and an already-migrated database does too, so both skip.
+func migratePrivateMessagesBodyCheck(ctx context.Context, tx *sql.Tx) error {
+	var existing sql.NullString
+	err := tx.QueryRowContext(ctx,
+		`SELECT sql FROM sqlite_master WHERE type='table' AND name='private_messages'`,
+	).Scan(&existing)
+	if err == sql.ErrNoRows {
+		// Table absent (e.g. a partial-schema fixture) — nothing to rebuild.
+		return nil
+	}
+	if err != nil {
+		return WrapError("introspect private_messages constraint", err)
+	}
+	// The relaxed constraint is the only place "image_path IS NOT NULL"
+	// appears in the table DDL, so its presence means the rebuild already
+	// happened (or the table was created fresh from the new schema).
+	if strings.Contains(existing.String, "image_path IS NOT NULL") {
+		return nil
+	}
+
+	// Rebuild. Columns are listed explicitly in the copy so the result is
+	// independent of column ordering. The two indexes are dropped together
+	// with the old table, so they are recreated to match forum_schema.sql.
+	stmts := []string{
+		`CREATE TABLE private_messages_new (
+			id            INTEGER PRIMARY KEY AUTOINCREMENT,
+			sender_id     INTEGER NOT NULL,
+			recipient_id  INTEGER NOT NULL,
+			body          TEXT NOT NULL,
+			image_path    TEXT DEFAULT NULL,
+			created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+			FOREIGN KEY (sender_id)    REFERENCES users(id) ON DELETE CASCADE,
+			FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+			CHECK (sender_id <> recipient_id),
+			CHECK ((length(trim(body)) > 0) OR image_path IS NOT NULL)
+		)`,
+		`INSERT INTO private_messages_new
+			(id, sender_id, recipient_id, body, image_path, created_at)
+			SELECT id, sender_id, recipient_id, body, image_path, created_at
+			FROM private_messages`,
+		`DROP TABLE private_messages`,
+		`ALTER TABLE private_messages_new RENAME TO private_messages`,
+		`CREATE INDEX IF NOT EXISTS idx_pm_sender
+			ON private_messages(sender_id, recipient_id, created_at DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_pm_recipient
+			ON private_messages(recipient_id, sender_id, created_at DESC)`,
+	}
+	for _, s := range stmts {
+		if _, err := tx.ExecContext(ctx, s); err != nil {
+			return WrapError("rebuild private_messages for image-only DMs", err)
+		}
 	}
 	return nil
 }
