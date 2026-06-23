@@ -848,11 +848,6 @@
 	padding: var(--space-md) var(--space-lg);
 	gap: var(--space-sm);
 	cursor: pointer;
-	transition: background var(--transition-fast);
-}
-
-.activity-section-head:hover {
-	background: var(--bg-secondary);
 }
 
 .activity-toggle {
@@ -920,14 +915,9 @@
 
 .post-owner-actions button,
 .post-owner-actions a {
-	padding: 0.35rem 0.85rem;
+	padding: 0.45rem;
 	border: 1px solid var(--border-light);
 	border-radius: var(--radius-full);
-	font-family: var(--font-display);
-	font-size: 0.72rem;
-	font-weight: 700;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
 	cursor: pointer;
 	background: var(--bg-elevated);
 	color: var(--text-secondary);
@@ -937,6 +927,22 @@
 		border-color var(--transition-fast);
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
+}
+
+.post-owner-actions .owner-action__icon {
+	width: 1.05rem;
+	height: 1.05rem;
+	display: block;
+}
+
+/* Black trash PNG recolored to red via mask. Uses an explicit red (not
+   currentColor) so it stays red on hover, when the button's text color
+   would otherwise shift to dark. */
+.post-owner-actions .owner-action__icon--delete {
+	background-color: var(--error-strong);
+	-webkit-mask: url("/assets/img/delete.png") center / contain no-repeat;
+	mask: url("/assets/img/delete.png") center / contain no-repeat;
 }
 
 .post-owner-actions button:hover,
@@ -1023,6 +1029,18 @@
 .activity-comment-head-right button:hover {
 	background: var(--accent-softer);
 	color: var(--accent-hover);
+}
+
+.activity-comment-head-right .comment-action__icon {
+	width: 1rem;
+	height: 1rem;
+	display: block;
+}
+
+.activity-comment-head-right .comment-action__icon--delete {
+	background-color: var(--error-strong);
+	-webkit-mask: url("/assets/img/delete.png") center / contain no-repeat;
+	mask: url("/assets/img/delete.png") center / contain no-repeat;
 }
 
 .activity-comment-body {

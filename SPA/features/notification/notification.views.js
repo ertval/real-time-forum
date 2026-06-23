@@ -40,7 +40,7 @@ export function renderNotificationBell() {
 				aria-expanded="false"
 				aria-label="Notifications"
 			>
-				<span class="notification__bell-icon" aria-hidden="true">🔔</span>
+				<img class="notification__bell-icon" src="/assets/img/bell.png" alt="" aria-hidden="true" />
 				<span class="notification__badge hidden" data-notification-badge aria-hidden="true"></span>
 			</button>
 			<div class="notification__dropdown hidden" data-notification-dropdown role="menu" hidden></div>

@@ -65,7 +65,7 @@ function renderPostFormFields({
 									id="image-button"
 									aria-label="Attach image"
 								>
-									<span class="post-editor__attach-icon" aria-hidden="true">+</span>
+									<img class="post-editor__attach-icon" src="/assets/img/paperclip.png" alt="" aria-hidden="true" />
 								</button>
 								<input
 									id="image"

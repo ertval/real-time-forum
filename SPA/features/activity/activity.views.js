@@ -190,6 +190,8 @@ function renderPostImageMarkup(imageUrl, title) {
 
 function renderPostOwnerActions(postId, ownerStatus) {
 	const isDraft = ownerStatus === 'draft';
+	const statusLabel = isDraft ? 'Publish' : 'Draft';
+	const statusIcon = isDraft ? 'publish' : 'draft';
 	return `
 		<button
 			type="button"
@@ -198,8 +200,9 @@ function renderPostOwnerActions(postId, ownerStatus) {
 			data-post-id="${postId}"
 			data-current-status="${escapeHTML(ownerStatus)}"
 			title="${isDraft ? 'Publish post' : 'Move to draft'}"
+			aria-label="${statusLabel}"
 		>
-			${isDraft ? 'Publish' : 'Draft'}
+			<img class="owner-action__icon" src="/assets/img/${statusIcon}.png" alt="" aria-hidden="true" />
 		</button>
 		<a
 			data-link
@@ -207,13 +210,17 @@ function renderPostOwnerActions(postId, ownerStatus) {
 			data-action="edit-post"
 			data-post-id="${postId}"
 			href="/edit-post/${postId}?next=%2Factivity"
-		>Edit</a>
+			title="Edit post"
+			aria-label="Edit"
+		><img class="owner-action__icon" src="/assets/img/edit.png" alt="" aria-hidden="true" /></a>
 		<button
 			type="button"
 			class="post-delete"
 			data-action="delete-post"
 			data-post-id="${postId}"
-		>Delete</button>
+			title="Delete post"
+			aria-label="Delete"
+		><span class="owner-action__icon owner-action__icon--delete" aria-hidden="true"></span></button>
 	`;
 }
 
@@ -340,13 +347,17 @@ export function renderActivityCommentEntry(comment) {
 							class="comment-edit"
 							data-action="edit-comment"
 							data-comment-id="${commentIdStr}"
-						>Edit</button>
+							title="Edit comment"
+							aria-label="Edit"
+						><img class="comment-action__icon" src="/assets/img/edit.png" alt="" aria-hidden="true" /></button>
 						<button
 							type="button"
 							class="comment-delete"
 							data-action="delete-comment"
 							data-comment-id="${commentIdStr}"
-						>Delete</button>
+							title="Delete comment"
+							aria-label="Delete"
+						><span class="comment-action__icon comment-action__icon--delete" aria-hidden="true"></span></button>
 					</div>
 				</header>
 				<div class="activity-comment-content">
