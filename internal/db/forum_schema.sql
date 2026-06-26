@@ -180,7 +180,9 @@ CREATE TABLE IF NOT EXISTS private_messages (
   FOREIGN KEY (sender_id)    REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
   CHECK (sender_id <> recipient_id),
-  CHECK (length(trim(body)) > 0)
+  -- A message must carry text OR an image attachment (image-only DMs are
+  -- allowed, matching the posts/comments image-only pattern).
+  CHECK ((length(trim(body)) > 0) OR image_path IS NOT NULL)
 );
 
 -- ===============================================================

@@ -15,6 +15,36 @@
 	border-bottom: 1px solid var(--border-light);
 }
 
+.chat-conversation__header-left {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	min-width: 0;
+}
+
+.chat-conversation__back {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--text-secondary);
+	font-size: 1.15rem;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color var(--transition-fast);
+}
+
+.chat-conversation__back:hover {
+	background: var(--bg-secondary);
+	color: var(--text-primary);
+}
+
 .chat-conversation__title {
 	font-weight: 600;
 	font-size: 0.95rem;

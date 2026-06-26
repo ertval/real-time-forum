@@ -284,7 +284,7 @@ describe('conversation composer image attachment (D08)', () => {
 		expect(input.value).toBe('with broken image');
 	});
 
-	test('an image with no message body is blocked and never uploads', async () => {
+	test('an image with no message body uploads and sends an image-only message', async () => {
 		const activeRoot = createActiveRoot();
 		const documentRef = createDocumentRef(activeRoot);
 		const fetchRef = makeImageFetch({ meId: 1 });
@@ -302,9 +302,18 @@ describe('conversation composer image attachment (D08)', () => {
 		});
 		await flushMicrotasks();
 
-		expect(fetchRef).not.toHaveBeenCalledWith('/api/v1/chats/2/images', expect.anything());
-		expect(documentRef.dispatched.filter((e) => e.type === SEND_MESSAGE_EVENT)).toHaveLength(0);
-		expect(activeRoot._error.isHidden()).toBe(false);
+		expect(fetchRef).toHaveBeenCalledWith(
+			'/api/v1/chats/2/images',
+			expect.objectContaining({ method: 'POST', credentials: 'include' }),
+		);
+		const sends = documentRef.dispatched.filter((e) => e.type === SEND_MESSAGE_EVENT);
+		expect(sends).toHaveLength(1);
+		expect(sends[0].detail).toEqual({
+			recipientId: 2,
+			body: '',
+			imageUrl: '/static/uploads/dm/p.png',
+		});
+		expect(input.value).toBe('');
 	});
 });
 

@@ -223,7 +223,8 @@ func isValidDMImageURL(url string) bool {
 }
 
 // handleDMSend processes a client dm.send event:
-//  1. Validate payload (parseable, recipient present, non-self, non-empty body).
+//  1. Validate payload (parseable, recipient present, non-self, and carrying
+//     a non-empty body or an image attachment).
 //  2. Reject if recipient is offline → chat.error RECIPIENT_OFFLINE.
 //     NOTE: there is an unavoidable TOCTOU window between IsUserOnline and
 //     SendToUser — the recipient may disconnect after the check. The message
@@ -250,10 +251,11 @@ func (h *WsHandler) handleDMSend(senderID int64, senderClient *ws.Client, payloa
 		h.sendChatError(senderClient, codeSelfSend, "cannot send a message to yourself")
 		return
 	}
-	if strings.TrimSpace(p.Body) == "" {
-		// Body is required even with an attachment (SDS § 6.1 + the DB CHECK
-		// on private_messages.body). Image-only messages are out of scope.
-		h.sendChatError(senderClient, codeEmptyBody, "message body cannot be empty")
+	if strings.TrimSpace(p.Body) == "" && strings.TrimSpace(p.ImageURL) == "" {
+		// A message must carry text or an image. An image-only message (empty
+		// body + valid image_url) is allowed, matching the DB CHECK on
+		// private_messages and the posts/comments image-only pattern.
+		h.sendChatError(senderClient, codeEmptyBody, "message must have a body or an image")
 		return
 	}
 	if p.ImageURL != "" && !isValidDMImageURL(p.ImageURL) {

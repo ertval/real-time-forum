@@ -15,19 +15,21 @@ function renderPostFormFields({
 	const postIDAttr = postID ? ` data-post-id="${postID}"` : '';
 	return `
 		<section class="post-editor post-editor--${mode}" data-screen="${mode}"${postIDAttr} aria-labelledby="screen-${mode}-title">
-			<div class="post-editor__hero">
+			${
+				mode === 'create-post'
+					? `<header class="activity-header">
+				<h1 id="screen-${mode}-title">${heading}</h1>
+			</header>`
+					: `<div class="post-editor__hero">
 				<p class="post-editor__eyebrow">${eyebrow}</p>
 				<div class="post-editor__hero-copy">
 					<h1 id="screen-${mode}-title" class="post-editor__title">${heading}</h1>
 					<p class="post-editor__subtitle">
-						${
-							mode === 'create-post'
-								? 'Build a post with categories, imagery, and a clean publishing path.'
-								: 'Refine the post content, update categories, or replace the attached image.'
-						}
+						Refine the post content, update categories, or replace the attached image.
 					</p>
 				</div>
-			</div>
+			</div>`
+			}
 
 			<form id="${mode === 'create-post' ? 'create-post-form' : 'edit-post-form'}" class="post-editor__form" novalidate>
 				<p class="post-editor__status" data-post-form-feedback hidden></p>
@@ -63,7 +65,7 @@ function renderPostFormFields({
 									id="image-button"
 									aria-label="Attach image"
 								>
-									<span class="post-editor__attach-icon" aria-hidden="true">+</span>
+									<img class="post-editor__attach-icon" src="/assets/img/paperclip.png" alt="" aria-hidden="true" />
 								</button>
 								<input
 									id="image"
@@ -103,16 +105,16 @@ function renderPostFormFields({
 							<div id="categoryCheckboxes" class="category-checkboxes" data-role="category-checkboxes"></div>
 						</div>
 
-						<div class="post-editor__panel post-editor__panel--quiet">
+						${
+							mode === 'create-post'
+								? ''
+								: `<div class="post-editor__panel post-editor__panel--quiet">
 							<p class="post-editor__panel-kicker">Flow</p>
 							<p class="post-editor__panel-copy">
-								${
-									showDraftAction
-										? 'Save a draft if you are not ready to publish, or publish immediately when the post is complete.'
-										: 'Update the post when you are done, or return without saving from the back control.'
-								}
+								Update the post when you are done, or return without saving from the back control.
 							</p>
-						</div>
+						</div>`
+						}
 					</aside>
 				</div>
 

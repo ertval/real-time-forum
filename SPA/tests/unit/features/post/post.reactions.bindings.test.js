@@ -9,17 +9,17 @@ class Element {}
 globalThis.Element = Element;
 
 // Minimal element shim supporting the DOM surface the reaction bindings use:
-// closest(), querySelector() against an explicit registry, and the small set of
-// properties (dataset/checked/textContent) the handler reads and writes.
+// closest(), querySelector() against an explicit registry, get/setAttribute for
+// the aria-pressed active-state hook, and the textContent the handler writes.
 class FakeNode extends Element {
-	constructor({ tag = 'div', className = '', dataset = {} } = {}) {
+	constructor({ tag = 'div', className = '', dataset = {}, attributes = {} } = {}) {
 		super();
 		this.tag = tag.toUpperCase();
 		this.className = className;
 		this.dataset = { ...dataset };
+		this.attributes = { ...attributes };
 		this.parentElement = null;
 		this.children = [];
-		this.checked = false;
 		this.textContent = '';
 		this._bySelector = new Map();
 	}
@@ -32,6 +32,14 @@ class FakeNode extends Element {
 
 	register(selector, node) {
 		this._bySelector.set(selector, node);
+	}
+
+	getAttribute(name) {
+		return this.attributes[name] ?? null;
+	}
+
+	setAttribute(name, value) {
+		this.attributes[name] = String(value);
 	}
 
 	matches(selector) {
@@ -68,9 +76,18 @@ class FakeNode extends Element {
 	}
 }
 
+function reactionButton(type, active) {
+	return new FakeNode({
+		tag: 'button',
+		className: `reaction-toggle reaction-toggle--${type}`,
+		dataset: { reaction: type },
+		attributes: { 'aria-pressed': active ? 'true' : 'false' },
+	});
+}
+
 // Builds a post-reaction fixture mirroring the real SPA markup: a container
 // carrying data-post-id wraps a .reactions[data-reaction-scope="post"] element,
-// which holds the reaction inputs. The inputs carry NO id of their own — the
+// which holds the reaction buttons. The buttons carry NO id of their own — the
 // listener resolves the post id from the container via the data-reaction-scope
 // hook. `rootTag` exercises both <article data-post-id> (feed/activity) and
 // <section data-post-id> (post detail).
@@ -83,32 +100,25 @@ function buildPostFixture({ rootTag = 'article', initialReaction = '' } = {}) {
 	});
 	root.append(reactions);
 
-	const likeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'like' } });
-	const dislikeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'dislike' } });
-	likeInput.checked = initialReaction === 'like';
-	dislikeInput.checked = initialReaction === 'dislike';
-
-	const likeLabel = new FakeNode({ tag: 'label' });
-	const dislikeLabel = new FakeNode({ tag: 'label' });
-	likeLabel.append(likeInput);
-	dislikeLabel.append(dislikeInput);
-	reactions.append(likeLabel);
-	reactions.append(dislikeLabel);
+	const likeButton = reactionButton('like', initialReaction === 'like');
+	const dislikeButton = reactionButton('dislike', initialReaction === 'dislike');
+	reactions.append(likeButton);
+	reactions.append(dislikeButton);
 
 	const likeCount = new FakeNode({ tag: 'span', dataset: { likeCount: '' } });
 	const dislikeCount = new FakeNode({ tag: 'span', dataset: { dislikeCount: '' } });
 	root.register('[data-like-count]', likeCount);
 	root.register('[data-dislike-count]', dislikeCount);
-	root.register('input[data-reaction="like"]', likeInput);
-	root.register('input[data-reaction="dislike"]', dislikeInput);
+	root.register('[data-reaction="like"]', likeButton);
+	root.register('[data-reaction="dislike"]', dislikeButton);
 
-	return { root, likeInput, dislikeInput, likeCount, dislikeCount };
+	return { root, likeButton, dislikeButton, likeCount, dislikeCount };
 }
 
 // Builds a comment-reaction fixture mirroring the post-detail comment markup:
 // an <article class="comment" data-comment-id> container wraps a
-// .reactions[data-reaction-scope="comment"] element holding the inputs. The
-// inputs carry no id; the listener resolves the comment id from the container
+// .reactions[data-reaction-scope="comment"] element holding the buttons. The
+// buttons carry no id; the listener resolves the comment id from the container
 // via the data-reaction-scope hook.
 function buildCommentFixture({ initialReaction = '' } = {}) {
 	const root = new FakeNode({ tag: 'article', className: 'comment', dataset: { commentId: '7' } });
@@ -119,26 +129,19 @@ function buildCommentFixture({ initialReaction = '' } = {}) {
 	});
 	root.append(reactions);
 
-	const likeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'like' } });
-	const dislikeInput = new FakeNode({ tag: 'input', dataset: { reaction: 'dislike' } });
-	likeInput.checked = initialReaction === 'like';
-	dislikeInput.checked = initialReaction === 'dislike';
-
-	const likeLabel = new FakeNode({ tag: 'label' });
-	const dislikeLabel = new FakeNode({ tag: 'label' });
-	likeLabel.append(likeInput);
-	dislikeLabel.append(dislikeInput);
-	reactions.append(likeLabel);
-	reactions.append(dislikeLabel);
+	const likeButton = reactionButton('like', initialReaction === 'like');
+	const dislikeButton = reactionButton('dislike', initialReaction === 'dislike');
+	reactions.append(likeButton);
+	reactions.append(dislikeButton);
 
 	const likeCount = new FakeNode({ tag: 'span', dataset: { likeCount: '' } });
 	const dislikeCount = new FakeNode({ tag: 'span', dataset: { dislikeCount: '' } });
 	root.register('[data-like-count]', likeCount);
 	root.register('[data-dislike-count]', dislikeCount);
-	root.register('input[data-reaction="like"]', likeInput);
-	root.register('input[data-reaction="dislike"]', dislikeInput);
+	root.register('[data-reaction="like"]', likeButton);
+	root.register('[data-reaction="dislike"]', dislikeButton);
 
-	return { root, likeInput, dislikeInput, likeCount, dislikeCount };
+	return { root, likeButton, dislikeButton, likeCount, dislikeCount };
 }
 
 function reactionResponse(likes, dislikes) {
@@ -150,21 +153,21 @@ function reactionResponse(likes, dislikes) {
 }
 
 describe('reaction bindings on post-detail and feed scopes', () => {
-	let changeHandler;
+	let clickHandler;
 	let fetchRef;
 
 	beforeEach(async () => {
-		changeHandler = null;
+		clickHandler = null;
 		const documentRef = {
 			addEventListener: (type, handler) => {
-				if (type === 'change') {
-					changeHandler = handler;
+				if (type === 'click') {
+					clickHandler = handler;
 				}
 			},
 		};
 		// The bindings module guards init with a module-level flag, so reset the
 		// module registry per test to get a fresh, un-initialized instance and
-		// capture the freshly registered change handler.
+		// capture the freshly registered click handler.
 		vi.resetModules();
 		const { initReactionBindings } = await import(
 			'../../../../features/post/post.reactions.bindings.js'
@@ -181,13 +184,13 @@ describe('reaction bindings on post-detail and feed scopes', () => {
 		});
 	});
 
-	async function toggle(input) {
-		// Simulate the checkbox flipping before the change event fires.
-		input.checked = !input.checked;
-		// The registered listener fires `void handleReactionChange(...)` and
-		// returns synchronously, so await the async chain it starts by yielding
-		// to the event loop until it settles.
-		changeHandler({ target: input, stopPropagation() {} });
+	async function click(button) {
+		// Buttons are not auto-toggled by the browser; the handler reads the
+		// current aria-pressed state and writes the next one only on success. The
+		// registered listener fires `void handleReactionClick(...)` and returns
+		// synchronously, so await the async chain it starts by yielding to the
+		// event loop until it settles.
+		clickHandler({ target: button, stopPropagation() {} });
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	}
 
@@ -203,14 +206,14 @@ describe('reaction bindings on post-detail and feed scopes', () => {
 			return Promise.resolve(reactionResponse(1, 0));
 		});
 
-		await toggle(fx.likeInput);
+		await click(fx.likeButton);
 
 		expect(fetchRef).toHaveBeenCalledWith(
 			expect.stringContaining('/posts/42/like'),
 			expect.objectContaining({ method: 'POST' }),
 		);
-		expect(fx.likeInput.checked).toBe(true);
-		expect(fx.dislikeInput.checked).toBe(false);
+		expect(fx.likeButton.getAttribute('aria-pressed')).toBe('true');
+		expect(fx.dislikeButton.getAttribute('aria-pressed')).toBe('false');
 		expect(fx.likeCount.textContent).toBe('1');
 		expect(fx.dislikeCount.textContent).toBe('0');
 	});
@@ -224,14 +227,14 @@ describe('reaction bindings on post-detail and feed scopes', () => {
 			return Promise.resolve(reactionResponse(0, 1));
 		});
 
-		await toggle(fx.dislikeInput);
+		await click(fx.dislikeButton);
 
 		expect(fetchRef).toHaveBeenCalledWith(
 			expect.stringContaining('/posts/42/dislike'),
 			expect.objectContaining({ method: 'POST' }),
 		);
-		expect(fx.dislikeInput.checked).toBe(true);
-		expect(fx.likeInput.checked).toBe(false);
+		expect(fx.dislikeButton.getAttribute('aria-pressed')).toBe('true');
+		expect(fx.likeButton.getAttribute('aria-pressed')).toBe('false');
 		expect(fx.dislikeCount.textContent).toBe('1');
 	});
 
@@ -244,16 +247,16 @@ describe('reaction bindings on post-detail and feed scopes', () => {
 			return Promise.resolve(reactionResponse(0, 1));
 		});
 
-		await toggle(fx.dislikeInput);
+		await click(fx.dislikeButton);
 
-		expect(fx.dislikeInput.checked).toBe(true);
-		expect(fx.likeInput.checked).toBe(false);
+		expect(fx.dislikeButton.getAttribute('aria-pressed')).toBe('true');
+		expect(fx.likeButton.getAttribute('aria-pressed')).toBe('false');
 		expect(fx.likeCount.textContent).toBe('0');
 		expect(fx.dislikeCount.textContent).toBe('1');
 	});
 
-	test('toggling the active reaction off reverts on a failed request', async () => {
-		const fx = buildPostFixture({ rootTag: 'section' });
+	test('clearing the active reaction leaves it intact on a failed request', async () => {
+		const fx = buildPostFixture({ rootTag: 'section', initialReaction: 'like' });
 		fetchRef.mockImplementation((url) => {
 			if (url.includes('/users/me')) {
 				return Promise.resolve({ ok: true, json: async () => ({ data: { id: 1 } }) });
@@ -261,14 +264,14 @@ describe('reaction bindings on post-detail and feed scopes', () => {
 			return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
 		});
 
-		await toggle(fx.likeInput);
+		await click(fx.likeButton);
 
-		// Request failed → the optimistic checkbox flip is reverted.
-		expect(fx.likeInput.checked).toBe(false);
+		// Request failed → state is never mutated, so the existing reaction stays.
+		expect(fx.likeButton.getAttribute('aria-pressed')).toBe('true');
 		expect(fx.likeCount.textContent).toBe('');
 	});
 
-	test('unauthenticated user reverts the toggle without posting a reaction', async () => {
+	test('unauthenticated user does not post a reaction or change state', async () => {
 		const fx = buildPostFixture({ rootTag: 'section' });
 		fetchRef.mockImplementation((url) => {
 			if (url.includes('/users/me')) {
@@ -277,9 +280,9 @@ describe('reaction bindings on post-detail and feed scopes', () => {
 			return Promise.resolve(reactionResponse(1, 0));
 		});
 
-		await toggle(fx.likeInput);
+		await click(fx.likeButton);
 
-		expect(fx.likeInput.checked).toBe(false);
+		expect(fx.likeButton.getAttribute('aria-pressed')).toBe('false');
 		expect(fetchRef).not.toHaveBeenCalledWith(
 			expect.stringContaining('/posts/42/like'),
 			expect.anything(),
@@ -288,15 +291,15 @@ describe('reaction bindings on post-detail and feed scopes', () => {
 });
 
 describe('reaction bindings on post-detail comment scope', () => {
-	let changeHandler;
+	let clickHandler;
 	let fetchRef;
 
 	beforeEach(async () => {
-		changeHandler = null;
+		clickHandler = null;
 		const documentRef = {
 			addEventListener: (type, handler) => {
-				if (type === 'change') {
-					changeHandler = handler;
+				if (type === 'click') {
+					clickHandler = handler;
 				}
 			},
 		};
@@ -308,9 +311,8 @@ describe('reaction bindings on post-detail comment scope', () => {
 		initReactionBindings({ documentRef, fetchRef });
 	});
 
-	async function toggle(input) {
-		input.checked = !input.checked;
-		changeHandler({ target: input, stopPropagation() {} });
+	async function click(button) {
+		clickHandler({ target: button, stopPropagation() {} });
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	}
 
@@ -327,14 +329,14 @@ describe('reaction bindings on post-detail comment scope', () => {
 		const fx = buildCommentFixture();
 		authedFetch(reactionResponse(1, 0));
 
-		await toggle(fx.likeInput);
+		await click(fx.likeButton);
 
 		expect(fetchRef).toHaveBeenCalledWith(
 			expect.stringContaining('/comments/7/like'),
 			expect.objectContaining({ method: 'POST' }),
 		);
-		expect(fx.likeInput.checked).toBe(true);
-		expect(fx.dislikeInput.checked).toBe(false);
+		expect(fx.likeButton.getAttribute('aria-pressed')).toBe('true');
+		expect(fx.dislikeButton.getAttribute('aria-pressed')).toBe('false');
 		expect(fx.likeCount.textContent).toBe('1');
 	});
 
@@ -342,13 +344,13 @@ describe('reaction bindings on post-detail comment scope', () => {
 		const fx = buildCommentFixture();
 		authedFetch(reactionResponse(0, 1));
 
-		await toggle(fx.dislikeInput);
+		await click(fx.dislikeButton);
 
 		expect(fetchRef).toHaveBeenCalledWith(
 			expect.stringContaining('/comments/7/dislike'),
 			expect.objectContaining({ method: 'POST' }),
 		);
-		expect(fx.dislikeInput.checked).toBe(true);
+		expect(fx.dislikeButton.getAttribute('aria-pressed')).toBe('true');
 		expect(fx.dislikeCount.textContent).toBe('1');
 	});
 
@@ -356,10 +358,10 @@ describe('reaction bindings on post-detail comment scope', () => {
 		const fx = buildCommentFixture({ initialReaction: 'like' });
 		authedFetch(reactionResponse(0, 1));
 
-		await toggle(fx.dislikeInput);
+		await click(fx.dislikeButton);
 
-		expect(fx.dislikeInput.checked).toBe(true);
-		expect(fx.likeInput.checked).toBe(false);
+		expect(fx.dislikeButton.getAttribute('aria-pressed')).toBe('true');
+		expect(fx.likeButton.getAttribute('aria-pressed')).toBe('false');
 		expect(fx.dislikeCount.textContent).toBe('1');
 	});
 
@@ -368,16 +370,16 @@ describe('reaction bindings on post-detail comment scope', () => {
 
 		// First render: react successfully.
 		const first = buildCommentFixture();
-		await toggle(first.likeInput);
-		expect(first.likeInput.checked).toBe(true);
+		await click(first.likeButton);
+		expect(first.likeButton.getAttribute('aria-pressed')).toBe('true');
 
 		// Simulate reloadComments() replacing the markup with a fresh comment node.
 		// The listener is delegated at the document level, so no re-binding occurs
 		// and the new node reacts without a duplicate listener being attached.
 		const second = buildCommentFixture();
-		await toggle(second.likeInput);
+		await click(second.likeButton);
 
-		expect(second.likeInput.checked).toBe(true);
+		expect(second.likeButton.getAttribute('aria-pressed')).toBe('true');
 		expect(second.likeCount.textContent).toBe('1');
 	});
 });

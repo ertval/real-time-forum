@@ -32,8 +32,10 @@ func CreateMessage(ctx context.Context, database *sql.DB, req CreateMessageReque
 	if req.SenderID == req.RecipientID {
 		return PrivateMessage{}, fmt.Errorf("sender and recipient must be different users")
 	}
-	if strings.TrimSpace(req.Body) == "" {
-		return PrivateMessage{}, fmt.Errorf("message body cannot be empty")
+	// A message must carry text or an image attachment; image-only messages
+	// (empty body + image) are allowed.
+	if strings.TrimSpace(req.Body) == "" && strings.TrimSpace(req.ImagePath) == "" {
+		return PrivateMessage{}, fmt.Errorf("message must have a body or an image")
 	}
 
 	// Empty ImagePath is stored as NULL so the column means "no attachment"

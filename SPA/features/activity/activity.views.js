@@ -3,7 +3,13 @@
 import { IMAGE_ACCEPT_ATTR } from '../../core/shared/utils.js';
 import { escapeHTML } from '../../core/utils/html.js';
 import { normalizeReactionState } from '../post/post.reactions.logic.js';
-import { formatCreatedAt, renderCategories, resolveUsername } from '../post/post-card.views.js';
+import {
+	formatCreatedAt,
+	renderCategories,
+	resolveUsername,
+	THUMB_DOWN_ICON,
+	THUMB_UP_ICON,
+} from '../post/post-card.views.js';
 
 export function renderActivityView() {
 	return `
@@ -129,36 +135,42 @@ function renderActivitySection({
 	`;
 }
 
-// Reaction <input> elements carry no id attribute of their own; the delegated
+// Reaction <button> elements carry no id attribute of their own; the delegated
 // listener resolves the target id from the [data-post-id]/[data-comment-id]
-// container via the data-reaction-scope hook. This keeps reaction inputs from
-// colliding with the unique [data-post-id] container selector. `refId` is
-// retained for signature symmetry with callers but is no longer emitted.
-function reactionPillsMarkup({ scope, likeCount, dislikeCount, userReaction }) {
+// container via the data-reaction-scope hook. This keeps reaction buttons from
+// colliding with the unique [data-post-id] container selector. The persisted
+// reaction is reflected via aria-pressed, which also drives active styling.
+function reactionButtonsMarkup({ scope, likeCount, dislikeCount, userReaction }) {
 	const liked = userReaction === 'like';
 	const disliked = userReaction === 'dislike';
 
 	return `
 		<div class="reactions" data-reaction-scope="${escapeHTML(scope)}">
-			<label class="reaction-pill">
-				<input
-					type="checkbox"
+			<div class="reaction">
+				<button
+					type="button"
+					class="reaction-toggle reaction-toggle--like"
 					data-reaction="like"
-					${liked ? 'checked' : ''}
-				/>
-				<span>Like</span>
-				<span data-like-count>${Number(likeCount) || 0}</span>
-			</label>
+					aria-label="Like"
+					aria-pressed="${liked ? 'true' : 'false'}"
+				>
+					${THUMB_UP_ICON}
+				</button>
+				<span class="reaction-count" data-like-count>${Number(likeCount) || 0}</span>
+			</div>
 
-			<label class="reaction-pill">
-				<input
-					type="checkbox"
+			<div class="reaction">
+				<button
+					type="button"
+					class="reaction-toggle reaction-toggle--dislike"
 					data-reaction="dislike"
-					${disliked ? 'checked' : ''}
-				/>
-				<span>Dislike</span>
-				<span data-dislike-count>${Number(dislikeCount) || 0}</span>
-			</label>
+					aria-label="Dislike"
+					aria-pressed="${disliked ? 'true' : 'false'}"
+				>
+					${THUMB_DOWN_ICON}
+				</button>
+				<span class="reaction-count" data-dislike-count>${Number(dislikeCount) || 0}</span>
+			</div>
 		</div>
 	`;
 }
@@ -178,6 +190,8 @@ function renderPostImageMarkup(imageUrl, title) {
 
 function renderPostOwnerActions(postId, ownerStatus) {
 	const isDraft = ownerStatus === 'draft';
+	const statusLabel = isDraft ? 'Publish' : 'Draft';
+	const statusIcon = isDraft ? 'publish' : 'draft';
 	return `
 		<button
 			type="button"
@@ -186,8 +200,9 @@ function renderPostOwnerActions(postId, ownerStatus) {
 			data-post-id="${postId}"
 			data-current-status="${escapeHTML(ownerStatus)}"
 			title="${isDraft ? 'Publish post' : 'Move to draft'}"
+			aria-label="${statusLabel}"
 		>
-			${isDraft ? 'Publish' : 'Draft'}
+			<img class="owner-action__icon" src="/assets/img/${statusIcon}.png" alt="" aria-hidden="true" />
 		</button>
 		<a
 			data-link
@@ -195,13 +210,17 @@ function renderPostOwnerActions(postId, ownerStatus) {
 			data-action="edit-post"
 			data-post-id="${postId}"
 			href="/edit-post/${postId}?next=%2Factivity"
-		>Edit</a>
+			title="Edit post"
+			aria-label="Edit"
+		><img class="owner-action__icon" src="/assets/img/edit.png" alt="" aria-hidden="true" /></a>
 		<button
 			type="button"
 			class="post-delete"
 			data-action="delete-post"
 			data-post-id="${postId}"
-		>Delete</button>
+			title="Delete post"
+			aria-label="Delete"
+		><span class="owner-action__icon owner-action__icon--delete" aria-hidden="true"></span></button>
 	`;
 }
 
@@ -255,7 +274,7 @@ export function renderActivityPostCard(post, { showOwnerActions = false } = {}) 
 			</section>
 
 			<section class="post-actions">
-				${reactionPillsMarkup({ scope: 'post', likeCount, dislikeCount, userReaction })}
+				${reactionButtonsMarkup({ scope: 'post', likeCount, dislikeCount, userReaction })}
 			</section>
 		</article>
 	`;
@@ -328,13 +347,17 @@ export function renderActivityCommentEntry(comment) {
 							class="comment-edit"
 							data-action="edit-comment"
 							data-comment-id="${commentIdStr}"
-						>Edit</button>
+							title="Edit comment"
+							aria-label="Edit"
+						><img class="comment-action__icon" src="/assets/img/edit.png" alt="" aria-hidden="true" /></button>
 						<button
 							type="button"
 							class="comment-delete"
 							data-action="delete-comment"
 							data-comment-id="${commentIdStr}"
-						>Delete</button>
+							title="Delete comment"
+							aria-label="Delete"
+						><span class="comment-action__icon comment-action__icon--delete" aria-hidden="true"></span></button>
 					</div>
 				</header>
 				<div class="activity-comment-content">
@@ -342,7 +365,7 @@ export function renderActivityCommentEntry(comment) {
 					${imageMarkup}
 				</div>
 				<div class="activity-comment-reactions comment">
-					${reactionPillsMarkup({
+					${reactionButtonsMarkup({
 						scope: 'comment',
 						likeCount,
 						dislikeCount,
