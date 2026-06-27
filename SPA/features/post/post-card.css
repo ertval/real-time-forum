@@ -543,21 +543,26 @@
 	position: absolute;
 	top: 0.65rem;
 	right: 0.65rem;
-	padding: 0.4rem 0.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.5rem;
 	border: 1px solid var(--border-light);
 	border-radius: var(--radius-full);
 	background: var(--bg-elevated);
 	color: var(--text-secondary);
-	font-family: var(--font-display);
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.05em;
 	cursor: pointer;
 	box-shadow: var(--shadow-xs);
 	transition:
 		background var(--transition-fast),
 		color var(--transition-fast),
 		border-color var(--transition-fast);
+}
+
+.comment-image-icon {
+	width: 1.2rem;
+	height: 1.2rem;
+	display: block;
 }
 
 .comment-image-btn:hover {
