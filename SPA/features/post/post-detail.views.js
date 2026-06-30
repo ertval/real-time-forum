@@ -50,8 +50,8 @@ export function renderPostDetailView(post = {}) {
 							rows="4"
 							placeholder="Write your reply here..."
 						></textarea>
-						<button type="button" class="comment-image-btn" aria-label="Attach image">
-							Attach image
+						<button type="button" class="comment-image-btn" aria-label="Attach image" title="Attach image">
+							<img class="comment-image-icon" src="/assets/img/paperclip.png" alt="" aria-hidden="true" />
 						</button>
 						<input
 							type="file"
