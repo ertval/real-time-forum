@@ -1,9 +1,12 @@
 # 🌐 Real-Time Forum
 
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
-[![JavaScript](https://img.shields.io/badge/Vanilla_JS-ES2026+-F7DF1E?style=for-the-badge&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![Runtime](https://img.shields.io/badge/Bun-Runtime-000000?style=for-the-badge&logo=bun)](https://bun.sh)
-[![Linter](https://img.shields.io/badge/Biome-Linted-60A5FA?style=for-the-badge&logo=biome)](https://biomejs.dev)
+Self-hosted real-time forum for private communities. Replaces proprietary group-chat tools with an open, auditable, single-binary SPA — zero tracking, full data ownership.
+
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://golang.org)
+[![JavaScript](https://img.shields.io/badge/Vanilla_JS-ES2026+-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Runtime](https://img.shields.io/badge/Bun-Runtime-000000?style=flat-square&logo=bun&logoColor=white)](https://bun.sh)
+[![Linter](https://img.shields.io/badge/Biome-Linted-60A5FA?style=flat-square&logo=biome&logoColor=white)](https://biomejs.dev)
+[![CI](https://img.shields.io/github/actions/workflow/status/ertval/real-time-forum/ci.yml?style=flat-square&logo=github&logoColor=white)](https://github.com/ertval/real-time-forum/actions)
 
 A powerhouse, production-grade **Real-Time Single-Page Application (SPA)**. Built with a high-performance Go backend and a cutting-edge Vanilla JavaScript (ES2026+) frontend. Experience seamless navigation, lightning-fast interactions, and live private messaging—all delivered through a single HTML document.
 
@@ -65,14 +68,20 @@ Check the [Ticket Tracker](docs/ticket-tracker.md) for detailed progress.
 
 ## 🏗️ Architecture
 
-| Path | Purpose |
-|:--- |:--- |
-| `cmd/` | Server entry points (Backend: 8080, Frontend: 3000) |
-| `SPA/` | **The Frontend Core** — Vertical slices for Auth, Feed, Post, Activity, Profile, Shell, Chat |
-| `internal/` | Business logic, persistence, and request handlers |
-| `web/` | Historical assets, static uploads, and startup guards |
-| `data/` | Persistent SQLite storage |
-| `docs/` | System Design (SDS), Product Requirements (PRD), and Audit trails |
+```mermaid
+graph LR
+    Browser -->|/:3000| FE[Frontend :3000]
+    FE -->|/api/*| BE[Backend :8080]
+    FE -->|/ws| BE
+    BE --> SQLite[(SQLite)]
+```
+
+- `cmd/`: Server entry points (Backend: 8080, Frontend: 3000)
+- `SPA/`: **The Frontend Core** — Vertical slices for Auth, Feed, Post, Activity, Profile, Shell, Chat
+- `internal/`: Business logic, persistence, and request handlers
+- `web/`: Historical assets, static uploads, and startup guards
+- `data/`: Persistent SQLite storage
+- `docs/`: System Design (SDS), Product Requirements (PRD), and Audit trails
 
 > [!NOTE]
 > The project utilizes a **Split-Server Topology**. The Frontend server (`:3000`) serves the SPA shell and proxies all `/api/` and `/ws` traffic to the Backend server (`:8080`).
@@ -185,6 +194,12 @@ Deep dive into the project's blueprints:
 | `GET` | `/api/v1/posts` | Fetch the paginated global feed |
 | `GET` | `/api/v1/chats` | Retrieve roster with presence state |
 | `GET` | `/ws` | WebSocket for live chat & events |
+
+---
+
+## Related
+- [CV / Portfolio](https://ertval.github.io)
+- [forum](https://github.com/ertval/forum) — Hexagonal Go monolith
 
 ---
 
