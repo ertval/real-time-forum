@@ -1,9 +1,18 @@
 # 🌐 Real-Time Forum
 
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
-[![JavaScript](https://img.shields.io/badge/Vanilla_JS-ES2026+-F7DF1E?style=for-the-badge&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![Runtime](https://img.shields.io/badge/Bun-Runtime-000000?style=for-the-badge&logo=bun)](https://bun.sh)
-[![Linter](https://img.shields.io/badge/Biome-Linted-60A5FA?style=for-the-badge&logo=biome)](https://biomejs.dev)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://golang.org)
+[![JavaScript](https://img.shields.io/badge/Vanilla_JS-ES2026+-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Runtime](https://img.shields.io/badge/Bun-Runtime-000000?style=flat-square&logo=bun&logoColor=white)](https://bun.sh)
+[![Linter](https://img.shields.io/badge/Biome-Linted-60A5FA?style=flat-square&logo=biome&logoColor=white)](https://biomejs.dev)
+[![CI](https://img.shields.io/github/actions/workflow/status/ertval/real-time-forum/go.yml?style=flat-square&logo=github&logoColor=white)](https://github.com/ertval/real-time-forum/actions)
+
+---
+
+**Problem:** Traditional forums rely on page refreshes or periodic polling for updates, causing latency in live chat, presence status, and typing indicators.
+
+**Solution:** A split-server Go and Vanilla JS Single-Page Application (SPA) driven by Gorilla WebSockets, handling typing indicators and presence channels concurrently via Go select-loops.
+
+---
 
 A powerhouse, production-grade **Real-Time Single-Page Application (SPA)**. Built with a high-performance Go backend and a cutting-edge Vanilla JavaScript (ES2026+) frontend. Experience seamless navigation, lightning-fast interactions, and live private messaging—all delivered through a single HTML document.
 
@@ -65,14 +74,19 @@ Check the [Ticket Tracker](docs/ticket-tracker.md) for detailed progress.
 
 ## 🏗️ Architecture
 
-| Path | Purpose |
-|:--- |:--- |
-| `cmd/` | Server entry points (Backend: 8080, Frontend: 3000) |
-| `SPA/` | **The Frontend Core** — Vertical slices for Auth, Feed, Post, Activity, Profile, Shell, Chat |
-| `internal/` | Business logic, persistence, and request handlers |
-| `web/` | Historical assets, static uploads, and startup guards |
-| `data/` | Persistent SQLite storage |
-| `docs/` | System Design (SDS), Product Requirements (PRD), and Audit trails |
+```mermaid
+graph TD
+    Browser[Browser: Vanilla JS SPA] <-->|HTTP / WebSockets| Frontend[Frontend Proxy :3000]
+    Frontend <-->|Proxy API & WS| Backend[Go API Backend :8080]
+    Backend <-->|SQL / Transactions| SQLite[(SQLite Database)]
+```
+
+*   `cmd/` — Server entry points (Backend: :8080, Frontend: :3000)
+*   `SPA/` — **The Frontend Core**: Domain-driven vertical slices (Auth, Feed, Post, Activity, Profile, Shell, Chat)
+*   `internal/` — Decoupled business logic, persistence layers, and HTTP handlers
+*   `web/` — Static frontend assets and browser startup validation wrappers
+*   `data/` — SQLite transactional storage files
+*   `docs/` — System Design, Product Requirements, and verification audit trails
 
 > [!NOTE]
 > The project utilizes a **Split-Server Topology**. The Frontend server (`:3000`) serves the SPA shell and proxies all `/api/` and `/ws` traffic to the Backend server (`:8080`).
