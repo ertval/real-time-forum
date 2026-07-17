@@ -16,11 +16,15 @@ Closes #54, Closes #64
 - **package-lock.json Removal**: Removed the npm package lockfile from the repository since Bun lockfile is used. Ignored `package-lock.json` in `.gitignore`.
 - **.gitignore & Biome configuration Cleanup**: Removed duplicate `.tmp` entry in `.gitignore`. Added dead directories under `web/static/js` and `web/static/css` to `.biomeignore`, and removed redundant binary ignores from `biome.json`.
 
+### 3. Chat Layout E2E Test Fix
+- **Desktop Chat Panel Visibility**: Added min-width media query to display `.chat-panel[hidden]` on desktop to ensure both roster and conversation are visible, satisfying the audit requirement and fixing the failing `A04-03` E2E test.
+
 ## Verification Gate Satisfaction
 
 This PR fully satisfies the verification gate for issues #54 and #64:
 - The centralized 401 session recovery is validated by a dedicated unit test in `create-app.test.js`.
 - Tooling, Makefile, `.gitignore`, `.biomeignore`, `biome.json` cleanups are verified by the clean local Biome check and standard build scripts.
+- The chat layout E2E test `A04-03` passes successfully on desktop viewports.
 
 ## Testing & Validation Verified
 
@@ -37,5 +41,6 @@ This PR fully satisfies the verification gate for issues #54 and #64:
 - `.biomeignore`
 - `biome.json`
 - `SPA/core/app/create-app.js`
+- `SPA/features/shell/shell.css`
 - `SPA/tests/unit/core/app/create-app.test.js`
 - `docs/audit-reports/pr-audit-ekaramet-A-54-session-expiry-and-tooling-hygiene.md`
