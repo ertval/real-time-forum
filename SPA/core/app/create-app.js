@@ -89,6 +89,17 @@ export function createApp(options = {}) {
 	const documentRef = options.documentRef ?? (typeof document !== 'undefined' ? document : null);
 	const fetchRef = options.fetchRef ?? (typeof fetch === 'function' ? fetch : null);
 
+	const appFetch = async (input, init) => {
+		if (typeof fetchRef !== 'function') {
+			throw new TypeError('fetchRef is not a function');
+		}
+		const response = await fetchRef(input, init);
+		if (response.status === 401) {
+			onUnauthorized();
+		}
+		return response;
+	};
+
 	if (!windowRef || !documentRef) {
 		return null;
 	}
@@ -106,12 +117,22 @@ export function createApp(options = {}) {
 		authShellOutlet: null,
 	};
 
+	function onUnauthorized() {
+		if (!state.isAuthenticated) {
+			return;
+		}
+		state.isAuthenticated = false;
+		stopNotifications();
+		stopChat();
+		goTo('/login', true);
+	}
+
 	const notificationCenter =
 		options.notificationCenter ??
 		createNotificationCenter({
 			windowRef,
 			documentRef,
-			fetchRef,
+			fetchRef: appFetch,
 			navigate: (path, navigationOptions) => navigate(path, navigationOptions),
 		});
 
@@ -227,32 +248,32 @@ export function createApp(options = {}) {
 
 	function runRouteInitializer(match) {
 		if (match?.route?.access === 'protected') {
-			initChatRoster({ windowRef, documentRef, fetchRef });
-			initChatConversation({ windowRef, documentRef, fetchRef });
+			initChatRoster({ windowRef, documentRef, fetchRef: appFetch });
+			initChatConversation({ windowRef, documentRef, fetchRef: appFetch });
 		}
 
 		if (match?.route?.id === 'feed') {
-			initFeedPage({ windowRef, documentRef, fetchRef });
+			initFeedPage({ windowRef, documentRef, fetchRef: appFetch });
 			return;
 		}
 
 		if (match?.route?.id === 'create-post' || match?.route?.id === 'edit-post') {
-			void initPostFormPage({ windowRef, documentRef, fetchRef, navigate });
+			void initPostFormPage({ windowRef, documentRef, fetchRef: appFetch, navigate });
 			return;
 		}
 
 		if (match?.route?.id === 'profile') {
-			initProfilePage({ windowRef, documentRef, fetchRef });
+			initProfilePage({ windowRef, documentRef, fetchRef: appFetch });
 			return;
 		}
 
 		if (match?.route?.id === 'post-detail') {
-			void initPostDetailPage({ windowRef, documentRef, fetchRef });
+			void initPostDetailPage({ windowRef, documentRef, fetchRef: appFetch });
 			return;
 		}
 
 		if (match?.route?.id === 'activity') {
-			initActivityPage({ windowRef, documentRef, fetchRef });
+			initActivityPage({ windowRef, documentRef, fetchRef: appFetch });
 		}
 	}
 

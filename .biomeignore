@@ -1,4 +1,6 @@
 web/templates/
 web/errors/
+web/static/js/
+web/static/css/
 node_modules/
 dist/

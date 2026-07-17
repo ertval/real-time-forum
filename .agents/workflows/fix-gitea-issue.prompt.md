@@ -1,5 +1,4 @@
 ---
-name: fix-gitea-issue
 description: Automated loop to retrieve, group, resolve, and verify Gitea issues assigned to Track A (ertval) following TDD.
 ---
 
