@@ -14,13 +14,12 @@ forum-frontend
 *.out
 debug
 debug.test
-.tmp
-
 # Local temp / build cache (e.g. GOCACHE)
 .tmp/
 
 # Node / JS / Bun
 node_modules/
+package-lock.json
 dist/
 build/
 .cache/

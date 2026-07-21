@@ -7,17 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": [
-			"**",
-			"!cmd",
-			"!internal",
-			"!data",
-			"!web/errors",
-			"!forum-backend",
-			"!forum-frontend",
-			"!bun.lock",
-			"!package-lock.json"
-		]
+		"includes": ["**", "!cmd", "!internal", "!data", "!web/errors", "!bun.lock"]
 	},
 	"formatter": {
 		"enabled": true,

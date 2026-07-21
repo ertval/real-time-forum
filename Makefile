@@ -132,7 +132,6 @@ deps-frontend:
 
 IMAGE      = forum
 CONTAINER  = forum_app
-PORT       = 8080
 
 # -----------------------------------------------------
 # Build & Run

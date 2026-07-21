@@ -2,7 +2,6 @@
 	"name": "real-time-forum",
 	"version": "1.0.0",
 	"description": "Real-Time Forum - A Go-based SPA with WebSockets",
-	"main": "index.js",
 	"type": "module",
 	"scripts": {
 		"dev": "make run",
@@ -10,10 +9,8 @@
 		"test:watch": "vitest",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write --unsafe .",
-		"check": "biome check .",
-		"fix": "biome check --write --unsafe .",
 		"format": "biome format --write .",
-		"policy": "bun run check && bun run test"
+		"policy": "bun run lint && bun run test"
 	},
 	"dependencies": {
 		"bun": "^1.3.12"

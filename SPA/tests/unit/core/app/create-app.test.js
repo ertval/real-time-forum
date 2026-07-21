@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { createApp } from '../../../../core/app/create-app.js';
 import { matchRoute, normalizePathname } from '../../../../core/router/routes.js';
 import * as authHandlers from '../../../../features/auth/auth.handlers.js';
+import * as notificationPage from '../../../../features/notification/notification.page.js';
 import * as postPage from '../../../../features/post/post.page.js';
 import { createMockBrowser } from '../../helpers/browser-mock.js';
 
@@ -715,5 +716,52 @@ describe('SPA Application Engine', () => {
 		expect(app.getState().isAuthenticated).toBe(false);
 		expect(browser.windowRef.location.pathname).toBe('/register');
 		expect(browser.mainContent.innerHTML).toContain('data-screen="register"');
+	});
+
+	test('session recovery: a post-boot 401 response downgrades session, stops notifications & chat, and redirects to /login', async () => {
+		const browser = createMockBrowser('/');
+		const chatSocket = { open: vi.fn(), close: vi.fn() };
+
+		let capturedFetch = null;
+		const mockNotificationCenter = {
+			start: vi.fn(),
+			stop: vi.fn(),
+		};
+
+		vi.spyOn(notificationPage, 'createNotificationCenter').mockImplementation((opts) => {
+			capturedFetch = opts.fetchRef;
+			return mockNotificationCenter;
+		});
+
+		let callCount = 0;
+		const fetchMock = vi.fn(async () => {
+			callCount++;
+			if (callCount === 1) {
+				return { ok: true, status: 200, json: async () => ({}) };
+			}
+			return { ok: false, status: 401 };
+		});
+
+		const app = createApp({
+			windowRef: browser.windowRef,
+			documentRef: browser.documentRef,
+			fetchRef: fetchMock,
+			chatSocket,
+		});
+
+		await app.boot();
+
+		expect(app.getState().isAuthenticated).toBe(true);
+		expect(mockNotificationCenter.start).toHaveBeenCalledTimes(1);
+		expect(chatSocket.open).toHaveBeenCalledTimes(1);
+		expect(capturedFetch).toBeTypeOf('function');
+
+		const response = await capturedFetch('/api/v1/posts');
+		expect(response.status).toBe(401);
+
+		expect(app.getState().isAuthenticated).toBe(false);
+		expect(mockNotificationCenter.stop).toHaveBeenCalledTimes(1);
+		expect(chatSocket.close).toHaveBeenCalledTimes(1);
+		expect(browser.windowRef.location.pathname).toBe('/login');
 	});
 });
