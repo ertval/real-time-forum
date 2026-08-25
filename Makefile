@@ -93,6 +93,10 @@ test-backend:
 	@mkdir -p $(TEST_CACHE_DIR) $(TEST_TMP_DIR)
 	@GOCACHE=$(TEST_CACHE_DIR) GOTMPDIR=$(TEST_TMP_DIR) go test ./...
 
+test-race:
+	@mkdir -p $(TEST_CACHE_DIR) $(TEST_TMP_DIR)
+	@GOCACHE=$(TEST_CACHE_DIR) GOTMPDIR=$(TEST_TMP_DIR) go test -race -timeout 20m ./...
+
 test-frontend:
 	@bun run policy
 

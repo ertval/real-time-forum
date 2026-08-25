@@ -1,9 +1,12 @@
 // SPA/main.js
 
 import { createApp } from './core/app/create-app.js';
+import { initGlobalErrorHandlers } from './core/errors/error-handler.js';
 import { matchRoute, normalizePathname } from './core/router/routes.js';
 
-export { createApp, matchRoute, normalizePathname };
+export { createApp, initGlobalErrorHandlers, matchRoute, normalizePathname };
+
+initGlobalErrorHandlers();
 
 const app = createApp();
 

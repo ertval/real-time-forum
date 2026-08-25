@@ -73,7 +73,7 @@ async function renderProfileData(fetchRef, userID, contentEl, avatarEl) {
 				<div class="profile-error">
 					<h3>User not found</h3>
 					<p>The profile you are looking for does not exist or has been removed.</p>
-					<button class="auth-button" onclick="window.history.back()">Go Back</button>
+					<button class="auth-button" type="button" data-action="back">Go Back</button>
 				</div>
 			`;
 			contentEl.classList.remove('skeleton-content');
@@ -110,6 +110,14 @@ export function initProfilePage(options = {}) {
 	}
 
 	root.setAttribute(PROFILE_BOUND_ATTR, 'true');
+
+	root.addEventListener('click', (event) => {
+		const backButton = event.target?.closest?.('[data-action="back"]');
+		if (backButton) {
+			event.preventDefault();
+			windowRef.history?.back?.();
+		}
+	});
 
 	const userID = root.getAttribute('data-user-id');
 	const contentEl = root.querySelector('#profile-content');

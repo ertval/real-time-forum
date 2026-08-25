@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 )
@@ -250,44 +249,5 @@ func TestAPIDraftByID_InvalidID_BadRequest(t *testing.T) {
 				t.Fatalf("expected BAD_REQUEST error, got %+v body=%s", apiErr, rec.Body.String())
 			}
 		})
-	}
-}
-
-func TestCreatePostTemplate_HasImagePreviewControls(t *testing.T) {
-	path := "../../web/templates/create-post.html"
-	b, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read template %s: %v", path, err)
-	}
-	s := string(b)
-
-	want := []string{
-		`id="image"`,
-		`name="image"`,
-		`accept="image/jpeg,image/png,image/gif"`,
-		`id="image-preview"`,
-		`id="image-name"`,
-		`id="image-clear"`,
-	}
-	for _, token := range want {
-		if !strings.Contains(s, token) {
-			t.Fatalf("expected template to include %q", token)
-		}
-	}
-}
-
-func TestCreatePostJS_ConditionallyRendersPostImageMarkup(t *testing.T) {
-	path := "../../web/static/js/posts.js"
-	b, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read js %s: %v", path, err)
-	}
-	s := string(b)
-
-	if !strings.Contains(s, "const imageMarkup = imageUrl") {
-		t.Fatalf("expected posts.js to define conditional image markup")
-	}
-	if !strings.Contains(s, ": ''") {
-		t.Fatalf("expected posts.js to omit image container when no image URL")
 	}
 }

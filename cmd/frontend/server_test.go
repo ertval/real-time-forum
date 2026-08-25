@@ -135,3 +135,83 @@ func TestSPARouting(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityHeaders(t *testing.T) {
+	requireLocalTCPListener(t)
+
+	tmpDir, err := os.MkdirTemp("", "frontend-sec-headers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	spaDir := filepath.Join(tmpDir, "SPA")
+	staticDir := filepath.Join(tmpDir, "web/static")
+	errorDir := filepath.Join(tmpDir, "web/errors")
+	os.MkdirAll(spaDir, 0755)
+	os.MkdirAll(staticDir, 0755)
+	os.MkdirAll(errorDir, 0755)
+
+	os.WriteFile(filepath.Join(spaDir, "index.html"), []byte("<html>SPA Shell</html>"), 0644)
+	os.WriteFile(filepath.Join(spaDir, "main.js"), []byte("console.log('hi');"), 0644)
+	os.WriteFile(filepath.Join(staticDir, "test.css"), []byte("body {}"), 0644)
+	os.WriteFile(filepath.Join(staticDir, "favicon.ico"), []byte("fake-favicon"), 0644)
+	os.WriteFile(filepath.Join(errorDir, "404.html"), []byte("404 Not Found"), 0644)
+
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer backend.Close()
+
+	oldBackendURL := backendBaseURL
+	backendBaseURL = backend.URL
+	defer func() { backendBaseURL = oldBackendURL }()
+
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(oldWD)
+
+	mux := NewMux()
+
+	expectedCSP := "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: /static/uploads/; connect-src 'self' ws: wss:; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+	expectedXFO := "DENY"
+	expectedXCTO := "nosniff"
+	expectedRP := "strict-origin-when-cross-origin"
+
+	paths := []string{
+		"/",
+		"/login",
+		"/main.js",
+		"/static/test.css",
+		"/favicon.ico",
+		"/errors/404.html",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest("GET", path, nil)
+			rr := httptest.NewRecorder()
+			mux.ServeHTTP(rr, req)
+
+			if csp := rr.Header().Get("Content-Security-Policy"); csp != expectedCSP {
+				t.Errorf("path %s: expected CSP %q, got %q", path, expectedCSP, csp)
+			}
+			if xfo := rr.Header().Get("X-Frame-Options"); xfo != expectedXFO {
+				t.Errorf("path %s: expected X-Frame-Options %q, got %q", path, expectedXFO, xfo)
+			}
+			if xcto := rr.Header().Get("X-Content-Type-Options"); xcto != expectedXCTO {
+				t.Errorf("path %s: expected X-Content-Type-Options %q, got %q", path, expectedXCTO, xcto)
+			}
+			if rp := rr.Header().Get("Referrer-Policy"); rp != expectedRP {
+				t.Errorf("path %s: expected Referrer-Policy %q, got %q", path, expectedRP, rp)
+			}
+		})
+	}
+}
+

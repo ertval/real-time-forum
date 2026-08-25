@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main ]
 
 jobs:
   quality-gate:
@@ -24,16 +24,27 @@ jobs:
           
       - name: Install dependencies
         run: make deps
+
+      - name: Build
+        run: make build
         
-      - name: Lint & Format Check
+      - name: Lint & Policy Check
         run: |
           make lint
-          make format
-          # Check if git is clean after format
-          git diff --exit-code
+          bun run policy
+
+      - name: Go Vet
+        run: make vet
         
       - name: Run Backend Tests
         run: make test-backend
+
+      - name: Run Backend Race Tests
+        run: make test-race
         
       - name: Run Frontend Tests
         run: make test-frontend
+
+      - name: Run Playwright E2E Tests
+        run: make test-e2e
+

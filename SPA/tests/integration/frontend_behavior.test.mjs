@@ -1,13 +1,6 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 import { beforeAll, expect, test } from 'vitest';
+import { setupImagePicker } from '../../core/shared/image-picker.js';
 import { renderPostCard } from '../../features/post/post-card.views.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
 class MockClassList {
 	constructor() {
@@ -262,21 +255,6 @@ function installTestEnvironment() {
 	globalThis.__mockCanvasAlpha = 255;
 }
 
-function loadImagePickerForTests() {
-	const filePath = path.join(repoRoot, 'web', 'static', 'js', 'image-picker.js');
-	const source = fs.readFileSync(filePath, 'utf8');
-
-	const noImports = source.replace(/^\s*import[\s\S]*?;\s*$/gm, '');
-
-	const transformed = [
-		'var MAX_IMAGE_BYTES = 20 * 1024 * 1024;',
-		noImports.replace('export function setupImagePicker', 'function setupImagePicker'),
-		'globalThis.__setupImagePicker = setupImagePicker;',
-	].join('\n');
-
-	vm.runInThisContext(transformed, { filename: 'image-picker.test.eval.js' });
-}
-
 async function flushMicrotasks() {
 	await Promise.resolve();
 	await Promise.resolve();
@@ -285,11 +263,9 @@ async function flushMicrotasks() {
 
 beforeAll(() => {
 	installTestEnvironment();
-	loadImagePickerForTests();
 });
 
 test('Image preview behavior', async () => {
-	const setupImagePicker = globalThis.__setupImagePicker;
 	expect(typeof setupImagePicker).toBe('function');
 
 	const input = new MockInputElement();
@@ -334,8 +310,6 @@ test('Image preview behavior', async () => {
 });
 
 test('Preview checkerboard for transparent PNG', async () => {
-	const setupImagePicker = globalThis.__setupImagePicker;
-
 	const input = new MockInputElement();
 	const previewContainer = new MockElement('div');
 	previewContainer.hidden = true;

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	userTimeout       = 2 * time.Second
+	userTimeout       = 10 * time.Second
 	minUsernameLength = 3
 	maxUsernameLength = 30
 	minPasswordLength = 8

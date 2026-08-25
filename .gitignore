@@ -1,10 +1,10 @@
 # --- Build Artifacts ---
 # Go
 bin/
-backend
-frontend
-forum-backend
-forum-frontend
+/backend
+/frontend
+/forum-backend
+/forum-frontend
 *.exe
 *.exe~
 *.dll
@@ -81,4 +81,5 @@ desktop.ini
 .factorypath
 
 # --- Project Specific ---
-web/static/uploads/
+web/static/uploads/*
+!web/static/uploads/.gitkeep

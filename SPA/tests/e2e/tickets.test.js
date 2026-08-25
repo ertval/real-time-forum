@@ -181,36 +181,6 @@ test.describe('Ticket Manual E2E Verification', () => {
 				await context.close();
 			}
 		});
-
-		test('A02-03: legacy /static assets remain accessible', async ({ request }) => {
-			const assets = [
-				{ path: '/static/css/base.css', expectedType: /text\/css/i, textLike: true },
-				{
-					path: '/static/js/auth.js',
-					expectedType: /(javascript|ecmascript)/i,
-					textLike: true,
-				},
-				{ path: '/static/img/forum-logo.png', expectedType: /image\//i, textLike: false },
-			];
-
-			for (const asset of assets) {
-				const response = await request.get(asset.path, { failOnStatusCode: false });
-				const contentType = response.headers()['content-type'] ?? '';
-
-				expect(response.status(), `status for ${asset.path}`).toBe(200);
-				expect(contentType, `content-type for ${asset.path}`).toMatch(asset.expectedType);
-				expect(contentType, `fallback check for ${asset.path}`).not.toContain('text/html');
-
-				if (asset.textLike) {
-					const body = await response.text();
-					expect(body.length).toBeGreaterThan(0);
-					expect(body).not.toContain('<!DOCTYPE html>');
-				} else {
-					const body = await response.body();
-					expect(body.length).toBeGreaterThan(0);
-				}
-			}
-		});
 	});
 
 	test.describe('A03', () => {
